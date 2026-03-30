@@ -7,7 +7,7 @@ def calc_shakemap(parsed_data):
     sm_create_cmd = (
         f'sm_create -f {event_id} -e ies {parsed_data["time"]} '
         f'{parsed_data["longitude"]} {parsed_data["latitude"]} '
-        f'{parsed_data["depth"]} {parsed_data["ml"]} " " -n'
+        f'{parsed_data["depth"]} {parsed_data["ml"]} "{parsed_data["desc"]}" -n'
     )
     logging.info(f"Running ShakeMap for event {event_id} with command: {sm_create_cmd}")
 

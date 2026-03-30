@@ -47,7 +47,8 @@ class RunShakeMap(Resource):
             "longitude": event.longitude,
             "latitude": event.latitude,
             "depth": event.depth,
-            "ml": event.ml
+            "ml": event.ml,
+            "desc": event.region_ge or "Event Description"
         }
 
         # Run async worker
