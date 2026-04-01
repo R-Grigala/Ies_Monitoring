@@ -16,7 +16,6 @@ from src.config import Config
         404: 'Not Found'
     }
 )
-
 class SeismicListAPI(Resource):
     @event_ns.marshal_list_with(event_model)  # show schema in Swagger
     def get(self):

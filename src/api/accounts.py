@@ -3,7 +3,7 @@ from flask_jwt_extended import jwt_required, current_user, get_jwt_identity
 from flask import request
 
 from src.models import User, Role
-from src.api.nsmodels import accounts_ns, user_model, user_parser, accounts_model, accounts_parser, roles_model, roles_parser, password_reset_parser, request_password_reset_parser
+from src.api.nsmodels import accounts_ns, user_model, user_parser, accounts_model, accounts_parser, roles_model, roles_parser, password_reset_parser, request_password_reset_parser, change_password_parser
 from src.services import mail, url_serializer
 
 from datetime import datetime, timedelta
@@ -159,11 +159,7 @@ class RolesListApi(Resource):
             name=args['name'],
             is_admin=args.get('is_admin', False),
             can_users=args.get('can_users', False),
-            can_project=args.get('can_project', False),
-            can_geophysic=args.get('can_geophysic', False),
-            can_geologic=args.get('can_geologic', False),
-            can_hazard=args.get('can_hazard', False),
-            can_geodetic=args.get('can_geodetic', False)
+            can_shakemap=args.get('can_shakemap', False),
         )
         
         # Save the new role to the database
@@ -213,16 +209,8 @@ class RolesAPI(Resource):
             role.is_admin = args['is_admin']
         if args['can_users'] is not None:
             role.can_users = args['can_users']
-        if args['can_project'] is not None:
-            role.can_project = args['can_project']
-        if args['can_geophysic'] is not None:
-            role.can_geophysic = args['can_geophysic']
-        if args['can_geologic'] is not None:
-            role.can_geologic = args['can_geologic']
-        if args['can_hazard'] is not None:
-            role.can_hazard = args['can_hazard']
-        if args['can_geodetic'] is not None:
-            role.can_geodetic = args['can_geodetic']
+        if args['can_shakemap'] is not None:
+            role.can_shakemap = args['can_shakemap']
 
         role.save()
         return {"message": f"როლი წარმატებით განახლდა."}, 200
@@ -301,4 +289,36 @@ class ResetPassword(Resource):
             user.save()
             return {'message': 'პაროლი წარმატებით დარედაქტირდა'}, 200
         except:
+            return {'error': 'პაროლის შეცვლის დროს დაფიქსირდა შეცდომა'}, 400
+
+
+@accounts_ns.route('/change_password')
+@accounts_ns.doc(responses={200: 'OK', 400: 'Invalid Argument', 401: 'JWT Token Expires', 403: 'Forbidden', 404: 'Not Found'})
+class ChangePassword(Resource):
+    @jwt_required()
+    @accounts_ns.doc(security='JsonWebToken')
+    @accounts_ns.doc(parser=change_password_parser)
+    def put(self):
+        """ავტორიზებული მომხმარებლის პაროლის შეცვლა (მეილის გარეშე)."""
+        args = change_password_parser.parse_args()
+        identity = get_jwt_identity()
+        user = User.query.filter_by(uuid=identity).first()
+
+        if not user:
+            return {'error': 'მომხმარებელი ვერ მოიძებნა'}, 404
+
+        if args.get('password') != args.get("retype_password"):
+            return {"error": "პაროლები არ ემთხვევა."}, 400
+
+        if len(args.get("password")) < 8:
+            return {"error": "პაროლი უნდა იყოს მინიმუმ 8 სიმბოლო."}, 400
+
+        if not user.check_password(args.get("current_password")):
+            return {"error": "ძველი პაროლი არასწორია."}, 400
+
+        try:
+            user.password = args.get('password')
+            user.save()
+            return {'message': 'პაროლი წარმატებით შეიცვალა'}, 200
+        except Exception:
             return {'error': 'პაროლის შეცვლის დროს დაფიქსირდა შეცდომა'}, 400

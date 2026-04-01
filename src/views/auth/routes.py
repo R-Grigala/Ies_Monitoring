@@ -26,4 +26,9 @@ def reset_password(token):
     elif uuid == 'expired':
         return redirect(url_for('auth.auth', message=uuid))
 
-    return render_template("resetPassword.html", token=token)
+    return render_template("resetPass.html", token=token)
+
+
+@auth_blueprint.route("/change_password")
+def change_password():
+    return render_template("changePass.html")

@@ -36,6 +36,12 @@ class Config:
     JWT_REFRESH_TOKEN_EXPIRES = timedelta(hours=12)
     
     AUTHORIZATION = {
+        'JsonWebToken': {
+            'type': 'apiKey',
+            'in': 'header',
+            'name': 'Authorization',
+            'description': 'JWT token using Bearer scheme. Example: Bearer <access_token>'
+        },
         'ApiKeyAuth': {
             'type': 'apiKey',
             'in': 'header',

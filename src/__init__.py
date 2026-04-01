@@ -5,12 +5,11 @@ from src.config import Config
 from src.commands import init_db, populate_db
 from src.extensions import db, migrate, jwt, api as restx_api
 from src.models import User
-from src.views import shakemap_blueprint, auth_blueprint
+from src.views import shakemap_blueprint, auth_blueprint, accounts_blueprint, events_blueprint
 from src import api as api_package # ensure namespaces are imported
 
 # Register blueprints
-BLUEPRINTS = [shakemap_blueprint, auth_blueprint]
-
+BLUEPRINTS = [shakemap_blueprint, auth_blueprint, accounts_blueprint, events_blueprint]
 COMMANDS = [init_db, populate_db]
 
 
@@ -44,7 +43,7 @@ def register_extensions(app):
     # Flask-RESTX (attach namespaces defined in src/api)
     restx_api.init_app(app)
 
-        # Flask-JWT-Extended
+    # Flask-JWT-Extended
     jwt.init_app(app)
 
     @jwt.user_identity_loader

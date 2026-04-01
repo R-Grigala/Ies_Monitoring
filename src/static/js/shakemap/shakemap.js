@@ -1,6 +1,5 @@
 const eventsTableBody = document.getElementById("eventsTableBody");
 const eventsStatus = document.getElementById("eventsStatus");
-const refreshEventsBtn = document.getElementById("refreshEventsBtn");
 const lastUpdated = document.getElementById("lastUpdated");
 const totalEvents = document.getElementById("totalEvents");
 const galleryModalElement = document.getElementById("galleryModal");
@@ -256,7 +255,6 @@ function renderEvents(events) {
 // /api/events-დან მონაცემების წამოღება და UI-ის განახლება.
 async function loadEvents() {
   eventsStatus.textContent = "ივენთები იტვირთება...";
-  refreshEventsBtn.disabled = true;
 
   try {
     const response = await fetch("/api/events", {
@@ -279,11 +277,8 @@ async function loadEvents() {
     eventsStatus.textContent = "მოთხოვნა ჩავარდა ივენთების ჩატვირთვისას.";
     totalEvents.textContent = "—";
     lastUpdated.textContent = "—";
-  } finally {
-    refreshEventsBtn.disabled = false;
   }
 }
 
-// Refresh ღილაკი და საწყისი ჩატვირთვა.
-refreshEventsBtn.addEventListener("click", loadEvents);
+// საწყისი ჩატვირთვა.
 loadEvents();

@@ -25,11 +25,7 @@ roles_model = accounts_ns.model('Roles', {
     'name': fields.String(required=True, description='Role Name'),
     'is_admin': fields.Boolean(description='Admin Privileges'),
     'can_users': fields.Boolean(description='Permission to manage users'),
-    'can_project': fields.Boolean(description='Permission to manage projects'),
-    'can_geophysic': fields.Boolean(description='Permission to manage geophysic data'),
-    'can_geologic': fields.Boolean(description='Permission to manage geologic data'),
-    'can_hazard': fields.Boolean(description='Permission to manage hazard data'),
-    'can_geodetic': fields.Boolean(description='Permission to manage geodetic data'),
+    'can_shakemap': fields.Boolean(description='Permission to manage Shakemap'),
 })
 
 
@@ -38,11 +34,7 @@ roles_parser = reqparse.RequestParser()
 roles_parser.add_argument('name', type=str, required=False, help='Role name')
 roles_parser.add_argument('is_admin', type=inputs.boolean, required=False, help='Admin Privileges')
 roles_parser.add_argument('can_users', type=inputs.boolean, required=False, help='Manage Users')
-roles_parser.add_argument('can_project', type=inputs.boolean, required=False, help='Manage Projects')
-roles_parser.add_argument('can_geophysic', type=inputs.boolean, required=False, help='Manage Geophysic Data')
-roles_parser.add_argument('can_geologic', type=inputs.boolean, required=False, help='Manage Geologic Data')
-roles_parser.add_argument('can_hazard', type=inputs.boolean, required=False, help='Manage Hazard Data')
-roles_parser.add_argument('can_geodetic', type=inputs.boolean, required=False, help='Manage Geodetic Data')
+roles_parser.add_argument('can_shakemap', type=inputs.boolean, required=False, help='Manage Shakemap')
 
 accounts_model = api.model('Accounts', {
         'uuid': fields.String(description='The unique UUID of the user'),
@@ -61,3 +53,8 @@ password_reset_parser = reqparse.RequestParser()
 password_reset_parser.add_argument("token", required=True, type=str, help="გთხოვთ შეიყვანოთ ტოკენი", default='RmYTkyNTQxZjljMSI.Z8bhDw.1YCel4ik_BUzPqPpMZDvP8TaPMM.....')
 password_reset_parser.add_argument("password", required=True, type=str, help="გთხოვთ შეიყვანეთ ახალი პაროლი", default='PAROLIparoli123')
 password_reset_parser.add_argument("retype_password", required=True, type=str, help="გთხოვთ გაიმეოროთ პაროლი", default='PAROLIparoli123')
+
+change_password_parser = reqparse.RequestParser()
+change_password_parser.add_argument("current_password", required=True, type=str, help="გთხოვთ შეიყვანეთ ძველი პაროლი", default='PAROLIparoli123')
+change_password_parser.add_argument("password", required=True, type=str, help="გთხოვთ შეიყვანეთ ახალი პაროლი", default='PAROLIparoli123')
+change_password_parser.add_argument("retype_password", required=True, type=str, help="გთხოვთ გაიმეოროთ პაროლი", default='PAROLIparoli123')

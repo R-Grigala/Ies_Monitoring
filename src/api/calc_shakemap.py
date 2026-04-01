@@ -2,6 +2,7 @@ import os
 
 from flask_restx import Resource
 from flask import request, send_file
+from flask_jwt_extended import verify_jwt_in_request, get_jwt_identity
 
 from src.api.nsmodels import shakemap_ns, shakemap_parser, shakemap_model
 from src.models.seismic_event import SeismicEvent
@@ -42,17 +43,33 @@ def get_products_path(seiscomp_oid, event_id=None):
     }
 )
 class RunShakeMap(Resource):
+    @staticmethod
+    def _is_authorized():
+        # 1) Internal service auth via API key
+        api_key = request.headers.get('X-API-Key')
+        if api_key and api_key == Config.API_KEY:
+            return True
+
+        # 2) User auth via JWT Bearer token
+        try:
+            verify_jwt_in_request()
+            identity = get_jwt_identity()
+            return bool(identity)
+        except Exception:
+            return False
 
     @shakemap_ns.expect(shakemap_model)
-    @shakemap_ns.doc(security='ApiKeyAuth', description='Create or update a seismic event (requires X-API-Key)')
+    @shakemap_ns.doc(
+        security=[{'ApiKeyAuth': []}, {'JsonWebToken': []}],
+        description='Trigger ShakeMap by using either X-API-Key or JWT Bearer token'
+    )
     def post(self):
         # --- Parse request body ---
         args = shakemap_parser.parse_args()
         seiscomp_oid = args["seiscomp_oid"]
         # --- Auth check ---
-        api_key = request.headers.get('X-API-Key')
-        if api_key != Config.API_KEY:
-            return {'error': 'Unauthorized - Invalid API key'}, 401
+        if not self._is_authorized():
+            return {'error': 'Unauthorized - provide valid X-API-Key or JWT token'}, 401
 
         try:
             # --- Get event by seiscomp_oid ---

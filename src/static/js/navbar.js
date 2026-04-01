@@ -6,6 +6,7 @@ document.addEventListener("DOMContentLoaded", function() {
     const navItems = [
         { endpoint: '/', text: 'მთავარი' },
         { endpoint: '/shakemap', text: 'ShakeMap' },
+        { endpoint: '/events', text: 'Events' },
         // Add other static links as needed
     ];
 
@@ -21,11 +22,13 @@ document.addEventListener("DOMContentLoaded", function() {
     navItems.forEach(item => {
         const link = document.createElement('a');
         link.href = item.endpoint;
-        link.className = currentPath === item.endpoint ? 'btn btn-sm btn-info m-2' : 'btn btn-sm btn-primary m-2';
+        link.className = currentPath === item.endpoint
+            ? 'nav-link active text-primary fw-semibold px-2'
+            : 'nav-link px-2';
         link.textContent = item.text;
 
         const listItem = document.createElement('li');
-        listItem.className = 'd-flex justify-content-center';
+        listItem.className = 'nav-item';
         listItem.appendChild(link);
 
         navLinksStart.appendChild(listItem);
@@ -35,36 +38,34 @@ document.addEventListener("DOMContentLoaded", function() {
     if (localStorage.getItem('access_token')) {
         // User is logged in, show Logout button
         const logoutItem = document.createElement('li');
-        logoutItem.className = 'd-flex justify-content-center';
+        logoutItem.className = 'nav-item d-flex align-items-center gap-2 mt-2 mt-lg-0';
 
         // Retrieve the user's email from localStorage
         const access_token = localStorage.getItem('access_token');
         if (access_token) {
-            const emailSpan = document.createElement('span');
-            emailSpan.className = 'nav-link me-4'; // Margin end for spacing
+            const profileButton = document.createElement('button');
+            profileButton.type = 'button';
+            profileButton.className = 'btn btn-sm btn-outline-secondary rounded-circle d-flex align-items-center justify-content-center';
+            profileButton.style.width = '34px';
+            profileButton.style.height = '34px';
 
             const iconImg = document.createElement('img');
             iconImg.src = '/static/img/circle-user-solid.svg';
-            iconImg.alt = 'Email Icon'; 
-            iconImg.style.width = '30px'; 
-            iconImg.style.height = '30px'; 
+            iconImg.alt = 'User Icon'; 
+            iconImg.style.width = '18px'; 
+            iconImg.style.height = '18px'; 
             iconImg.style.verticalAlign = 'middle';
-            iconImg.style.cursor = 'pointer';
-
-
-            emailSpan.appendChild(iconImg);
-
-            emailSpan.onclick = function() {
+            profileButton.appendChild(iconImg);
+            profileButton.onclick = function() {
                 openUserModal();
             };
-
-            logoutItem.appendChild(emailSpan); // Append email first
+            logoutItem.appendChild(profileButton);
             
         }
 
         const logoutLink = document.createElement('a');
         logoutLink.href = '/login';
-        logoutLink.className = 'btn btn-sm btn-danger m-2';
+        logoutLink.className = 'btn btn-sm btn-outline-danger';
         logoutLink.textContent = 'გასვლა';
         logoutLink.onclick = function() {
             clearSessionData();
@@ -77,11 +78,13 @@ document.addEventListener("DOMContentLoaded", function() {
         // User is not logged in, show Login and Registration buttons
         authLinks.forEach(link => {
             const authItem = document.createElement('li');
-            authItem.className = 'd-flex justify-content-center';
+            authItem.className = 'nav-item mt-2 mt-lg-0';
 
             const authLink = document.createElement('a');
             authLink.href = link.endpoint;
-            authLink.className = currentPath === link.endpoint ? 'btn btn-sm btn-info m-2' : 'btn btn-sm btn-primary m-2';
+            authLink.className = currentPath === link.endpoint
+                ? 'btn btn-sm btn-primary'
+                : 'btn btn-sm btn-outline-primary';
             authLink.textContent = link.text;
 
             authItem.appendChild(authLink);
