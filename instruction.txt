@@ -1,0 +1,113 @@
+# Ies_Monitoring — პროექტის მოკლე ინსტრუქცია
+
+## რას აკეთებს ეს პროექტი
+ეს არის Flask-ზე აგებული სეისმური მონიტორინგის სისტემა, რომელიც:
+- ინახავს მიწისძვრის ივენთებს ბაზაში
+- უშვებს ShakeMap გენერაციას SeisComP OID-ით
+- აჩვენებს გენერირებულ სურათებს (pga/pgv/intensity)
+- მართავს მომხმარებლებს, როლებს და ავტორიზაციას (JWT)
+
+---
+
+## მთავარი გვერდები (Frontend)
+- `/` — მთავარი გვერდი
+- `/shakemap` — ShakeMap ოპერაციები: ივენთების სია, regenerate, gallery
+- `/events` — ივენთების დამატება/დათვალიერება ცალკე გვერდზე
+- `/login` — ავტორიზაცია
+- `/change_password` — შიგნიდან პაროლის შეცვლა (JWT + ძველი პაროლი)
+- `/reset_password/<token>` — მეილიდან მოსული პაროლის აღდგენა (token flow)
+- `/accounts` — მომხმარებლებისა და როლების მართვა (უფლებებზე დამოკიდებული)
+
+---
+
+## API (მთავარი endpoint-ები)
+
+### ივენთები
+- `GET /api/events` — ივენთების სია
+- `POST /api/events` — ივენთის შექმნა/განახლება (`X-API-Key` სავალდებულოა)
+
+### ShakeMap
+- `POST /api/shakemap` — ShakeMap გაშვება (`seiscomp_oid`)
+  - ავტორიზაცია: ან `X-API-Key`, ან `Authorization: Bearer <JWT>`
+- `GET /api/shakemap/<seiscomp_oid>` — კონკრეტული ივენთის ShakeMap შედეგები (images + paths)
+- `GET /api/shakemap/<seiscomp_oid>/image/<image_type>` — კონკრეტული სურათის ფაილი
+
+### Auth
+- `POST /api/login` — login (აბრუნებს `access_token`, `refresh_token`, `permissions_token`)
+- `POST /api/refresh` — access token განახლება refresh token-ით
+- `POST /api/registration` — ახალი მომხმარებლის დამატება (მხოლოდ უფლებამოსილი user/admin)
+
+### Accounts / Password
+- `GET /api/user` — მიმდინარე user ინფორმაცია
+- `PUT /api/user/<uuid>` — საკუთარი პროფილის განახლება
+- `GET /api/accounts` — user list (role permission)
+- `PUT /api/accounts/<uuid>` — user role-ის შეცვლა
+- `GET/POST /api/roles` — როლების სია/დამატება
+- `GET/PUT /api/roles/<role_id>` — როლის ნახვა/რედაქტირება
+- `POST /api/request_reset_password` — reset ბმულის გაგზავნა ელფოსტაზე
+- `PUT /api/reset_password` — პაროლის reset token-ით
+- `PUT /api/change_password` — შიდა პაროლის შეცვლა (JWT + ძველი პაროლი)
+
+---
+
+## ავტორიზაციის ტიპები
+პროექტში 2 ტიპის დაცვა გამოიყენება:
+
+1. `ApiKeyAuth`
+- Header: `X-API-Key: <value>`
+- გამოიყენება შიდა/integration endpoint-ებზე
+
+2. `JsonWebToken`
+- Header: `Authorization: Bearer <access_token>`
+- გამოიყენება user/session/permission endpoint-ებზე
+
+Swagger-ში ორივე security სქემა აღწერილია (`/api`).
+
+---
+
+## კონფიგი (მნიშვნელოვანი ENV)
+- `SECRET_KEY`
+- `API_KEY`
+- `JWT_SECRET_KEY`  (აუცილებლად 32+ bytes, ძლიერი მნიშვნელობა)
+- `SHAKEMAP_BASE_PATH`
+- DB პარამეტრები (SQLite/MySQL გარემოზე დამოკიდებული)
+- MAIL პარამეტრები (reset password flow-სთვის)
+
+---
+
+## ძირითადი სამუშაო სცენარები
+
+### 1) ივენთის დამატება
+1. გადადი `/events`
+2. შეავსე ფორმა (Origin Time მიიღებს ISO ფორმატს, მაგალითად `2024-07-22T08:08:09.660000`)
+3. გაგზავნისას გამოიყენება `POST /api/events` + `X-API-Key`
+
+### 2) ShakeMap გენერაცია
+1. გადადი `/shakemap`
+2. ივენთთან დააჭირე regenerate აიქონს
+3. სისტემა გაუშვებს `POST /api/shakemap`
+4. წარმატებისას სტატუსი განახლდება
+
+### 3) Gallery ნახვა
+1. `/shakemap` გვერდზე დააჭირე gallery აიქონს
+2. იხსნება modal სურათებით
+3. სურათზე click -> სრულ ზომაზე ახალ tab-ში
+
+### 4) პაროლის შეცვლა
+- შიგნიდან: `/change_password` (ძველი პაროლის გადამოწმებით)
+- მეილიდან: `/reset_password/<token>` (token reset flow)
+
+---
+
+## Deployment მოკლედ
+- Dockerfile + docker-compose უკვე დევს პროექტში
+- სერვისები: Flask + Nginx + MySQL
+- ლოგები და მიგრაციები volume-ებით არის მიბმული
+
+---
+
+## შენიშვნა
+თუ API-ში ან Front-ში endpoint შეიცვალა, აუცილებელია:
+1) შესაბამის JS გამოძახებების განახლება  
+2) Swagger დოკის სინქრონიზაცია  
+3) ავტორიზაციის ტიპის (API key vs JWT) შესაბამისობის შემოწმება.
