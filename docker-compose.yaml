@@ -1,0 +1,64 @@
+services:
+  # Flask სერვისი
+  flask:
+    build: .  # Flask აპლიკაციის იმიჯი ეწყობა მიმდინარე დირექტორიიდან.
+    environment:
+      # გარემოს ცვლადები, რომლებიც საჭიროა Flask აპლიკაციისთვის.
+      MY_SECRET_KEY: ${MY_SECRET_KEY}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY}
+      API_KEY: ${API_KEY}
+      MYSQL_HOST: ${MYSQL_HOST}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      MAIL_SERVER: ${MAIL_SERVER}
+      MAIL_PORT: ${MAIL_PORT}
+      MAIL_USERNAME: ${MAIL_USERNAME}
+      MAIL_PASSWORD: ${MAIL_PASSWORD}
+    volumes:
+      - ./logs:/app/logs  # ლოგების ფაილების დირექტორია
+      - ./migrations:/app/migrations  # ბაზის მიგრაციის ფაილების დირექტორია
+    restart: always  # კონტეინერი ავტომატურად გადატვირთოს, თუ გათიშულია.
+    depends_on:
+      - db  # Flask სერვერი ელოდება, სანამ MySQL სერვერი ჩაირთვება.
+    networks:
+      - net  # სერვისის გაერთიანება იდენტურ ქსელში
+    deploy:
+      replicas: 2
+
+  # Nginx სერვისი, რომელიც მოქმედებს როგორც ლოუდ ბალანსერი და რევერს-პროსი.
+  nginx:
+    image: nginx:1.27.0-alpine # ოფიციალური NGINX იმიჯის ვერსია Docker Hub-დან
+    ports:
+      - "2021:80" # HTTP Port
+      - "2022:443"  # HTTPS პორტი
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro  # NGINX კონფიგურაციის ფაილი
+      - ./nginx/certs:/etc/nginx/certs:ro            # SSL სერთიფიკატები
+    restart: always  # კონტეინერი ავტომატურად გადატვირთოს, თუ გათიშულია.
+    depends_on:
+      - flask  # NGINX ელოდება, სანამ Flask სერვერი ჩაირთვება.
+    networks:
+      - net  # NGINX და Flask კონტეინერები საერთო ქსელში არიან.
+
+  # MySQL მონაცემთა ბაზის სერვისი
+  db:
+    image: mysql:8.2.0-alpine # ოფიციალური MySQL 8.2.0 იმიჯი Docker Hub-დან
+    environment:
+      # გარემოს ცვლადები მონაცემთა ბაზის კონფიგურაციისთვის.
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+    volumes:
+      - ./database:/var/lib/mysql  # მონაცემთა ბაზის მუდმივი შენახვა ადგილობრივ დირექტორიაში
+    ports:
+      - 3306:3306  # MySQL პორტი, რისი მეშვეობითაც შესაძლებელია კავშირის დამყარება.
+    restart: always  # ავტომატურად გადატვირთვა გათიშვისას.
+    networks:
+      - net  # MySQL დაკავშირებულია საერთო ქსელზე.
+
+# საერთო ქსელი სერვისებისთვის, რომელიც საშუალებას აძლევს მათ კომუნიკაცია მოახდინონ ერთმანეთთან.
+networks:
+  net:
+    driver: bridge  # Bridge ტიპის ქსელი, რომელიც გამოიყენება კონტეინერების იზოლაციისთვის.
