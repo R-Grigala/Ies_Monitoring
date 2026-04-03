@@ -1,0 +1,67 @@
+<div class="modal fade" id="editEventModal" tabindex="-1" aria-labelledby="editEventModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-fullscreen-sm-down">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="editEventModalLabel">მიწისძვრის რედაქტირება</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <form id="editEventForm" class="row g-3">
+          <div class="col-md-6">
+            <label for="editEventIdInput" class="form-label">Event ID *</label>
+            <input id="editEventIdInput" type="number" class="form-control" required>
+          </div>
+          <div class="col-md-6">
+            <label for="editSeiscompOidInput" class="form-label">SeisComP OID *</label>
+            <input id="editSeiscompOidInput" type="text" class="form-control" required>
+          </div>
+          <div class="col-md-6">
+            <label for="editOriginTimeInput" class="form-label">Origin Time (ISO 8601) *</label>
+            <input id="editOriginTimeInput" type="text" class="form-control" required>
+          </div>
+          <div class="col-md-6">
+            <label for="editOriginMsecInput" class="form-label">Origin msec</label>
+            <input id="editOriginMsecInput" type="number" class="form-control">
+          </div>
+          <div class="col-md-6">
+            <label for="editLatitudeInput" class="form-label">Latitude *</label>
+            <input id="editLatitudeInput" type="number" step="any" class="form-control" required>
+          </div>
+          <div class="col-md-6">
+            <label for="editLongitudeInput" class="form-label">Longitude *</label>
+            <input id="editLongitudeInput" type="number" step="any" class="form-control" required>
+          </div>
+          <div class="col-md-6">
+            <label for="editDepthInput" class="form-label">Depth (km) *</label>
+            <input id="editDepthInput" type="number" step="any" class="form-control" required>
+          </div>
+          <div class="col-md-6">
+            <label for="editMlInput" class="form-label">Magnitude (ML) *</label>
+            <input id="editMlInput" type="number" step="any" class="form-control" required>
+          </div>
+          <div class="col-md-4">
+            <label for="editRegionGeInput" class="form-label">Region GE</label>
+            <input id="editRegionGeInput" type="text" class="form-control">
+          </div>
+          <div class="col-md-4">
+            <label for="editRegionEnInput" class="form-label">Region EN</label>
+            <input id="editRegionEnInput" type="text" class="form-control">
+          </div>
+          <div class="col-md-4">
+            <label for="editAreaInput" class="form-label">Area</label>
+            <select id="editAreaInput" class="form-select">
+              <option value="">აირჩიე</option>
+              <option value="local">local</option>
+              <option value="regional">regional</option>
+              <option value="teleseismic">teleseismic</option>
+            </select>
+          </div>
+          <div class="col-12">
+            <button id="editEventSubmitBtn" type="submit" class="btn btn-primary">შენახვა</button>
+          </div>
+        </form>
+        <div id="editEventStatus" class="small mt-3 text-muted"></div>
+      </div>
+    </div>
+  </div>
+</div>

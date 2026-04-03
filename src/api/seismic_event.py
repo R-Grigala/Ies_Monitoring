@@ -60,7 +60,9 @@ class SeismicListAPI(Resource):
             exist_event.region_en = args.get('region_en')
             exist_event.area = args.get('area')
             exist_event.ml = args.get('ml')
-            exist_event.shakemap_calculated = args.get('shakemap_calculated') or False
+            # Keep current flag unless caller explicitly sends it.
+            if args.get('shakemap_calculated') is not None:
+                exist_event.shakemap_calculated = args.get('shakemap_calculated')
 
             exist_event.save()
             return {
@@ -88,3 +90,27 @@ class SeismicListAPI(Resource):
             return {
                 'message': f'Seismic event {new_event.event_id} created successfully'
             }, 201
+
+
+@event_ns.route('/events/<int:event_id>')
+@event_ns.doc(
+    responses={
+        200: 'OK',
+        401: 'Unauthorized',
+        404: 'Not Found'
+    }
+)
+class SeismicEventAPI(Resource):
+    @event_ns.doc(security='ApiKeyAuth', description='Delete a seismic event by event_id (requires X-API-Key)')
+    def delete(self, event_id):
+        """Delete seismic event by event_id (requires API key)"""
+        api_key = request.headers.get('X-API-Key')
+        if api_key != Config.API_KEY:
+            return {'error': 'Unauthorized - Invalid API key'}, 401
+
+        event = SeismicEvent.query.filter_by(event_id=event_id).first()
+        if not event:
+            return {'error': f'Seismic event {event_id} not found'}, 404
+
+        event.delete()
+        return {'message': f'Seismic event {event_id} deleted successfully'}, 200

@@ -1,0 +1,19 @@
+{% macro global_confirm_modal() %}
+<div class="modal fade" id="globalConfirmModal" tabindex="-1" aria-labelledby="globalConfirmModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="globalConfirmModalLabel">დადასტურება</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" id="globalConfirmModalMessage">
+                ნამდვილად გსურთ მოქმედების შესრულება?
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-light" id="globalConfirmModalCancelBtn" data-bs-dismiss="modal">გაუქმება</button>
+                <button type="button" class="btn btn-danger" id="globalConfirmModalConfirmBtn">დადასტურება</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endmacro %}

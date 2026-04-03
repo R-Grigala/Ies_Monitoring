@@ -1,3 +1,15 @@
+.app-shell,
+html,
+body {
+    height: 100%;
+}
+
+html,
+body {
+    margin: 0;
+    overflow: hidden;
+}
+
 .togglePassword {
     cursor: pointer;
     float: right;
@@ -6,5 +18,23 @@
     right: 10px;
     position: relative; 
     z-index: 2;
-    }
+}
+
+.alert-surface {
+    background-color: #eee;
+}
+
+.app-shell {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.app-content {
+    background-color: #eee;
+    font-size: small;
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+}
 
