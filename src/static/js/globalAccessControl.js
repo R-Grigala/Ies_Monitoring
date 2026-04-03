@@ -143,6 +143,57 @@ function closeModal(modalName) {
     }
 }
 
+function showConfirmModal({
+    title = 'დადასტურება',
+    message = 'ნამდვილად გსურთ მოქმედების შესრულება?',
+    confirmText = 'დადასტურება',
+    cancelText = 'გაუქმება',
+    confirmClass = 'btn-danger'
+} = {}) {
+    return new Promise((resolve) => {
+        const modalElement = document.getElementById('globalConfirmModal');
+        const titleElement = document.getElementById('globalConfirmModalLabel');
+        const messageElement = document.getElementById('globalConfirmModalMessage');
+        const confirmButton = document.getElementById('globalConfirmModalConfirmBtn');
+        const cancelButton = document.getElementById('globalConfirmModalCancelBtn');
+
+        if (!modalElement || !titleElement || !messageElement || !confirmButton || !cancelButton || typeof bootstrap === 'undefined') {
+            resolve(window.confirm(message));
+            return;
+        }
+
+        titleElement.textContent = title;
+        messageElement.textContent = message;
+        confirmButton.textContent = confirmText;
+        cancelButton.textContent = cancelText;
+        confirmButton.className = `btn ${confirmClass}`;
+
+        const modalInstance = bootstrap.Modal.getOrCreateInstance(modalElement);
+        let isResolved = false;
+
+        const onConfirm = () => {
+            if (isResolved) return;
+            isResolved = true;
+            confirmButton.removeEventListener('click', onConfirm);
+            modalElement.removeEventListener('hidden.bs.modal', onHidden);
+            modalInstance.hide();
+            resolve(true);
+        };
+
+        const onHidden = () => {
+            if (isResolved) return;
+            isResolved = true;
+            confirmButton.removeEventListener('click', onConfirm);
+            modalElement.removeEventListener('hidden.bs.modal', onHidden);
+            resolve(false);
+        };
+
+        confirmButton.addEventListener('click', onConfirm, { once: true });
+        modalElement.addEventListener('hidden.bs.modal', onHidden, { once: true });
+        modalInstance.show();
+    });
+}
+
 function getPermissions(){
     // Getting permissions token from local storage, decoding it and then returning them
     
@@ -150,6 +201,8 @@ function getPermissions(){
     const decodedPermissions = jwt_decode(encodedPermissions).sub;
     return decodedPermissions;
 }
+
+window.showConfirmModal = showConfirmModal;
 
 
 // The DOMContentLoaded event listener

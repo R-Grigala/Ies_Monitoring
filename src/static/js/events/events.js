@@ -1,8 +1,6 @@
 const eventsTableBody = document.getElementById("eventsTableBody");
 const eventsStatus = document.getElementById("eventsStatus");
-const addEventForm = document.getElementById("addEventForm");
-const addEventSubmitBtn = document.getElementById("addEventSubmitBtn");
-const addEventStatus = document.getElementById("addEventStatus");
+const eventsById = new Map();
 
 function escapeHtml(value) {
   const div = document.createElement("div");
@@ -13,7 +11,7 @@ function escapeHtml(value) {
 function getApiKey() {
   let apiKey = window.localStorage.getItem("ies_api_key");
   if (!apiKey) {
-    apiKey = window.prompt("შეიყვანე X-API-Key ივენთის დასამატებლად:");
+    apiKey = window.prompt("შეიყვანე X-API-Key:");
     if (apiKey) {
       window.localStorage.setItem("ies_api_key", apiKey);
     }
@@ -33,11 +31,44 @@ function renderEvents(events) {
     const bTime = new Date(b.origin_time || 0).getTime();
     return bTime - aTime;
   });
+  eventsById.clear();
+  sortedEvents.forEach((event) => eventsById.set(String(event.event_id), event));
+  window.eventsById = eventsById;
 
   eventsTableBody.innerHTML = sortedEvents
     .map(
       (event) => `
       <tr>
+        <td>
+          <div class="d-flex align-items-center gap-1">
+            <button
+              type="button"
+              class="btn btn-sm btn-outline-secondary edit-event-btn d-inline-flex align-items-center justify-content-center"
+              onclick="openEditEventModal('${escapeHtml(event.event_id)}')"
+              title="ივენთის რედაქტირება"
+              aria-label="ივენთის რედაქტირება"
+            >
+              <img
+                src="/static/img/pen-solid.svg"
+                alt="რედაქტირება"
+                style="width: 14px; height: 14px;"
+              >
+            </button>
+            <button
+              type="button"
+              class="btn btn-sm btn-outline-danger d-inline-flex align-items-center justify-content-center"
+              onclick="deleteEvent('${escapeHtml(event.event_id)}')"
+              title="ივენთის წაშლა"
+              aria-label="ივენთის წაშლა"
+            >
+              <img
+                src="/static/img/trash-solid.svg"
+                alt="წაშლა"
+                style="width: 14px; height: 14px;"
+              >
+            </button>
+          </div>
+        </td>
         <td>${escapeHtml(event.event_id)}</td>
         <td>${escapeHtml(event.seiscomp_oid)}</td>
         <td>${escapeHtml(event.origin_time)}</td>
@@ -76,66 +107,8 @@ async function loadEvents() {
     eventsStatus.textContent = "მოთხოვნა ჩავარდა ივენთების ჩატვირთვისას.";
   }
 }
+window.escapeHtml = escapeHtml;
+window.getApiKey = getApiKey;
+window.loadEvents = loadEvents;
 
-async function createEvent(event) {
-  event.preventDefault();
-
-  const apiKey = getApiKey();
-  if (!apiKey) {
-    addEventStatus.textContent = "API key აუცილებელია ივენთის დასამატებლად.";
-    addEventStatus.className = "small mt-3 text-danger";
-    return;
-  }
-
-  const payload = {
-    event_id: Number(document.getElementById("eventIdInput").value),
-    seiscomp_oid: document.getElementById("seiscompOidInput").value.trim(),
-    origin_time: document.getElementById("originTimeInput").value.trim(),
-    origin_msec: document.getElementById("originMsecInput").value
-      ? Number(document.getElementById("originMsecInput").value)
-      : null,
-    latitude: Number(document.getElementById("latitudeInput").value),
-    longitude: Number(document.getElementById("longitudeInput").value),
-    depth: Number(document.getElementById("depthInput").value),
-    region_ge: document.getElementById("regionGeInput").value.trim() || null,
-    region_en: document.getElementById("regionEnInput").value.trim() || null,
-    area: document.getElementById("areaInput").value.trim() || null,
-    ml: Number(document.getElementById("mlInput").value),
-  };
-
-  addEventSubmitBtn.disabled = true;
-  addEventStatus.textContent = "ივენთის დამატება მიმდინარეობს...";
-  addEventStatus.className = "small mt-3 text-muted";
-
-  try {
-    const response = await fetch("/api/events", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        accept: "application/json",
-        "X-API-Key": apiKey,
-      },
-      body: JSON.stringify(payload),
-    });
-    const data = await response.json();
-
-    if (!response.ok) {
-      addEventStatus.textContent = data.error || "ივენთის დამატება ვერ მოხერხდა.";
-      addEventStatus.className = "small mt-3 text-danger";
-      return;
-    }
-
-    addEventStatus.textContent = data.message || "ივენთი წარმატებით დაემატა.";
-    addEventStatus.className = "small mt-3 text-success";
-    addEventForm.reset();
-    await loadEvents();
-  } catch {
-    addEventStatus.textContent = "მოთხოვნა ჩავარდა ივენთის დამატებისას.";
-    addEventStatus.className = "small mt-3 text-danger";
-  } finally {
-    addEventSubmitBtn.disabled = false;
-  }
-}
-
-addEventForm.addEventListener("submit", createEvent);
-loadEvents();
+document.addEventListener("DOMContentLoaded", loadEvents);
