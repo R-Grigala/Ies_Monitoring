@@ -186,11 +186,11 @@ async function openGallery(seiscompOid) {
   }
 }
 
-// ივენთების ცხრილის რენდერი და ზედა სტატუსების განახლება.
+// მიწისძვრების ცხრილის რენდერი და ზედა სტატუსების განახლება.
 function renderEvents(events) {
   if (!Array.isArray(events) || events.length === 0) {
     eventsTableBody.innerHTML = "";
-    eventsStatus.textContent = "ივენთები ვერ მოიძებნა.";
+    eventsStatus.textContent = "მიწისძვრები ვერ მოიძებნა.";
     totalEvents.textContent = "0";
     lastUpdated.textContent = "—";
     return;
@@ -245,7 +245,7 @@ function renderEvents(events) {
     )
     .join("");
 
-  eventsStatus.textContent = `ჩაიტვირთა ${sortedEvents.length} ივენთი.`;
+  eventsStatus.textContent = `ჩაიტვირთა ${sortedEvents.length} მიწისძვრა.`;
   totalEvents.textContent = String(sortedEvents.length);
   lastUpdated.textContent = getLatestCreatedAt(sortedEvents);
   bindGalleryButtons();
@@ -254,7 +254,7 @@ function renderEvents(events) {
 
 // /api/events-დან მონაცემების წამოღება და UI-ის განახლება.
 async function loadEvents() {
-  eventsStatus.textContent = "ივენთები იტვირთება...";
+  eventsStatus.textContent = "მიწისძვრები იტვირთება...";
 
   try {
     const response = await fetch("/api/events", {
@@ -265,7 +265,7 @@ async function loadEvents() {
 
     if (!response.ok) {
       eventsTableBody.innerHTML = "";
-      eventsStatus.textContent = payload.error || "ივენთების ჩატვირთვა ვერ მოხერხდა.";
+      eventsStatus.textContent = payload.error || "მიწისძვრების ჩატვირთვა ვერ მოხერხდა.";
       totalEvents.textContent = "—";
       lastUpdated.textContent = "—";
       return;
@@ -274,7 +274,7 @@ async function loadEvents() {
     renderEvents(payload);
   } catch (error) {
     eventsTableBody.innerHTML = "";
-    eventsStatus.textContent = "მოთხოვნა ჩავარდა ივენთების ჩატვირთვისას.";
+    eventsStatus.textContent = "მოთხოვნა ჩავარდა მიწისძვრების ჩატვირთვისას.";
     totalEvents.textContent = "—";
     lastUpdated.textContent = "—";
   }
