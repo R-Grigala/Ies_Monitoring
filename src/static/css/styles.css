@@ -38,3 +38,17 @@ body {
     overflow-y: auto;
 }
 
+.events-map-card #map {
+    width: 100%;
+    min-height: 360px;
+    height: 100%;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+}
+
+@media (min-width: 1200px) {
+    .events-map-card #map {
+        min-height: 430px;
+    }
+}
+
