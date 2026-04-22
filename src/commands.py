@@ -41,7 +41,7 @@ def populate_db_core():
         region_en="City Oni - South-East - 8km. Village Iri.",
         area="local",
         ml=5.33,
-        shakemap_calculated=False,
+        shakemap_status="pending",
     )
     new_event.create()
 

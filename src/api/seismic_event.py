@@ -71,9 +71,9 @@ class SeismicListAPI(Resource):
             exist_event.region_en = args.get('region_en')
             exist_event.area = args.get('area')
             exist_event.ml = args.get('ml')
-            # მიმდინარე flag უცვლელი რჩება, თუ მომწოდებელმა კონკრეტულად არ გამოგზავნა.
-            if args.get('shakemap_calculated') is not None:
-                exist_event.shakemap_calculated = args.get('shakemap_calculated')
+            # მიმდინარე სტატუსი უცვლელი რჩება, თუ მომწოდებელმა კონკრეტულად არ გამოგზავნა.
+            if args.get('shakemap_status') is not None:
+                exist_event.shakemap_status = args.get('shakemap_status')
 
             exist_event.save()
             logger.info("Event updated: event_id=%s", exist_event.event_id)
@@ -95,7 +95,7 @@ class SeismicListAPI(Resource):
                 region_en=args.get('region_en'),
                 area=args.get('area'),
                 ml=args.get('ml'),
-                shakemap_calculated=args.get('shakemap_calculated') or False
+                shakemap_status=args.get('shakemap_status') or "pending",
             )
             new_event.create()
             logger.info("Event created: event_id=%s", new_event.event_id)

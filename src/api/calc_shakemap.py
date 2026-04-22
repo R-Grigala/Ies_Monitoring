@@ -82,6 +82,10 @@ class RunShakeMap(Resource):
                 logger.info("ShakeMap run failed: seiscomp_oid=%s not found", seiscomp_oid)
                 return {"error": f"მოვლენა ვერ მოიძებნა: {seiscomp_oid}"}, 404
 
+            # --- მიმდინარე დათვლა დაიწყო ---
+            event.shakemap_status = "running"
+            event.save()
+
             parsed_data = {
                 "event_id": event.event_id,
                 "time": event.origin_time.isoformat(),
@@ -94,8 +98,8 @@ class RunShakeMap(Resource):
 
             # --- ShakeMap worker-ის გაშვება ---
             result = run_shakemap_worker(parsed_data)
-            # --- მოვლენის shakemap_calculated სტატუსის განახლება ---
-            event.shakemap_calculated = True
+            # --- წარმატებული დათვლის შემდეგ სტატუსის განახლება ---
+            event.shakemap_status = "generated"
             # --- მოვლენის შენახვა ---
             event.save()
             logger.info(
@@ -106,9 +110,17 @@ class RunShakeMap(Resource):
             # --- შედეგის დაბრუნება ---
             return result, 200
         except ValueError as e:
+            event = SeismicEvent.query.filter_by(seiscomp_oid=seiscomp_oid).first()
+            if event:
+                event.shakemap_status = "failed"
+                event.save()
             logger.info("ShakeMap run failed: seiscomp_oid=%s value error=%s", seiscomp_oid, e)
             return {"error": str(e)}, 404
         except Exception as e:
+            event = SeismicEvent.query.filter_by(seiscomp_oid=seiscomp_oid).first()
+            if event:
+                event.shakemap_status = "failed"
+                event.save()
             logger.exception("ShakeMap run exception: seiscomp_oid=%s", seiscomp_oid)
             return {
                 "status": "წარუმატებელია",

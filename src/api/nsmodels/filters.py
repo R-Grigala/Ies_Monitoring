@@ -19,7 +19,10 @@ filter_model = api.model(
         'region_en': fields.String(description='Region EN'),
         'area': fields.String(description='Area name'),
         'ml': fields.Float(required=True, description='Local Magnitude (ML)'),
-        'shakemap_calculated': fields.Boolean(description='Whether ShakeMap is calculated'),
+        'shakemap_status': fields.String(
+            description='ShakeMap status (pending/running/generated/failed)',
+            enum=['pending', 'running', 'generated', 'failed'],
+        ),
         'created_at': fields.DateTime(description='Record creation timestamp (UTC)')
     },
 )
@@ -54,9 +57,10 @@ filter_parser.add_argument(
     help="End datetime (ISO 8601) or date (YYYY-MM-DD)",
 )
 filter_parser.add_argument(
-    "shakemap_calculated",
-    type=bool,
+    "shakemap_status",
+    type=str,
     required=False,
     location="args",
-    help="ShakeMap calculation status (true/false)",
+    choices=("pending", "running", "generated", "failed"),
+    help="ShakeMap სტატუსი: pending, running, generated ან failed",
 )
