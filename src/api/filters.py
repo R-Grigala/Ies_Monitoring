@@ -8,7 +8,7 @@ from sqlalchemy import and_
 from src.api.nsmodels import filter_ns, filter_parser, filter_model
 from src.models import SeismicEvent
 
-logger = logging.getLogger("app.api")
+logger = logging.getLogger("app.filters")
 
 
 @filter_ns.route('/filter_event')
@@ -34,6 +34,7 @@ class FilterEventAPI(Resource):
         depth_max = args.get("depth_max")
         start_time = args.get("start_time")
         end_time = args.get("end_time")
+        shakemap_status = args.get("shakemap_status")
 
         event_query = SeismicEvent.query
 
@@ -86,12 +87,12 @@ class FilterEventAPI(Resource):
         elif ml_max:
             event_query = event_query.filter(SeismicEvent.ml <= ml_max)
 
+        # ShakeMap სტატუსის ფილტრი (თუ გადმოიცა)
+        if shakemap_status:
+            event_query = event_query.filter(SeismicEvent.shakemap_status == shakemap_status)
+
         # ვიღებთ გაფილტრულ მოვლენებს.
         filtered_events = event_query.all()
-
-        # თითოეულ მოვლენაზე shakemap_calculated ველისთვის bool მნიშვნელობას ვინარჩუნებთ.
-        for event in filtered_events:
-            event.shakemap_calculated = True if event.shakemap_calculated else False
 
         logger.info(
             "Filter events success: result_count=%s filters=%s",

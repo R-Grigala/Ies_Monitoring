@@ -31,6 +31,20 @@ function getLatestCreatedAt(events) {
   return latest.toLocaleString();
 }
 
+// ShakeMap სტატუსის ვიზუალური წარმოდგენა ცხრილში.
+function buildShakeMapStatusBadge(status) {
+  switch (status) {
+    case "generated":
+      return '<span class="badge text-bg-success" title="დათვლილია">generated</span>';
+    case "running":
+      return '<span class="badge text-bg-warning text-dark" title="მიმდინარეობს"><i class="fas fa-spinner fa-spin me-1"></i>running</span>';
+    case "failed":
+      return '<span class="badge text-bg-danger" title="შეცდომა">failed</span>';
+    default:
+      return '<span class="badge text-bg-secondary" title="მოლოდინში">pending</span>';
+  }
+}
+
 // გალერეის ღილაკებზე handler-ების მიბმა.
 function bindGalleryButtons() {
   const buttons = document.querySelectorAll(".open-gallery-btn");
@@ -230,17 +244,13 @@ function renderEvents(events) {
       (event) => `
       <tr>
         <td>
-          ${
-            event.shakemap_calculated
-              ? '<span class="badge text-bg-success" title="დათვლილია">✓</span>'
-              : '<span class="badge text-bg-danger" title="არ არის დათვლილი">✗</span>'
-          }
+          ${buildShakeMapStatusBadge(event.shakemap_status)}
           <button
             type="button"
             class="btn btn-sm btn-outline-warning ms-2 regenerate-shakemap-btn"
             data-seiscomp-oid="${escapeHtml(event.seiscomp_oid || "")}"
             title="ხელახლა გენერაცია"
-            ${event.seiscomp_oid ? "" : "disabled"}
+            ${event.seiscomp_oid && event.shakemap_status !== "running" ? "" : "disabled"}
           >
             <i class="fas fa-rotate-right"></i>
           </button>
