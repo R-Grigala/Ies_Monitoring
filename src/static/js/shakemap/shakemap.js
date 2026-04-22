@@ -31,6 +31,20 @@ function getLatestCreatedAt(events) {
   return latest.toLocaleString();
 }
 
+// ShakeMap სტატუსის ვიზუალური წარმოდგენა ცხრილში.
+function buildShakeMapStatusBadge(status) {
+  switch (status) {
+    case "generated":
+      return '<span class="badge text-bg-success" title="დათვლილია">generated</span>';
+    case "running":
+      return '<span class="badge text-bg-warning text-dark" title="მიმდინარეობს"><i class="fas fa-spinner fa-spin me-1"></i>running</span>';
+    case "failed":
+      return '<span class="badge text-bg-danger" title="შეცდომა">failed</span>';
+    default:
+      return '<span class="badge text-bg-secondary" title="მოლოდინში">pending</span>';
+  }
+}
+
 // გალერეის ღილაკებზე handler-ების მიბმა.
 function bindGalleryButtons() {
   const buttons = document.querySelectorAll(".open-gallery-btn");
@@ -71,10 +85,15 @@ async function regenerateShakeMap(button) {
     return;
   }
 
-  const apiKey = getApiKey();
-  if (!apiKey) {
-    eventsStatus.textContent = "API key აუცილებელია რეგენერაციისთვის.";
-    return;
+  const accessToken = window.localStorage.getItem("access_token");
+  let apiKey = null;
+  // თუ JWT ავტორიზაცია არსებობს, API key აღარ არის სავალდებულო.
+  if (!accessToken) {
+    apiKey = getApiKey();
+    if (!apiKey) {
+      eventsStatus.textContent = "რეგენერაციისთვის საჭიროა ავტორიზაცია ან API key.";
+      return;
+    }
   }
 
   button.disabled = true;
@@ -82,19 +101,37 @@ async function regenerateShakeMap(button) {
   eventsStatus.textContent = `ShakeMap გენერაცია დაიწყო (${seiscompOid})...`;
 
   try {
-    const response = await fetch("/api/shakemap", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-API-Key": apiKey,
-      },
-      body: JSON.stringify({ seiscomp_oid: seiscompOid }),
-    });
-    const payload = await response.json();
+    const requestHeaders = {
+      "Content-Type": "application/json",
+      accept: "application/json",
+    };
+    if (apiKey) {
+      requestHeaders["X-API-Key"] = apiKey;
+    }
 
-    if (!response.ok) {
-      eventsStatus.textContent = payload.error || "ShakeMap გენერაცია ვერ მოხერხდა.";
-      return;
+    let payload;
+    if (accessToken && typeof window.makeApiRequest === "function") {
+      payload = await window.makeApiRequest("/api/shakemap", {
+        method: "POST",
+        headers: requestHeaders,
+        body: JSON.stringify({ seiscomp_oid: seiscompOid }),
+      });
+      if (!payload || payload.error) {
+        eventsStatus.textContent = payload?.error || "ShakeMap გენერაცია ვერ მოხერხდა.";
+        return;
+      }
+    } else {
+      const response = await fetch("/api/shakemap", {
+        method: "POST",
+        headers: requestHeaders,
+        body: JSON.stringify({ seiscomp_oid: seiscompOid }),
+      });
+      payload = await response.json();
+
+      if (!response.ok) {
+        eventsStatus.textContent = payload.error || "ShakeMap გენერაცია ვერ მოხერხდა.";
+        return;
+      }
     }
 
     eventsStatus.textContent = `ShakeMap წარმატებით დაგენერირდა (${seiscompOid}).`;
@@ -207,17 +244,13 @@ function renderEvents(events) {
       (event) => `
       <tr>
         <td>
-          ${
-            event.shakemap_calculated
-              ? '<span class="badge text-bg-success" title="დათვლილია">✓</span>'
-              : '<span class="badge text-bg-danger" title="არ არის დათვლილი">✗</span>'
-          }
+          ${buildShakeMapStatusBadge(event.shakemap_status)}
           <button
             type="button"
             class="btn btn-sm btn-outline-warning ms-2 regenerate-shakemap-btn"
             data-seiscomp-oid="${escapeHtml(event.seiscomp_oid || "")}"
             title="ხელახლა გენერაცია"
-            ${event.seiscomp_oid ? "" : "disabled"}
+            ${event.seiscomp_oid && event.shakemap_status !== "running" ? "" : "disabled"}
           >
             <i class="fas fa-rotate-right"></i>
           </button>
