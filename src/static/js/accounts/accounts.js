@@ -45,6 +45,7 @@ function populateTable(accounts) {
             <td>${role.is_admin ? 'Yes' : 'No'}</td>
             <td>${role.can_users ? 'Yes' : 'No'}</td>
             <td>${role.can_shakemap ? 'Yes' : 'No'}</td>
+            <td>${role.can_events ? 'Yes' : 'No'}</td>
             <td><button class="btn btn-info btn-sm" onclick="populateEditRoleModal(${role.id})">Edit Role</button></td>
         `;
         tbody.appendChild(row);
