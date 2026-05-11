@@ -16,6 +16,7 @@ function populateEditRoleModal(roleId) {
         document.getElementById('editIsAdmin').checked = role.is_admin;
         document.getElementById('editCanUsers').checked = role.can_users;
         document.getElementById('editCanShakemap').checked = role.can_shakemap;
+        document.getElementById('editCanEvents').checked = role.can_events;
 
         // Show the modal
         const editRoleModal = new bootstrap.Modal(document.getElementById('editRoleModal'));
@@ -40,7 +41,8 @@ function submitEditRoleForm() {
         name: formData.get('name'),
         is_admin: formData.get('is_admin') === 'on',
         can_users: formData.get('can_users') === 'on',
-        can_shakemap: formData.get('can_shakemap') === 'on'
+        can_shakemap: formData.get('can_shakemap') === 'on',
+        can_events: formData.get('can_events') === 'on'
     };
 
     makeApiRequest(`/api/roles/${roleId}`, {
