@@ -42,36 +42,50 @@ function filterEventForm(event) {
     const query = buildFilterQuery();
     const url = query ? `/api/filter_event?${query}` : "/api/filter_event";
 
-    makeApiRequest(url, {
+    fetch(url, {
         method: "POST",
         headers: {
             accept: "application/json",
         },
     })
-    .then((data) => {
-        if (!Array.isArray(data)) {
+        .then(async (response) => {
+            let data = null;
+            try {
+                data = await response.json();
+            } catch (error) {
+                data = null;
+            }
+
+            if (!response.ok) {
+                return { error: data?.error || "ფილტრაცია ვერ შესრულდა." };
+            }
+
+            return data;
+        })
+        .then((data) => {
+            if (!Array.isArray(data)) {
+                if (window.renderEventsAndMap) window.renderEventsAndMap([]);
+                if (filterStatus) {
+                    filterStatus.textContent = data?.error || "ფილტრაცია ვერ შესრულდა.";
+                }
+                return;
+            }
+
+            if (window.renderEventsAndMap) {
+                window.renderEventsAndMap(data);
+            }
+
+            if (filterStatus) {
+                filterStatus.textContent = `გაფილტრულია ${data.length} მიწისძვრა.`;
+            }
+        })
+        .catch((error) => {
+            console.error("Error fetching filtered events:", error);
             if (window.renderEventsAndMap) window.renderEventsAndMap([]);
             if (filterStatus) {
-                filterStatus.textContent = data?.error || "ფილტრაცია ვერ შესრულდა.";
+                filterStatus.textContent = "ფილტრაციის მოთხოვნა ჩავარდა.";
             }
-            return;
-        }
-
-        if (window.renderEventsAndMap) {
-            window.renderEventsAndMap(data);
-        }
-
-        if (filterStatus) {
-            filterStatus.textContent = `გაფილტრულია ${data.length} მიწისძვრა.`;
-        }
-    })
-    .catch((error) => {
-        console.error("Error fetching filtered events:", error);
-        if (window.renderEventsAndMap) window.renderEventsAndMap([]);
-        if (filterStatus) {
-            filterStatus.textContent = "ფილტრაციის მოთხოვნა ჩავარდა.";
-        }
-    });
+        });
 
     return false;
 }
