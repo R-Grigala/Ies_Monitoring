@@ -22,6 +22,9 @@ function buildCreateEventPayload() {
 
 async function createEvent(event) {
   event.preventDefault();
+  if (typeof window.requireEventsAuth === "function" && !window.requireEventsAuth("მიწისძვრის დამატება")) {
+    return;
+  }
 
   const payload = buildCreateEventPayload();
   addEventSubmitBtn.disabled = true;

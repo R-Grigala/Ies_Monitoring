@@ -23,6 +23,9 @@ function buildEditEventPayload() {
 }
 
 window.openEditEventModal = function openEditEventModal(eventId) {
+  if (typeof window.requireEventsAuth === "function" && !window.requireEventsAuth("ივენთის რედაქტირება")) {
+    return;
+  }
   const eventMap = window.eventsById;
   const event = eventMap?.get(String(eventId));
   if (!event || !editEventModal) {
