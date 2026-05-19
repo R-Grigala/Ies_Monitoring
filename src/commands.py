@@ -45,7 +45,7 @@ def populate_db_core():
     new_event.create()
 
     click.echo("Creating Role")
-    role = Role(name="Admin", is_admin=True, can_users=True, can_shakemap=True)
+    role = Role(name="Admin", is_admin=True, can_users=True, can_shakemap=True, can_events=True)
     role.create()
     role = Role(name="User")
     role.create()

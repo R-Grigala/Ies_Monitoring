@@ -1,8 +1,10 @@
 import uuid
 from datetime import datetime
 from werkzeug.security import generate_password_hash, check_password_hash
+from sqlalchemy.orm import validates
 from src.extensions import db
 from src.models.base import BaseModel
+from src.utils.validators import normalize_email
 
 # User-თან დაკავშირებული relationship-ები
 class User(db.Model, BaseModel):
@@ -40,6 +42,10 @@ class User(db.Model, BaseModel):
             permission_attr = getattr(self.role, permission_name, None)
             return permission_attr is True
         return False
+
+    @validates("email")
+    def validate_and_normalize_email(self, key, email):
+        return normalize_email(email)
 
     def __repr__(self):
         return f"<User {self.name} ({self.email})>"

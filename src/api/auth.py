@@ -5,7 +5,7 @@ from flask_jwt_extended import create_access_token, create_refresh_token, jwt_re
 
 from src.models import User, Role
 from src.api.nsmodels import auth_ns, registration_parser, auth_parser
-from src.services import validate_password
+from src.utils import validate_password, normalize_email
 
 logger = logging.getLogger("app.auth")
 
@@ -25,37 +25,42 @@ class RegistrationApi(Resource):
 
 
         args = registration_parser.parse_args()
+        try:
+            normalized_email = normalize_email(args["email"])
+        except ValueError as err:
+            logger.info("Registration failed: invalid email format")
+            return {"error": str(err)}, 400
 
         # ვამოწმებთ, ემთხვევა თუ არა პაროლის წესებს და განმეორებით შეყვანას.
         if args["password"] != args["passwordRepeat"]:
-            logger.info("Registration failed: email=%s password mismatch", args["email"])
+            logger.info("Registration failed: email=%s password mismatch", normalized_email)
             return {"error": "პაროლები არ ემთხვევა."}, 400
 
         try:
             validate_password(args["password"])
         except ValueError as err:
-            logger.info("Registration failed: email=%s password policy error", args["email"])
+            logger.info("Registration failed: email=%s password policy error", normalized_email)
             return {"error": str(err)}, 400
 
-        if User.query.filter_by(email=args["email"]).first():
-            logger.info("Registration failed: email=%s already exists", args["email"])
+        if User.query.filter_by(email=normalized_email).first():
+            logger.info("Registration failed: email=%s already exists", normalized_email)
             return {"error": "ელ.ფოსტის მისამართი უკვე რეგისტრირებულია."}, 400
 
         role = Role.query.filter_by(name=args["role_name"]).first()
         if not role:
-            logger.info("Registration failed: email=%s role not found=%s", args["email"], args["role_name"])
+            logger.info("Registration failed: email=%s role not found=%s", normalized_email, args["role_name"])
             return {"error": "როლი ვერ მოიძებნა."}, 400
 
         new_user = User(
             name=args["name"],
             lastname=args["lastname"],
-            email=args["email"],
+            email=normalized_email,
             password=args["password"],
             role_id=role.id
         )
 
         new_user.create()
-        logger.info("Registration success: email=%s role=%s", args["email"], role.name)
+        logger.info("Registration success: email=%s role=%s", normalized_email, role.name)
 
         return {"message": "მომხმარებელი წარმატებით დარეგისტრირდა."}, 200
     
@@ -65,11 +70,16 @@ class AuthorizationApi(Resource):
     @auth_ns.doc(parser=auth_parser)
     def post(self):
         args = auth_parser.parse_args()
+        try:
+            normalized_email = normalize_email(args["email"])
+        except ValueError:
+            logger.info("Login failed: invalid email format")
+            return {"error": "შეყვანილი პაროლი ან ელ.ფოსტა არასწორია."}, 400
 
         # მომხმარებელს ვეძებთ ელფოსტის მიხედვით.
-        user = User.query.filter_by(email=args["email"]).first()
+        user = User.query.filter_by(email=normalized_email).first()
         if not user:
-            logger.info("Login failed: email=%s user not found", args["email"])
+            logger.info("Login failed: email=%s user not found", normalized_email)
             return {"error": "შეყვანილი პაროლი ან ელ.ფოსტა არასწორია."}, 400
 
         # ვამოწმებთ, ემთხვევა თუ არა პაროლი.
@@ -97,7 +107,7 @@ class AuthorizationApi(Resource):
         
         # თუ პაროლი არასწორია, ვაბრუნებთ ავტორიზაციის შეცდომას.
         else:
-            logger.info("Login failed: email=%s invalid password", args["email"])
+            logger.info("Login failed: email=%s invalid password", normalized_email)
             return {"error": "შეყვანილი პაროლი ან ელ.ფოსტა არასწორია."}, 400
 
 @auth_ns.route('/refresh')

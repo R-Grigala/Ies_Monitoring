@@ -1,4 +1,5 @@
 from string import ascii_lowercase, ascii_uppercase, digits, punctuation
+import re
 
 
 def validate_password(password: str) -> None:
@@ -30,3 +31,40 @@ def validate_password(password: str) -> None:
         raise ValueError("პაროლი უნდა შეიცავდეს მინიმუმ ერთ პატარა ასოს.")
     if not contains_digits:
         raise ValueError("პაროლი უნდა შეიცავდეს მინიმუმ ერთ ციფრს.")
+
+
+def normalize_ge_phone(phone: str) -> str:
+    """
+    Validate and normalize Georgian phone number to E.164: +9955XXXXXXXX.
+    - Must start with +995
+    - Remaining part must be digits only
+    """
+    if not isinstance(phone, str) or not phone.strip():
+        raise ValueError("ტელეფონის ნომერი სავალდებულოა.")
+
+    # Basic cleanup for user input convenience.
+    normalized = phone.strip().replace(" ", "").replace("-", "").replace("(", "").replace(")", "")
+    if not normalized.startswith("+995"):
+        raise ValueError("ტელეფონის ნომერი უნდა იწყებოდეს +995-ით.")
+
+    local = normalized[4:]
+    if not local.isdigit():
+        raise ValueError("ტელეფონის ნომრის +995-ის შემდეგ ნაწილი უნდა იყოს მხოლოდ ციფრები.")
+
+    if len(local) != 9 or not local.startswith("5"):
+        raise ValueError("ტელეფონის ნომერი უნდა იყოს ფორმატში: +9955XXXXXXXX.")
+
+    return f"+995{local}"
+
+
+def normalize_email(email: str) -> str:
+    """Validate and normalize email value."""
+    if not isinstance(email, str) or not email.strip():
+        raise ValueError("ელ.ფოსტა სავალდებულოა.")
+
+    normalized = email.strip().lower()
+    email_pattern = r"^[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}$"
+    if not re.fullmatch(email_pattern, normalized):
+        raise ValueError("ელ.ფოსტის ფორმატი არასწორია.")
+
+    return normalized

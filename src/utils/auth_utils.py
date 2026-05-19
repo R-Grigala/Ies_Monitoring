@@ -31,9 +31,6 @@ def have_permission(permission):
         if not user:
             return False
 
-        if user.check_permission(permission):
-            return True
-
-        return False, {"error": "არ გაქვს უფლება (can_events)."}, 403
+        return bool(user.check_permission(permission))
     except Exception:
         return False

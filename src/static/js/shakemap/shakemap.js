@@ -101,7 +101,7 @@ function getApiKey() {
 async function regenerateShakeMap(button) {
   const seiscompOid = button.dataset.seiscompOid;
   if (!seiscompOid) {
-    eventsStatus.textContent = "SeisComP OID არ არის მითითებული.";
+    showAlert("alertPlaceholder", "danger", "SeisComP OID არ არის მითითებული.");
     return;
   }
 
@@ -111,7 +111,7 @@ async function regenerateShakeMap(button) {
   if (!accessToken) {
     apiKey = getApiKey();
     if (!apiKey) {
-      eventsStatus.textContent = "რეგენერაციისთვის საჭიროა ავტორიზაცია ან API key.";
+      showAlert("alertPlaceholder", "danger", "რეგენერაციისთვის საჭიროა ავტორიზაცია ან API key.");
       return;
     }
   }
@@ -119,6 +119,7 @@ async function regenerateShakeMap(button) {
   button.disabled = true;
   button.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
   eventsStatus.textContent = `ShakeMap გენერაცია დაიწყო (${seiscompOid})...`;
+  let statusMessageOverride = null;
 
   try {
     const requestHeaders = {
@@ -137,7 +138,8 @@ async function regenerateShakeMap(button) {
         body: JSON.stringify({ seiscomp_oid: seiscompOid }),
       });
       if (!payload || payload.error) {
-        eventsStatus.textContent = payload?.error || "ShakeMap გენერაცია ვერ მოხერხდა.";
+        statusMessageOverride = payload?.error || "ShakeMap გენერაცია ვერ მოხერხდა.";
+        showAlert("alertPlaceholder", "danger", statusMessageOverride);
         return;
       }
     } else {
@@ -149,20 +151,25 @@ async function regenerateShakeMap(button) {
       payload = await response.json();
 
       if (!response.ok) {
-        eventsStatus.textContent = payload.error || "ShakeMap გენერაცია ვერ მოხერხდა.";
+        statusMessageOverride = payload.error || "ShakeMap გენერაცია ვერ მოხერხდა.";
+        showAlert("alertPlaceholder", "danger", statusMessageOverride);
         return;
       }
     }
 
-    eventsStatus.textContent = payload?.message || `ShakeMap დათვლა რიგში ჩაეშვა (${seiscompOid}).`;
+    showAlert("alertPlaceholder", "success", payload?.message || `ShakeMap დათვლა რიგში ჩაეშვა (${seiscompOid}).`);
     await loadEvents();
   } catch (error) {
-    eventsStatus.textContent = "მოთხოვნა ჩავარდა ShakeMap გენერაციისას.";
+    statusMessageOverride = "მოთხოვნა ჩავარდა ShakeMap გენერაციისას.";
+    showAlert("alertPlaceholder", "danger", statusMessageOverride);
   } finally {
     button.disabled = false;
     button.innerHTML = '<i class="fas fa-rotate-right"></i>';
     // ოპერაციის შედეგის მიუხედავად ვაახლებთ სიას, რომ running -> generated/failed გადმოვიდეს.
     await loadEvents();
+    if (statusMessageOverride) {
+      eventsStatus.textContent = statusMessageOverride;
+    }
   }
 }
 
@@ -329,7 +336,7 @@ async function loadEvents() {
 
     if (!response.ok) {
       eventsTableBody.innerHTML = "";
-      eventsStatus.textContent = payload.error || "ივენთების ჩატვირთვა ვერ მოხერხდა.";
+      showAlert("alertPlaceholder", "danger", payload.error || "ივენთების ჩატვირთვა ვერ მოხერხდა.");
       totalEvents.textContent = "—";
       lastUpdated.textContent = "—";
       return;

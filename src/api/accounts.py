@@ -7,7 +7,7 @@ from flask import request
 from src.models import User, Role
 from src.api.nsmodels import accounts_ns, user_model, user_parser, accounts_model, accounts_parser, roles_model, roles_parser, password_reset_parser, request_password_reset_parser, change_password_parser
 from src.services import mail, url_serializer
-from src.services import validate_password
+from src.utils import validate_password
 
 from datetime import datetime, timedelta
 
