@@ -9,6 +9,64 @@ const galleryModal = galleryModalElement ? new bootstrap.Modal(galleryModalEleme
 const STATUS_POLL_INTERVAL_MS = 4000;
 let statusPollTimer = null;
 
+function requireEventsAuth(actionLabel = "ამ მოქმედების შესრულება") {
+  const token = window.localStorage.getItem("access_token");
+  if (!token) {
+    showAlert("alertPlaceholder", "danger", `${actionLabel}-თვის გაიარე ავტორიზაცია.`);
+    return false;
+  }
+
+  if (typeof isTokenExpired === "function" && isTokenExpired(token)) {
+    showAlert("alertPlaceholder", "danger", `${actionLabel}-თვის საჭიროა ხელახალი ავტორიზაცია.`);
+    return false;
+  }
+
+  const permissionsToken = window.localStorage.getItem("permissions_token");
+  let permissions = null;
+  if (permissionsToken) {
+    try {
+      const payload = JSON.parse(atob(permissionsToken.split(".")[1]));
+      permissions = payload?.sub || null;
+    } catch (error) {
+      permissions = null;
+    }
+  }
+
+  // თუ permissions_token არ იკითხება, მოდალის გახსნას არ ვბლოკავთ:
+  // საბოლოო ვალიდაცია მაინც backend-ზე ხდება.
+  if (permissions && !permissions.can_events && !permissions.is_admin) {
+    showAlert("alertPlaceholder", "danger", `${actionLabel}-ის უფლება არ გაქვს.`);
+    return false;
+  }
+
+  return true;
+}
+
+function bindCreateEventAuthGuard() {
+  const createEventButton = document.getElementById("btnCreateEventShakemap");
+  const createEventModalElement = document.getElementById("createEventModal");
+  if (!createEventButton) {
+    return;
+  }
+
+  createEventButton.removeAttribute("data-bs-toggle");
+  createEventButton.removeAttribute("data-bs-target");
+
+  createEventButton.addEventListener("click", (event) => {
+    event.preventDefault();
+    if (!requireEventsAuth("მიწისძვრის დამატება")) {
+      if (createEventModalElement && typeof bootstrap !== "undefined") {
+        bootstrap.Modal.getOrCreateInstance(createEventModalElement).hide();
+      }
+      return;
+    }
+
+    if (createEventModalElement && typeof bootstrap !== "undefined") {
+      bootstrap.Modal.getOrCreateInstance(createEventModalElement).show();
+    }
+  });
+}
+
 // უსაფრთხო escape, რომ HTML ინექცია არ მოხდეს ცხრილში.
 function escapeHtml(value) {
   const div = document.createElement("div");
@@ -85,18 +143,6 @@ function bindRegenerateButtons() {
   });
 }
 
-// API key-ს ვიმახსოვრებთ localStorage-ში.
-function getApiKey() {
-  let apiKey = window.localStorage.getItem("ies_api_key");
-  if (!apiKey) {
-    apiKey = window.prompt("შეიყვანე X-API-Key ShakeMap გენერაციისთვის:");
-    if (apiKey) {
-      window.localStorage.setItem("ies_api_key", apiKey);
-    }
-  }
-  return apiKey;
-}
-
 // არჩევითი რეგენერაცია ცხრილიდან კონკრეტული OID-ით.
 async function regenerateShakeMap(button) {
   const seiscompOid = button.dataset.seiscompOid;
@@ -106,14 +152,13 @@ async function regenerateShakeMap(button) {
   }
 
   const accessToken = window.localStorage.getItem("access_token");
-  let apiKey = null;
-  // თუ JWT ავტორიზაცია არსებობს, API key აღარ არის სავალდებულო.
   if (!accessToken) {
-    apiKey = getApiKey();
-    if (!apiKey) {
-      showAlert("alertPlaceholder", "danger", "რეგენერაციისთვის საჭიროა ავტორიზაცია ან API key.");
-      return;
-    }
+    showAlert("alertPlaceholder", "danger", "ShakeMap გენერაციისთვის საჭიროა ავტორიზაცია.");
+    return;
+  }
+  if (typeof window.makeApiRequest !== "function") {
+    showAlert("alertPlaceholder", "danger", "ავტორიზაციის მოდული ვერ ჩაიტვირთა.");
+    return;
   }
 
   button.disabled = true;
@@ -126,35 +171,15 @@ async function regenerateShakeMap(button) {
       "Content-Type": "application/json",
       accept: "application/json",
     };
-    if (apiKey) {
-      requestHeaders["X-API-Key"] = apiKey;
-    }
-
-    let payload;
-    if (accessToken && typeof window.makeApiRequest === "function") {
-      payload = await window.makeApiRequest("/api/shakemap", {
-        method: "POST",
-        headers: requestHeaders,
-        body: JSON.stringify({ seiscomp_oid: seiscompOid }),
-      });
-      if (!payload || payload.error) {
-        statusMessageOverride = payload?.error || "ShakeMap გენერაცია ვერ მოხერხდა.";
-        showAlert("alertPlaceholder", "danger", statusMessageOverride);
-        return;
-      }
-    } else {
-      const response = await fetch("/api/shakemap", {
-        method: "POST",
-        headers: requestHeaders,
-        body: JSON.stringify({ seiscomp_oid: seiscompOid }),
-      });
-      payload = await response.json();
-
-      if (!response.ok) {
-        statusMessageOverride = payload.error || "ShakeMap გენერაცია ვერ მოხერხდა.";
-        showAlert("alertPlaceholder", "danger", statusMessageOverride);
-        return;
-      }
+    const payload = await window.makeApiRequest("/api/shakemap", {
+      method: "POST",
+      headers: requestHeaders,
+      body: JSON.stringify({ seiscomp_oid: seiscompOid }),
+    });
+    if (!payload || payload.error) {
+      statusMessageOverride = payload?.error || "ShakeMap გენერაცია ვერ მოხერხდა.";
+      showAlert("alertPlaceholder", "danger", statusMessageOverride);
+      return;
     }
 
     showAlert("alertPlaceholder", "success", payload?.message || `ShakeMap დათვლა რიგში ჩაეშვა (${seiscompOid}).`);
@@ -353,6 +378,7 @@ async function loadEvents() {
 }
 
 // საწყისი ჩატვირთვა.
-window.getApiKey = getApiKey;
+window.requireEventsAuth = requireEventsAuth;
 window.loadEvents = loadEvents;
+bindCreateEventAuthGuard();
 loadEvents();

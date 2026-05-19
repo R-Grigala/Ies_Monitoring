@@ -248,14 +248,20 @@ document.addEventListener("DOMContentLoaded", function() {
     const resetPasswordPage = '/reset_password';
     const currentPage = window.location.pathname;
     const token = localStorage.getItem('access_token');
+    const isPublicPage =
+        currentPage === '/' ||
+        currentPage === '/shakemap' ||
+        currentPage.startsWith('/shakemap/') ||
+        currentPage === '/events' ||
+        currentPage.startsWith('/events/');
 
 
-    if (!token && currentPage !== loginPage && !currentPage.startsWith(resetPasswordPage)) {
+    if (!token && currentPage !== loginPage && !isPublicPage && !currentPage.startsWith(resetPasswordPage)) {
         window.location.href = loginPage;
     }
 
     // Check if the token is expired and redirect to login if necessary
-    if (token && isTokenExpired(token)) {
+    if (token && isTokenExpired(token) && !isPublicPage) {
         refreshToken(); // Clear session data and redirect to login
     }
 
