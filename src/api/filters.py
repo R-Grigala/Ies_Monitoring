@@ -2,7 +2,6 @@ import logging
 
 from flask_restx import Resource
 from datetime import datetime
-from flask_jwt_extended import jwt_required
 from sqlalchemy import and_
 
 from src.api.nsmodels import filter_ns, filter_parser, filter_model
@@ -14,9 +13,7 @@ logger = logging.getLogger("app.filters")
 @filter_ns.route('/filter_event')
 @filter_ns.doc(responses={200: 'OK', 400: 'Invalid Argument', 401: 'JWT Token Expires', 403: 'Unauthorized', 404: 'Not Found'})
 class FilterEventAPI(Resource):
-    @jwt_required()
     @filter_ns.doc(parser=filter_parser)
-    @filter_ns.doc(security='JsonWebToken')
     @filter_ns.marshal_list_with(filter_model)
     def post(self):
         '''გავფილტროთ მიწისძვრები სხვადასხვა პარამეტრებით'''
