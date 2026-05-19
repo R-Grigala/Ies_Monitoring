@@ -8,15 +8,64 @@ function escapeHtml(value) {
   return div.innerHTML;
 }
 
-function getApiKey() {
-  let apiKey = window.localStorage.getItem("ies_api_key");
-  if (!apiKey) {
-    apiKey = window.prompt("შეიყვანე X-API-Key:");
-    if (apiKey) {
-      window.localStorage.setItem("ies_api_key", apiKey);
+function requireEventsAuth(actionLabel = "ამ მოქმედების შესრულება") {
+  const token = window.localStorage.getItem("access_token");
+  if (!token) {
+    showAlert("alertPlaceholder", "danger", `${actionLabel}-თვის გაიარე ავტორიზაცია.`);
+    return false;
+  }
+
+  if (typeof isTokenExpired === "function" && isTokenExpired(token)) {
+    showAlert("alertPlaceholder", "danger", `${actionLabel}-თვის საჭიროა ხელახალი ავტორიზაცია.`);
+    return false;
+  }
+
+  const permissionsToken = window.localStorage.getItem("permissions_token");
+  let permissions = null;
+  if (permissionsToken) {
+    try {
+      const payload = JSON.parse(atob(permissionsToken.split(".")[1]));
+      permissions = payload?.sub || null;
+    } catch (error) {
+      permissions = null;
     }
   }
-  return apiKey;
+
+  // თუ permissions_token არ იკითხება, მოდალის გახსნას არ ვბლოკავთ:
+  // საბოლოო ვალიდაცია მაინც backend-ზე ხდება.
+  if (permissions && !permissions.can_events && !permissions.is_admin) {
+    showAlert("alertPlaceholder", "danger", `${actionLabel}-ის უფლება არ გაქვს.`);
+    return false;
+  }
+
+  return true;
+}
+
+function bindCreateEventAuthGuard() {
+  const createEventButton = document.getElementById("btnCreateEvent");
+  const createEventModalElement = document.getElementById("createEventModal");
+  if (!createEventButton) {
+    return;
+  }
+
+  // Bootstrap-ის ავტომატურ data-bs-toggle მექანიზმს ვთიშავთ,
+  // რომ მოდალის გახსნა სრულად ჩვენი auth-check-ით იმართოს.
+  createEventButton.removeAttribute("data-bs-toggle");
+  createEventButton.removeAttribute("data-bs-target");
+
+  createEventButton.addEventListener("click", (event) => {
+    event.preventDefault();
+    if (!requireEventsAuth("მიწისძვრის დამატება")) {
+      if (createEventModalElement && typeof bootstrap !== "undefined") {
+        bootstrap.Modal.getOrCreateInstance(createEventModalElement).hide();
+      }
+      return;
+    }
+
+    if (createEventModalElement && typeof bootstrap !== "undefined") {
+      bootstrap.Modal.getOrCreateInstance(createEventModalElement).show();
+    }
+  });
 }
 
 function renderEvents(events) {
@@ -115,9 +164,12 @@ async function loadEvents() {
   }
 }
 window.escapeHtml = escapeHtml;
-window.getApiKey = getApiKey;
+window.requireEventsAuth = requireEventsAuth;
 window.renderEvents = renderEvents;
 window.renderEventsAndMap = renderEventsAndMap;
 window.loadEvents = loadEvents;
 
-document.addEventListener("DOMContentLoaded", loadEvents);
+document.addEventListener("DOMContentLoaded", () => {
+  bindCreateEventAuthGuard();
+  loadEvents();
+});
