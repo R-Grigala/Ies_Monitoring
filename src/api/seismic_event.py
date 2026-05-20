@@ -29,7 +29,7 @@ class SeismicListAPI(Resource):
         events = SeismicEvent.query.all()
         if not events:
             logger.info("Events list: no records found")
-            return {"error": "მიწისძვრები არ მოიძებნა."}, 404
+            return {"error": "No earthquakes found."}, 404
 
         logger.info("Events list success: count=%s", len(events))
         return events
@@ -44,11 +44,11 @@ class SeismicListAPI(Resource):
         # --- ავტორიზაციის შემოწმება ---
         if not is_authorized_request():
             logger.warning("Event upsert denied: unauthorized")
-            return {'error': 'არ გაქვს წვდომა. მიუთითე სწორი X-API-Key ან JWT ტოკენი.'}, 401
+            return {'error': 'Access denied. Provide a valid X-API-Key or JWT token.'}, 401
         # --- უფლების შემოწმება ---
         if not have_permission("can_events"):
             logger.warning("Event upsert denied: missing can_events permission")
-            return {'error': 'არ გაქვს უფლება მიწისძვრის დამატებისთვის.'}, 403
+            return {'error': 'You do not have permission to add earthquakes.'}, 403
 
         # --- მოთხოვნის body-ის დამუშავება ---
         args = event_parser.parse_args()
@@ -62,7 +62,7 @@ class SeismicListAPI(Resource):
                 args.get("event_id"),
             )
             return {
-                'error': 'origin_time ფორმატი არასწორია (გამოიყენე ISO 8601, მაგ.: 2025-10-24T12:20:00)'
+                'error': 'Invalid origin_time format (use ISO 8601, e.g. 2025-10-24T12:20:00).'
             }, 400
 
         # --- ვამოწმებთ, არსებობს თუ არა უკვე ეს მოვლენა ---
@@ -83,7 +83,7 @@ class SeismicListAPI(Resource):
             exist_event.save()
             logger.info("Event updated: event_id=%s", exist_event.event_id)
             return {
-                'message': f'მიწისძვრის მოვლენა წარმატებით განახლდა: {exist_event.event_id}'
+                'message': f'Earthquake event updated successfully: {exist_event.event_id}'
             }, 200
 
         else:
@@ -105,7 +105,7 @@ class SeismicListAPI(Resource):
             logger.info("Event created: event_id=%s", new_event.event_id)
 
             return {
-                'message': f'მიწისძვრის მოვლენა წარმატებით დაემატა: {new_event.event_id}'
+                'message': f'Earthquake event created successfully: {new_event.event_id}'
             }, 201
 
 
@@ -127,20 +127,20 @@ class SeismicEventAPI(Resource):
         """აახლებს მიწისძვრის მოვლენას event_id-ით."""
         if not is_authorized_request():
             logger.warning("Event update denied: event_id=%s unauthorized", event_id)
-            return {'error': 'არ გაქვს წვდომა. არ ხართ ავტორიზირებული.'}, 401
+            return {'error': 'Access denied. You are not authorized.'}, 401
         if not have_permission("can_events"):
             logger.warning("Event update denied: event_id=%s missing can_events permission", event_id)
-            return {'error': 'არ გაქვს უფლება მიწისძვრის რედაქტირებისთვის.'}, 403
+            return {'error': 'You do not have permission to edit earthquakes.'}, 403
 
         args = event_parser.parse_args()
         body_event_id = args.get("event_id")
         if body_event_id is not None and int(body_event_id) != int(event_id):
-            return {'error': 'URL-ის event_id და body-ის event_id არ ემთხვევა.'}, 400
+            return {'error': 'URL event_id and body event_id do not match.'}, 400
 
         event = SeismicEvent.query.filter_by(event_id=event_id).first()
         if not event:
             logger.info("Event update failed: event_id=%s not found", event_id)
-            return {'error': f'მიწისძვრის მოვლენა ვერ მოიძებნა: {event_id}'}, 404
+            return {'error': f'Earthquake event not found: {event_id}'}, 404
 
         try:
             origin_time = datetime.datetime.fromisoformat(args['origin_time'])
@@ -150,7 +150,7 @@ class SeismicEventAPI(Resource):
                 event_id,
             )
             return {
-                'error': 'origin_time ფორმატი არასწორია (გამოიყენე ISO 8601, მაგ.: 2025-10-24T12:20:00)'
+                'error': 'Invalid origin_time format (use ISO 8601, e.g. 2025-10-24T12:20:00).'
             }, 400
 
         event.seiscomp_oid = args.get('seiscomp_oid')
@@ -166,23 +166,23 @@ class SeismicEventAPI(Resource):
         event.save()
 
         logger.info("Event updated via PUT: event_id=%s", event_id)
-        return {'message': f'მიწისძვრის მოვლენა წარმატებით განახლდა: {event_id}'}, 200
+        return {'message': f'Earthquake event updated successfully: {event_id}'}, 200
 
     @event_ns.doc(security='JsonWebToken', description='Delete a seismic event by event_id (requires JWT Bearer token)')
     def delete(self, event_id):
         """შლის მიწისძვრის მოვლენას event_id-ით (მომხმარებელი უნდა იყოს ავტორიზირებული)."""
         if not is_authorized_request():
             logger.warning("Event delete denied: event_id=%s unauthorized", event_id)
-            return {'error': 'არ გაქვს წვდომა. მიუთითე სწორი JWT ტოკენი.'}, 401
+            return {'error': 'Access denied. Provide a valid JWT token.'}, 401
         if not have_permission("can_events"):
             logger.warning("Event delete denied: event_id=%s missing can_events permission", event_id)
-            return {'error': 'არ გაქვს უფლება მიწისძვრის წაშლისთვის.'}, 403
+            return {'error': 'You do not have permission to delete earthquakes.'}, 403
 
         event = SeismicEvent.query.filter_by(event_id=event_id).first()
         if not event:
             logger.info("Event delete failed: event_id=%s not found", event_id)
-            return {'error': f'მიწისძვრის მოვლენა ვერ მოიძებნა: {event_id}'}, 404
+            return {'error': f'Earthquake event not found: {event_id}'}, 404
 
         event.delete()
         logger.info("Event deleted: event_id=%s", event_id)
-        return {'message': f'მიწისძვრის მოვლენა წარმატებით წაიშალა: {event_id}'}, 200
+        return {'message': f'Earthquake event deleted successfully: {event_id}'}, 200

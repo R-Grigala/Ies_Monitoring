@@ -33,13 +33,13 @@ email_recipient_model = notification_ns.model(
 )
 
 phone_recipient_parser = reqparse.RequestParser()
-phone_recipient_parser.add_argument("username", type=str, required=True, help="მომხმარებლის სახელი სავალდებულოა")
-phone_recipient_parser.add_argument("phone", type=str, required=True, help="ტელეფონის ნომერი სავალდებულოა")
+phone_recipient_parser.add_argument("username", type=str, required=True, help="Username is required")
+phone_recipient_parser.add_argument("phone", type=str, required=True, help="Phone number is required")
 phone_recipient_parser.add_argument("staff_member", type=inputs.boolean, required=False, default=False)
 phone_recipient_parser.add_argument("is_active", type=inputs.boolean, required=False, default=True)
 
 email_recipient_parser = reqparse.RequestParser()
-email_recipient_parser.add_argument("username", type=str, required=True, help="მომხმარებლის სახელი სავალდებულოა")
-email_recipient_parser.add_argument("email", type=str, required=True, help="ელ.ფოსტა სავალდებულოა")
+email_recipient_parser.add_argument("username", type=str, required=True, help="Username is required")
+email_recipient_parser.add_argument("email", type=str, required=True, help="Email is required")
 email_recipient_parser.add_argument("staff_member", type=inputs.boolean, required=False, default=False)
 email_recipient_parser.add_argument("is_active", type=inputs.boolean, required=False, default=True)

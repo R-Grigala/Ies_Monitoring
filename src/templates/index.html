@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 
 {% block title %}
-EarthQuakeWatch | მთავარი
+EarthQuakeWatch | Home
 {% endblock %}
 
 {% block body %}
@@ -11,13 +11,13 @@ EarthQuakeWatch | მთავარი
     <div class="col-md-7">
       <h1 class="display-5 fw-bold">🌍 EarthQuakeWatch</h1>
       <p class="lead text-muted mt-3">
-        სეისმური მონიტორინგისა და ანალიტიკის პლატფორმა რეალურ დროში,
-        აგებული Flask-ისა და AWS სერვისების გამოყენებით.
+        Real-time seismic monitoring and analytics platform,
+        built with Flask and AWS services.
       </p>
 
       <div class="mt-4">
         <a href="/shakemap" class="btn btn-primary btn-lg me-2">
-          ShakeMap-ის გახსნა
+          Open ShakeMap
         </a>
       </div>
     </div>
@@ -27,7 +27,7 @@ EarthQuakeWatch | მთავარი
         src="{{ url_for('static', filename='img/earthquakes.png') }}"
         class="img-fluid"
         style="max-height: 260px;"
-        alt="მიწისძვრა"
+        alt="Earthquake"
       >
     </div>
   </div>
@@ -36,9 +36,9 @@ EarthQuakeWatch | მთავარი
     <div class="col-md-4">
       <div class="card h-100 shadow-sm">
         <div class="card-body">
-          <h5 class="card-title">📡 მონაცემთა მიღება</h5>
+          <h5 class="card-title">📡 Data Ingestion</h5>
           <p class="card-text text-muted">
-            სეისმური კატალოგების სინქრონიზაცია AWS RDS-ში.
+            Seismic catalog synchronization into AWS RDS.
           </p>
         </div>
       </div>
@@ -47,9 +47,9 @@ EarthQuakeWatch | მთავარი
     <div class="col-md-4">
       <div class="card h-100 shadow-sm">
         <div class="card-body">
-          <h5 class="card-title">📊 ანალიტიკა</h5>
+          <h5 class="card-title">📊 Analytics</h5>
           <p class="card-text text-muted">
-            სეისმური მოვლენების ცოცხალი სტატისტიკა REST API-ის საშუალებით.
+            Live seismic event statistics via REST API.
           </p>
         </div>
       </div>
@@ -58,9 +58,9 @@ EarthQuakeWatch | მთავარი
     <div class="col-md-4">
       <div class="card h-100 shadow-sm">
         <div class="card-body">
-          <h5 class="card-title">☁️ Cloud ინფრასტრუქტურა</h5>
+          <h5 class="card-title">☁️ Cloud Infrastructure</h5>
           <p class="card-text text-muted">
-            პროექტი მორგებულია AWS cloud სერვისებზე.
+            The project is tailored for AWS cloud services.
           </p>
         </div>
       </div>

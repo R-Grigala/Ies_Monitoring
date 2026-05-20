@@ -13,12 +13,12 @@ function openUserModal() {
     .then(response => {
         if (!response.ok) {
             if (response.status === 401) {
-                showAlert('alertPlaceholder', 'danger', 'სესიის ვადა ამოიწურა. გთხოვთ, თავიდან შეხვიდეთ სისტემაში.');
+                showAlert('alertPlaceholder', 'danger', 'Session has expired. Please sign in again.');
                 clearSessionData();
             } else if (response.status === 403) {
-                showAlert('alertPlaceholder', 'danger', 'არ გაქვთ უფლებები ამ მონაცემების ნახვისთვის.');
+                showAlert('alertPlaceholder', 'danger', 'You do not have permission to view this data.');
             } else {
-                showAlert('alertPlaceholder', 'danger', 'მოხდა შეცდომა მონაცემების გამოთხოვისას.');
+                showAlert('alertPlaceholder', 'danger', 'An error occurred while fetching data.');
             }
             throw new Error('Network response was not ok.');
         }
@@ -37,7 +37,7 @@ function openUserModal() {
                 accountsButton.style.display = 'block';
             }
         } else {
-            showAlert('alertPlaceholder', 'danger', 'მომხმარებელი არ მოიძებნა.');
+            showAlert('alertPlaceholder', 'danger', 'User not found.');
         }
     })
     .catch(error => console.error('Error fetching data:', error));
@@ -71,7 +71,7 @@ function submitUserForm(event) {
     .then(data => {
         if (data.error) {
             closeModal('UserModal')
-            showAlert('alertPlaceholder', 'danger', data.error || ' მონაცემტა ცვლილებისას დაფიქსირდა შეცდომა');
+            showAlert('alertPlaceholder', 'danger', data.error || 'An error occurred while updating data.');
         } else {
             window.location.reload(); // Reload the page to reflect changes
         }

@@ -26,7 +26,7 @@ function decodeJwtPayload(token) {
         const payloadPart = token.split('.')[1];
         if (!payloadPart) return null;
 
-        // JWT payload არის base64url ფორმატში და პირდაპირ atob() ყოველთვის ვერ კითხულობს.
+        // JWT payload is base64url encoded; atob() needs normalization.
         const base64 = payloadPart.replace(/-/g, '+').replace(/_/g, '/');
         const padded = base64 + '='.repeat((4 - (base64.length % 4)) % 4);
         return JSON.parse(atob(padded));
@@ -58,8 +58,7 @@ function refreshToken() {
     })
     .then(response => {
         if (response.status === 401) {
-            // alert("გთხოვთ ხელახლა გაიაროთ ავტორიზაცია.");
-            showAlert('alertPlaceholder', 'danger', ' გთხოვთ ხელახლა გაიაროთ ავტორიზაცია.');
+            showAlert('alertPlaceholder', 'danger', 'Please sign in again.');
             clearSessionData(); // Clear session data and redirect to login
             return Promise.reject('Unauthorized');
         }
@@ -187,10 +186,10 @@ function closeModal(modalName) {
 }
 
 function showConfirmModal({
-    title = 'დადასტურება',
-    message = 'ნამდვილად გსურთ მოქმედების შესრულება?',
-    confirmText = 'დადასტურება',
-    cancelText = 'გაუქმება',
+    title = 'Confirmation',
+    message = 'Are you sure you want to perform this action?',
+    confirmText = 'Confirm',
+    cancelText = 'Cancel',
     confirmClass = 'btn-danger'
 } = {}) {
     return new Promise((resolve) => {

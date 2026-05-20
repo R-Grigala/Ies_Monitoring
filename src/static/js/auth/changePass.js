@@ -7,7 +7,7 @@ function submitChangePassword(event) {
     const accessToken = localStorage.getItem('access_token');
 
     if (!accessToken) {
-        showAlert('alertPlaceholder', 'danger', 'ჯერ ავტორიზაცია გაიარე.');
+        showAlert('alertPlaceholder', 'danger', 'Please sign in first.');
         return;
     }
 
@@ -26,16 +26,16 @@ function submitChangePassword(event) {
     .then(response => response.json())
     .then(data => {
         if (data.message) {
-            showAlert('alertPlaceholder', 'success', data.message || 'პაროლი წარმატებით შეიცვალა.');
+            showAlert('alertPlaceholder', 'success', data.message || 'Password changed successfully.');
             setTimeout(() => {
                 clearSessionData();
             }, 1000);
         } else {
-            showAlert('alertPlaceholder', 'danger', data.error || 'პაროლის შეცვლა ვერ მოხერხდა.');
+            showAlert('alertPlaceholder', 'danger', data.error || 'Failed to change password.');
         }
     })
     .catch(() => {
-        showAlert('alertPlaceholder', 'danger', 'მოთხოვნა ჩავარდა პაროლის შეცვლისას.');
+        showAlert('alertPlaceholder', 'danger', 'Request failed while changing password.');
     });
 }
 

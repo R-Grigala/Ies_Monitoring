@@ -27,7 +27,7 @@ EarthQuakeWatch | Events
       data-bs-toggle="modal"
       data-bs-target="#createEventModal"
     >
-      მიწისძვრის დამატება
+      Add Earthquake
     </button>
   </div>
 </div>
@@ -36,9 +36,9 @@ EarthQuakeWatch | Events
 
 <div class="container-fluid container-lg py-2 py-md-2">
   <div class="card shadow-sm">
-    <div class="card-header fw-semibold">მიწისძვრების სია</div>
+    <div class="card-header fw-semibold">Earthquake List</div>
     <div class="card-body">
-      <div id="eventsStatus" class="text-muted mb-3">იტვირთება...</div>
+      <div id="eventsStatus" class="text-muted mb-3">Loading...</div>
       <div class="table-responsive events-table-scroll">
         <table class="table table-sm table-hover align-middle mb-0 text-nowrap text-center events-table">
           <thead>
@@ -46,12 +46,12 @@ EarthQuakeWatch | Events
               <th>Action</th>
               <th>Event ID</th>
               <th>SeisComP OID</th>
-              <th>მიწისძვრის დრო</th>
-              <th>მაგნიტუდა (ML)</th>
-              <th>სიღრმე (km)</th>
+              <th>Earthquake Time</th>
+              <th>Magnitude (ML)</th>
+              <th>Depth (km)</th>
               <th>Latitude</th>
               <th>Longitude</th>
-              <th>რეგიონი</th>
+              <th>Region</th>
             </tr>
           </thead>
           <tbody id="eventsTableBody"></tbody>

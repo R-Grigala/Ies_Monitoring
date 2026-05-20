@@ -48,12 +48,12 @@ function attachInfoWindow(marker, event) {
         content: `
             <div class="text-center">
                 <strong>Event ID: ${event.event_id ?? '-'}</strong><br>
-                <strong>მიწისძვრის დრო: ${event.origin_time}</strong><br>
-                <strong>მაგნიტუდა (ML): ${event.ml}</strong><br>
-                <strong>სიღრმე (km): ${event.depth}</strong><br>
-                <strong>ლათიტუდა: ${event.latitude}</strong><br>
-                <strong>ლონგიტუდა: ${event.longitude}</strong><br>
-                <strong>რეგიონი: ${event.region_ge || event.region_en || '-'}</strong><br>
+                <strong>Earthquake time: ${event.origin_time}</strong><br>
+                <strong>Magnitude (ML): ${event.ml}</strong><br>
+                <strong>Depth (km): ${event.depth}</strong><br>
+                <strong>Latitude: ${event.latitude}</strong><br>
+                <strong>Longitude: ${event.longitude}</strong><br>
+                <strong>Region: ${event.region_ge || event.region_en || '-'}</strong><br>
             </div>`
     });
     marker.addListener('click', function() {

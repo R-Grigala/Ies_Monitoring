@@ -20,21 +20,21 @@
     </div>
     <div class="col-md-8 col-lg-6 col-xl-4 offset-xl-1">
         <div class="text-center mb-5">
-            <h2>ავტორიზაცია</h2>
+            <h2>Login</h2>
         </div>
         <form id="loginForm">
             <!-- Email input -->
             <div class="form-outline mb-4">
-                <label class="form-label" for="email">ელ.ფოსტის მისამართი</label>
+                <label class="form-label" for="email">Email address</label>
                 <input type="email" id="email" name="email" class="form-control form-control-lg"
-                    placeholder="შეიყვანეთ ელ.ფოსტის მისამართი" required/>
+                    placeholder="Enter email address" required/>
             </div>
 
             <!-- Password input -->
             <div class="form-outline mb-3">
-                <label class="form-label" for="password">პაროლი</label>
+                <label class="form-label" for="password">Password</label>
                 <input type="password" id="password" name="password" class="form-control form-control-lg"
-                    placeholder="შეიყვანეთ პაროლი" required autocomplete="password"/>
+                    placeholder="Enter password" required autocomplete="password"/>
                 <i id="togglePassword" class="togglePassword"><img src="static/img/eye-hide.svg" alt="Icon eye-hide" width="25px" id="togglePasswordImg"></i>
             </div>
 
@@ -43,16 +43,16 @@
                 <div class="form-check mb-0">
                     <input class="form-check-input me-2" type="checkbox" value="" id="rememberMe" />
                     <label class="form-check-label" for="rememberMe">
-                        დამახსოვრება
+                        Remember me
                     </label>
                 </div>
-                <a onclick="openResetPasswordModal()" class="text-decoration-none" style="cursor: pointer;">პაროლის აღდგენა</a>
+                <a onclick="openResetPasswordModal()" class="text-decoration-none" style="cursor: pointer;">Reset password</a>
             </div>
 
             <!-- Submit button -->
             <div class="text-center text-lg-start mt-4 pt-2">
                 <button type="submit" class="btn btn-primary"
-                        style="padding-left: 2.5rem; padding-right: 2.5rem;">შესვლა</button>
+                        style="padding-left: 2.5rem; padding-right: 2.5rem;">Login</button>
             </div>
         </form>
         {% include "forgetPass.html" %}
