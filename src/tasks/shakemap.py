@@ -38,7 +38,7 @@ def run_shakemap(self, job_id):
             "latitude": event.latitude,
             "depth": event.depth,
             "ml": event.ml,
-            "desc": event.region_ge or "მოვლენის აღწერა",
+            "desc": event.region_en or "მოვლენის აღწერა",
         }
         logger.info("ShakeMap worker started for event: %s", event_oid)
         run_shakemap_worker(parsed_data)

@@ -7,17 +7,24 @@ EarthQuakeWatch | Home
 {% block body %}
 <div class="container py-5">
 
-  <div class="row align-items-center mb-5">
+  <div class="row align-items-center mb-4">
     <div class="col-md-7">
       <h1 class="display-5 fw-bold">🌍 EarthQuakeWatch</h1>
       <p class="lead text-muted mt-3">
-        Real-time seismic monitoring and analytics platform,
-        built with Flask and AWS services.
+        A real-time earthquake monitoring platform that brings event data,
+        ShakeMap generation, and operational alerts into one workflow.
+      </p>
+      <p class="text-muted mb-0">
+        It helps teams quickly understand what happened, where it happened, and
+        what to do next.
       </p>
 
       <div class="mt-4">
         <a href="/shakemap" class="btn btn-primary btn-lg me-2">
           Open ShakeMap
+        </a>
+        <a href="/events" class="btn btn-outline-secondary btn-lg">
+          View Events
         </a>
       </div>
     </div>
@@ -32,36 +39,79 @@ EarthQuakeWatch | Home
     </div>
   </div>
 
-  <div class="row g-4">
-    <div class="col-md-4">
-      <div class="card h-100 shadow-sm">
+  <div class="row g-4 mb-4">
+    <div class="col-lg-4">
+      <div class="card h-100 shadow-sm border-0">
         <div class="card-body">
-          <h5 class="card-title">📡 Data Ingestion</h5>
+          <h5 class="card-title">What We Do</h5>
           <p class="card-text text-muted">
-            Seismic catalog synchronization into AWS RDS.
+            We collect seismic events, enrich them with location and magnitude
+            context, and provide a clear operational view for analysts.
           </p>
         </div>
       </div>
     </div>
 
-    <div class="col-md-4">
-      <div class="card h-100 shadow-sm">
+    <div class="col-lg-4">
+      <div class="card h-100 shadow-sm border-0">
         <div class="card-body">
-          <h5 class="card-title">📊 Analytics</h5>
+          <h5 class="card-title">How It Works</h5>
           <p class="card-text text-muted">
-            Live seismic event statistics via REST API.
+            Events are ingested through API, stored in the database, visualized
+            on map/table views, and processed for ShakeMap products.
           </p>
         </div>
       </div>
     </div>
 
-    <div class="col-md-4">
-      <div class="card h-100 shadow-sm">
+    <div class="col-lg-4">
+      <div class="card h-100 shadow-sm border-0">
         <div class="card-body">
-          <h5 class="card-title">☁️ Cloud Infrastructure</h5>
+          <h5 class="card-title">Why It Helps</h5>
           <p class="card-text text-muted">
-            The project is tailored for AWS cloud services.
+            A single interface reduces response time, improves consistency, and
+            supports faster operational decisions during seismic activity.
           </p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card shadow-sm border-0">
+    <div class="card-body">
+      <h5 class="card-title mb-3">Platform Flow</h5>
+      <div class="row g-3">
+        <div class="col-md-3">
+          <div class="p-3 bg-light rounded h-100">
+            <div class="fw-semibold">1) Ingest</div>
+            <div class="small text-muted mt-1">
+              Receive earthquake data from SeisComP and internal API sources.
+            </div>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="p-3 bg-light rounded h-100">
+            <div class="fw-semibold">2) Validate</div>
+            <div class="small text-muted mt-1">
+              Apply auth, permissions, and input checks before persistence.
+            </div>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="p-3 bg-light rounded h-100">
+            <div class="fw-semibold">3) Process</div>
+            <div class="small text-muted mt-1">
+              Run ShakeMap jobs and track status from queue to completion.
+            </div>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="p-3 bg-light rounded h-100">
+            <div class="fw-semibold">4) Deliver</div>
+            <div class="small text-muted mt-1">
+              Surface results in event dashboards, maps, and notifications.
+            </div>
+          </div>
         </div>
       </div>
     </div>
