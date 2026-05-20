@@ -1,5 +1,8 @@
 window.deleteEvent = async function deleteEvent(eventId) {
-  if (typeof window.requireEventsAuth === "function" && !window.requireEventsAuth("ივენთის წაშლა")) {
+  if (
+    typeof window.requireEventsAuth === "function" &&
+    !(await Promise.resolve(window.requireEventsAuth("ივენთის წაშლა")))
+  ) {
     return;
   }
   const confirmationMessage = `ნამდვილად გინდა ივენთის წაშლა? (event_id: ${eventId})`;

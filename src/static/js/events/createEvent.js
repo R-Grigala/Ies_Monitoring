@@ -22,7 +22,10 @@ function buildCreateEventPayload() {
 
 async function createEvent(event) {
   event.preventDefault();
-  if (typeof window.requireEventsAuth === "function" && !window.requireEventsAuth("მიწისძვრის დამატება")) {
+  if (
+    typeof window.requireEventsAuth === "function" &&
+    !(await Promise.resolve(window.requireEventsAuth("მიწისძვრის დამატება")))
+  ) {
     return;
   }
 

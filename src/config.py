@@ -52,8 +52,13 @@ class Config:
     API_KEY = os.getenv('API_KEY', 'default_api_key')
 
     JWT_SECRET_KEY = os.getenv('JWT_SECRET_KEY', 'default_jwt_secret_key')
+    JWT_TOKEN_LOCATION = ["headers", "cookies"]
+
+    JWT_COOKIE_SECURE = True
+    JWT_REFRESH_COOKIE_PATH = "/api/refresh"
     JWT_ACCESS_TOKEN_EXPIRES = timedelta(hours=1)
-    JWT_REFRESH_TOKEN_EXPIRES = timedelta(hours=12)
+    JWT_REFRESH_TOKEN_EXPIRES = timedelta(days=15)
+    JWT_COOKIE_CSRF_PROTECT = False
     
     AUTHORIZATION = {
         'JsonWebToken': {

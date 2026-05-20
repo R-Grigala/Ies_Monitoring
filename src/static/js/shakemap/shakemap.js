@@ -9,32 +9,35 @@ const galleryModal = galleryModalElement ? new bootstrap.Modal(galleryModalEleme
 const STATUS_POLL_INTERVAL_MS = 4000;
 let statusPollTimer = null;
 
-function requireEventsAuth(actionLabel = "ამ მოქმედების შესრულება") {
-  const token = window.localStorage.getItem("access_token");
+async function requireEventsAuth(actionLabel = "ამ მოქმედების შესრულება") {
+  let token = window.localStorage.getItem("access_token");
   if (!token) {
     showAlert("alertPlaceholder", "danger", `${actionLabel}-თვის გაიარე ავტორიზაცია.`);
     return false;
   }
 
   if (typeof isTokenExpired === "function" && isTokenExpired(token)) {
-    showAlert("alertPlaceholder", "danger", `${actionLabel}-თვის საჭიროა ხელახალი ავტორიზაცია.`);
-    return false;
-  }
-
-  const permissionsToken = window.localStorage.getItem("permissions_token");
-  let permissions = null;
-  if (permissionsToken) {
-    try {
-      const payload = JSON.parse(atob(permissionsToken.split(".")[1]));
-      permissions = payload?.sub || null;
-    } catch (error) {
-      permissions = null;
+    if (typeof refreshToken === "function") {
+      const refreshedToken = await refreshToken();
+      if (!refreshedToken) {
+        showAlert("alertPlaceholder", "danger", `${actionLabel}-თვის საჭიროა ხელახალი ავტორიზაცია.`);
+        return false;
+      }
+      token = refreshedToken;
+    } else {
+      showAlert("alertPlaceholder", "danger", `${actionLabel}-თვის საჭიროა ხელახალი ავტორიზაცია.`);
+      return false;
     }
   }
 
-  // თუ permissions_token არ იკითხება, მოდალის გახსნას არ ვბლოკავთ:
+  const hasEventsPermission =
+    typeof window.hasPermission === "function"
+      ? window.hasPermission("can_events")
+      : true;
+
+  // თუ permissions ვერ ვამოწმებთ, მოდალის გახსნას არ ვბლოკავთ:
   // საბოლოო ვალიდაცია მაინც backend-ზე ხდება.
-  if (permissions && !permissions.can_events && !permissions.is_admin) {
+  if (typeof window.hasPermission === "function" && !hasEventsPermission) {
     showAlert("alertPlaceholder", "danger", `${actionLabel}-ის უფლება არ გაქვს.`);
     return false;
   }
@@ -49,12 +52,24 @@ function bindCreateEventAuthGuard() {
     return;
   }
 
+  const canCreateEvents =
+    typeof window.hasPermission === "function"
+      ? window.hasPermission("can_events")
+      : false;
+
+  if (!canCreateEvents) {
+    createEventButton.classList.add("d-none");
+    return;
+  }
+
+  createEventButton.classList.remove("d-none");
+
   createEventButton.removeAttribute("data-bs-toggle");
   createEventButton.removeAttribute("data-bs-target");
 
-  createEventButton.addEventListener("click", (event) => {
+  createEventButton.addEventListener("click", async (event) => {
     event.preventDefault();
-    if (!requireEventsAuth("მიწისძვრის დამატება")) {
+    if (!(await requireEventsAuth("მიწისძვრის დამატება"))) {
       if (createEventModalElement && typeof bootstrap !== "undefined") {
         bootstrap.Modal.getOrCreateInstance(createEventModalElement).hide();
       }
@@ -145,6 +160,15 @@ function bindRegenerateButtons() {
 
 // არჩევითი რეგენერაცია ცხრილიდან კონკრეტული OID-ით.
 async function regenerateShakeMap(button) {
+  const canRunShakeMap =
+    typeof window.hasPermission === "function"
+      ? window.hasPermission("can_shakemap")
+      : false;
+  if (!canRunShakeMap) {
+    showAlert("alertPlaceholder", "danger", "ShakeMap გენერაციის უფლება არ გაქვს.");
+    return;
+  }
+
   const seiscompOid = button.dataset.seiscompOid;
   if (!seiscompOid) {
     showAlert("alertPlaceholder", "danger", "SeisComP OID არ არის მითითებული.");
@@ -292,6 +316,10 @@ function renderEvents(events) {
     const bTime = new Date(b.origin_time || 0).getTime();
     return bTime - aTime;
   });
+  const canRunShakeMap =
+    typeof window.hasPermission === "function"
+      ? window.hasPermission("can_shakemap")
+      : false;
 
   eventsTableBody.innerHTML = sortedEvents
     .map(
@@ -299,6 +327,9 @@ function renderEvents(events) {
       <tr>
         <td>
           ${buildShakeMapStatusBadge(event.shakemap_status)}
+          ${
+            canRunShakeMap
+              ? `
           <button
             type="button"
             class="btn btn-sm btn-outline-warning ms-2 regenerate-shakemap-btn"
@@ -313,6 +344,9 @@ function renderEvents(events) {
           >
             <i class="fas fa-rotate-right"></i>
           </button>
+          `
+              : ""
+          }
         </td>
         <td>
           <button

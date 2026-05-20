@@ -23,9 +23,6 @@ function buildEditEventPayload() {
 }
 
 window.openEditEventModal = function openEditEventModal(eventId) {
-  if (typeof window.requireEventsAuth === "function" && !window.requireEventsAuth("ივენთის რედაქტირება")) {
-    return;
-  }
   const eventMap = window.eventsById;
   const event = eventMap?.get(String(eventId));
   if (!event || !editEventModal) {
@@ -51,6 +48,12 @@ window.openEditEventModal = function openEditEventModal(eventId) {
 
 async function submitEditEvent(event) {
   event.preventDefault();
+  if (
+    typeof window.requireEventsAuth === "function" &&
+    !(await Promise.resolve(window.requireEventsAuth("ივენთის რედაქტირება")))
+  ) {
+    return;
+  }
 
   const payload = buildEditEventPayload();
   const eventId = payload.event_id;

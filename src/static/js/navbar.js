@@ -51,7 +51,7 @@ document.addEventListener("DOMContentLoaded", function() {
 
             const iconImg = document.createElement('img');
             iconImg.src = '/static/img/circle-user-solid.svg';
-            iconImg.alt = 'User Icon'; 
+            iconImg.alt = 'User Icon';
             iconImg.style.width = '18px'; 
             iconImg.style.height = '18px'; 
             iconImg.style.verticalAlign = 'middle';
@@ -64,11 +64,23 @@ document.addEventListener("DOMContentLoaded", function() {
         }
 
         const logoutLink = document.createElement('a');
-        logoutLink.href = '/login';
         logoutLink.className = 'btn btn-sm btn-outline-danger';
         logoutLink.textContent = 'გასვლა';
-        logoutLink.onclick = function() {
-            clearSessionData();
+        logoutLink.onclick = async function(event) {
+            event.preventDefault();
+            try {
+                await fetch('/api/logout', {
+                    method: 'POST',
+                    credentials: 'include',
+                    headers: {
+                        'accept': 'application/json'
+                    }
+                });
+            } catch (error) {
+                console.error('Logout request failed:', error);
+            } finally {
+                clearSessionData();
+            }
         };
 
         logoutItem.appendChild(logoutLink);
