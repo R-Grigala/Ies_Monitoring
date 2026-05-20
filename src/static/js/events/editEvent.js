@@ -23,9 +23,6 @@ function buildEditEventPayload() {
 }
 
 window.openEditEventModal = function openEditEventModal(eventId) {
-  if (typeof window.requireEventsAuth === "function" && !window.requireEventsAuth("ივენთის რედაქტირება")) {
-    return;
-  }
   const eventMap = window.eventsById;
   const event = eventMap?.get(String(eventId));
   if (!event || !editEventModal) {
@@ -51,11 +48,17 @@ window.openEditEventModal = function openEditEventModal(eventId) {
 
 async function submitEditEvent(event) {
   event.preventDefault();
+  if (
+    typeof window.requireEventsAuth === "function" &&
+    !(await Promise.resolve(window.requireEventsAuth("Edit event")))
+  ) {
+    return;
+  }
 
   const payload = buildEditEventPayload();
   const eventId = payload.event_id;
   editEventSubmitBtn.disabled = true;
-  editEventStatus.textContent = "ივენთის განახლება მიმდინარეობს...";
+  editEventStatus.textContent = "Updating event...";
   editEventStatus.className = "small mt-3 text-muted";
 
   try {
@@ -69,14 +72,14 @@ async function submitEditEvent(event) {
     });
 
     if (!data || data.error) {
-      const message = data?.error || "ივენთის განახლება ვერ მოხერხდა.";
+      const message = data?.error || "Failed to update event.";
       editEventStatus.textContent = message;
       editEventStatus.className = "small mt-3 text-danger";
       showAlert("alertPlaceholder", "danger", message);
       return;
     }
 
-    const message = data.message || "ივენთი წარმატებით განახლდა.";
+    const message = data.message || "Event updated successfully.";
     editEventStatus.textContent = message;
     editEventStatus.className = "small mt-3 text-success";
     showAlert("alertPlaceholder", "success", message);
@@ -86,7 +89,7 @@ async function submitEditEvent(event) {
     }
     closeModal("editEventModal");
   } catch {
-    const message = "მოთხოვნა ჩავარდა ივენთის განახლებისას.";
+    const message = "Request failed while updating event.";
     editEventStatus.textContent = message;
     editEventStatus.className = "small mt-3 text-danger";
     showAlert("alertPlaceholder", "danger", message);

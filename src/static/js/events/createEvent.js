@@ -22,13 +22,16 @@ function buildCreateEventPayload() {
 
 async function createEvent(event) {
   event.preventDefault();
-  if (typeof window.requireEventsAuth === "function" && !window.requireEventsAuth("მიწისძვრის დამატება")) {
+  if (
+    typeof window.requireEventsAuth === "function" &&
+    !(await Promise.resolve(window.requireEventsAuth("Add earthquake")))
+  ) {
     return;
   }
 
   const payload = buildCreateEventPayload();
   addEventSubmitBtn.disabled = true;
-  addEventStatus.textContent = "ივენთის დამატება მიმდინარეობს...";
+  addEventStatus.textContent = "Creating event...";
   addEventStatus.className = "small mt-3 text-muted";
 
   try {
@@ -42,14 +45,14 @@ async function createEvent(event) {
     });
 
     if (!data || data.error) {
-      const message = data?.error || "ივენთის დამატება ვერ მოხერხდა.";
+      const message = data?.error || "Failed to create event.";
       addEventStatus.textContent = message;
       addEventStatus.className = "small mt-3 text-danger";
       showAlert("alertPlaceholder", "danger", message);
       return;
     }
 
-    const message = data.message || "ივენთი წარმატებით დაემატა.";
+    const message = data.message || "Event created successfully.";
     addEventStatus.textContent = message;
     addEventStatus.className = "small mt-3 text-success";
     showAlert("alertPlaceholder", "success", message);
@@ -58,7 +61,7 @@ async function createEvent(event) {
       await window.loadEvents();
     }
   } catch {
-    const message = "მოთხოვნა ჩავარდა ივენთის დამატებისას.";
+    const message = "Request failed while creating event.";
     addEventStatus.textContent = message;
     addEventStatus.className = "small mt-3 text-danger";
     showAlert("alertPlaceholder", "danger", message);

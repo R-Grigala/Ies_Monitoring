@@ -62,5 +62,5 @@ filter_parser.add_argument(
     required=False,
     location="args",
     choices=("pending", "running", "generated", "failed"),
-    help="ShakeMap სტატუსი: pending, running, generated ან failed",
+    help="ShakeMap status: pending, running, generated or failed",
 )

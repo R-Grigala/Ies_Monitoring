@@ -60,7 +60,7 @@ function changeRole(userUUID) {
         .then(data => {
             if (data.error) {
                 closeModal('UserModal')
-                showAlert('alertPlaceholder', 'danger', data.error || ' გაუმართავი როლის ცვლილება.');
+                showAlert('alertPlaceholder', 'danger', data.error || 'Invalid role change.');
             } else {
                 window.location.reload(); // Reload the page to reflect changes
             }

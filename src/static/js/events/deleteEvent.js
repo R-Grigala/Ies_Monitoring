@@ -1,14 +1,17 @@
 window.deleteEvent = async function deleteEvent(eventId) {
-  if (typeof window.requireEventsAuth === "function" && !window.requireEventsAuth("ივენთის წაშლა")) {
+  if (
+    typeof window.requireEventsAuth === "function" &&
+    !(await Promise.resolve(window.requireEventsAuth("Delete event")))
+  ) {
     return;
   }
-  const confirmationMessage = `ნამდვილად გინდა ივენთის წაშლა? (event_id: ${eventId})`;
+  const confirmationMessage = `Are you sure you want to delete this event? (event_id: ${eventId})`;
   const confirmed = window.showConfirmModal
     ? await window.showConfirmModal({
-        title: "ივენთის წაშლა",
+        title: "Delete event",
         message: confirmationMessage,
-        confirmText: "წაშლა",
-        cancelText: "გაუქმება",
+        confirmText: "Delete",
+        cancelText: "Cancel",
         confirmClass: "btn-danger",
       })
     : window.confirm(confirmationMessage);
@@ -25,11 +28,11 @@ window.deleteEvent = async function deleteEvent(eventId) {
   });
 
   if (!data || data.error) {
-    showAlert("alertPlaceholder", "danger", data?.error || "ივენთის წაშლა ვერ მოხერხდა.");
+    showAlert("alertPlaceholder", "danger", data?.error || "Failed to delete event.");
     return;
   }
 
-  showAlert("alertPlaceholder", "success", data.message || "ივენთი წარმატებით წაიშალა.");
+  showAlert("alertPlaceholder", "success", data.message || "Event deleted successfully.");
   if (window.loadEvents) {
     await window.loadEvents();
   }

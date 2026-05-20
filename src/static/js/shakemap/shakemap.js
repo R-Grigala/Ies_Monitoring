@@ -9,33 +9,34 @@ const galleryModal = galleryModalElement ? new bootstrap.Modal(galleryModalEleme
 const STATUS_POLL_INTERVAL_MS = 4000;
 let statusPollTimer = null;
 
-function requireEventsAuth(actionLabel = "ამ მოქმედების შესრულება") {
-  const token = window.localStorage.getItem("access_token");
+async function requireEventsAuth(actionLabel = "perform this action") {
+  let token = window.localStorage.getItem("access_token");
   if (!token) {
-    showAlert("alertPlaceholder", "danger", `${actionLabel}-თვის გაიარე ავტორიზაცია.`);
+    showAlert("alertPlaceholder", "danger", `Please log in to ${actionLabel}.`);
     return false;
   }
 
   if (typeof isTokenExpired === "function" && isTokenExpired(token)) {
-    showAlert("alertPlaceholder", "danger", `${actionLabel}-თვის საჭიროა ხელახალი ავტორიზაცია.`);
-    return false;
-  }
-
-  const permissionsToken = window.localStorage.getItem("permissions_token");
-  let permissions = null;
-  if (permissionsToken) {
-    try {
-      const payload = JSON.parse(atob(permissionsToken.split(".")[1]));
-      permissions = payload?.sub || null;
-    } catch (error) {
-      permissions = null;
+    if (typeof refreshToken === "function") {
+      const refreshedToken = await refreshToken();
+      if (!refreshedToken) {
+        showAlert("alertPlaceholder", "danger", `Please sign in again to ${actionLabel}.`);
+        return false;
+      }
+      token = refreshedToken;
+    } else {
+      showAlert("alertPlaceholder", "danger", `Please sign in again to ${actionLabel}.`);
+      return false;
     }
   }
 
-  // თუ permissions_token არ იკითხება, მოდალის გახსნას არ ვბლოკავთ:
-  // საბოლოო ვალიდაცია მაინც backend-ზე ხდება.
-  if (permissions && !permissions.can_events && !permissions.is_admin) {
-    showAlert("alertPlaceholder", "danger", `${actionLabel}-ის უფლება არ გაქვს.`);
+  const hasEventsPermission =
+    typeof window.hasPermission === "function"
+      ? window.hasPermission("can_events")
+      : true;
+
+  if (typeof window.hasPermission === "function" && !hasEventsPermission) {
+    showAlert("alertPlaceholder", "danger", `You do not have permission to ${actionLabel}.`);
     return false;
   }
 
@@ -49,12 +50,24 @@ function bindCreateEventAuthGuard() {
     return;
   }
 
+  const canCreateEvents =
+    typeof window.hasPermission === "function"
+      ? window.hasPermission("can_events")
+      : false;
+
+  if (!canCreateEvents) {
+    createEventButton.classList.add("d-none");
+    return;
+  }
+
+  createEventButton.classList.remove("d-none");
+
   createEventButton.removeAttribute("data-bs-toggle");
   createEventButton.removeAttribute("data-bs-target");
 
-  createEventButton.addEventListener("click", (event) => {
+  createEventButton.addEventListener("click", async (event) => {
     event.preventDefault();
-    if (!requireEventsAuth("მიწისძვრის დამატება")) {
+    if (!(await requireEventsAuth("add an earthquake"))) {
       if (createEventModalElement && typeof bootstrap !== "undefined") {
         bootstrap.Modal.getOrCreateInstance(createEventModalElement).hide();
       }
@@ -95,17 +108,17 @@ function getLatestCreatedAt(events) {
 function buildShakeMapStatusBadge(status) {
   switch (status) {
     case "generated":
-      return '<span class="badge text-bg-success" title="დათვლილია">generated</span>';
+      return '<span class="badge text-bg-success" title="Generated">generated</span>';
     case "waiting":
-      return '<span class="badge text-bg-info text-dark" title="რიგშია">waiting</span>';
+      return '<span class="badge text-bg-info text-dark" title="Queued">waiting</span>';
     case "running":
-      return '<span class="badge text-bg-warning text-dark" title="მიმდინარეობს"><i class="fas fa-spinner fa-spin me-1"></i>running</span>';
+      return '<span class="badge text-bg-warning text-dark" title="Running"><i class="fas fa-spinner fa-spin me-1"></i>running</span>';
     case "failed":
-      return '<span class="badge text-bg-danger" title="შეცდომა">failed</span>';
+      return '<span class="badge text-bg-danger" title="Failed">failed</span>';
     case "pending":
-      return '<span class="badge text-bg-secondary" title="ჯერ არ არის გაშვებული">pending</span>';
+      return '<span class="badge text-bg-secondary" title="Not started">pending</span>';
     default:
-      return '<span class="badge text-bg-secondary" title="უცნობი სტატუსი">unknown</span>';
+      return '<span class="badge text-bg-secondary" title="Unknown status">unknown</span>';
   }
 }
 
@@ -145,25 +158,34 @@ function bindRegenerateButtons() {
 
 // არჩევითი რეგენერაცია ცხრილიდან კონკრეტული OID-ით.
 async function regenerateShakeMap(button) {
+  const canRunShakeMap =
+    typeof window.hasPermission === "function"
+      ? window.hasPermission("can_shakemap")
+      : false;
+  if (!canRunShakeMap) {
+    showAlert("alertPlaceholder", "danger", "You do not have permission to generate ShakeMap.");
+    return;
+  }
+
   const seiscompOid = button.dataset.seiscompOid;
   if (!seiscompOid) {
-    showAlert("alertPlaceholder", "danger", "SeisComP OID არ არის მითითებული.");
+    showAlert("alertPlaceholder", "danger", "SeisComP OID is missing.");
     return;
   }
 
   const accessToken = window.localStorage.getItem("access_token");
   if (!accessToken) {
-    showAlert("alertPlaceholder", "danger", "ShakeMap გენერაციისთვის საჭიროა ავტორიზაცია.");
+    showAlert("alertPlaceholder", "danger", "Authorization is required to generate ShakeMap.");
     return;
   }
   if (typeof window.makeApiRequest !== "function") {
-    showAlert("alertPlaceholder", "danger", "ავტორიზაციის მოდული ვერ ჩაიტვირთა.");
+    showAlert("alertPlaceholder", "danger", "Authorization module failed to load.");
     return;
   }
 
   button.disabled = true;
   button.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
-  eventsStatus.textContent = `ShakeMap გენერაცია დაიწყო (${seiscompOid})...`;
+  eventsStatus.textContent = `ShakeMap generation started (${seiscompOid})...`;
   let statusMessageOverride = null;
 
   try {
@@ -177,15 +199,15 @@ async function regenerateShakeMap(button) {
       body: JSON.stringify({ seiscomp_oid: seiscompOid }),
     });
     if (!payload || payload.error) {
-      statusMessageOverride = payload?.error || "ShakeMap გენერაცია ვერ მოხერხდა.";
+      statusMessageOverride = payload?.error || "Failed to generate ShakeMap.";
       showAlert("alertPlaceholder", "danger", statusMessageOverride);
       return;
     }
 
-    showAlert("alertPlaceholder", "success", payload?.message || `ShakeMap დათვლა რიგში ჩაეშვა (${seiscompOid}).`);
+    showAlert("alertPlaceholder", "success", payload?.message || `ShakeMap job queued (${seiscompOid}).`);
     await loadEvents();
   } catch (error) {
-    statusMessageOverride = "მოთხოვნა ჩავარდა ShakeMap გენერაციისას.";
+    statusMessageOverride = "Request failed during ShakeMap generation.";
     showAlert("alertPlaceholder", "danger", statusMessageOverride);
   } finally {
     button.disabled = false;
@@ -204,8 +226,8 @@ async function openGallery(seiscompOid) {
     return;
   }
 
-  galleryModalLabel.textContent = `ShakeMap გალერეა (${seiscompOid})`;
-  galleryModalBody.innerHTML = '<p class="text-muted mb-0">სურათები იტვირთება...</p>';
+  galleryModalLabel.textContent = `ShakeMap gallery (${seiscompOid})`;
+  galleryModalBody.innerHTML = '<p class="text-muted mb-0">Loading images...</p>';
   galleryModal.show();
 
   try {
@@ -217,7 +239,7 @@ async function openGallery(seiscompOid) {
 
     if (!response.ok) {
       galleryModalBody.innerHTML = `<div class="alert alert-danger mb-0">${
-        escapeHtml(payload.error || "გალერეის ჩატვირთვა ვერ მოხერხდა.")
+        escapeHtml(payload.error || "Failed to load gallery.")
       }</div>`;
       return;
     }
@@ -229,7 +251,7 @@ async function openGallery(seiscompOid) {
             <div class="col-md-4">
               <div class="card h-100">
                 <div class="card-body d-flex align-items-center justify-content-center text-muted">
-                  ${escapeHtml(image.filename)} არ არსებობს
+                  ${escapeHtml(image.filename)} does not exist
                 </div>
               </div>
             </div>
@@ -246,7 +268,7 @@ async function openGallery(seiscompOid) {
                 href="${escapeHtml(image.url)}"
                 target="_blank"
                 rel="noopener noreferrer"
-                title="სრული ზომით გახსნა ახალ ტაბში"
+                title="Open full size in a new tab"
               >
                 <img
                   src="${escapeHtml(image.url)}"
@@ -273,7 +295,7 @@ async function openGallery(seiscompOid) {
       </div>
     `;
   } catch (error) {
-    galleryModalBody.innerHTML = '<div class="alert alert-danger mb-0">მოთხოვნა ჩავარდა გალერეის ჩატვირთვისას.</div>';
+    galleryModalBody.innerHTML = '<div class="alert alert-danger mb-0">Request failed while loading gallery.</div>';
   }
 }
 
@@ -281,7 +303,7 @@ async function openGallery(seiscompOid) {
 function renderEvents(events) {
   if (!Array.isArray(events) || events.length === 0) {
     eventsTableBody.innerHTML = "";
-    eventsStatus.textContent = "ივენთები ვერ მოიძებნა.";
+    eventsStatus.textContent = "No events found.";
     totalEvents.textContent = "0";
     lastUpdated.textContent = "—";
     return;
@@ -292,6 +314,10 @@ function renderEvents(events) {
     const bTime = new Date(b.origin_time || 0).getTime();
     return bTime - aTime;
   });
+  const canRunShakeMap =
+    typeof window.hasPermission === "function"
+      ? window.hasPermission("can_shakemap")
+      : false;
 
   eventsTableBody.innerHTML = sortedEvents
     .map(
@@ -299,11 +325,14 @@ function renderEvents(events) {
       <tr>
         <td>
           ${buildShakeMapStatusBadge(event.shakemap_status)}
+          ${
+            canRunShakeMap
+              ? `
           <button
             type="button"
             class="btn btn-sm btn-outline-warning ms-2 regenerate-shakemap-btn"
             data-seiscomp-oid="${escapeHtml(event.seiscomp_oid || "")}"
-            title="ხელახლა გენერაცია"
+            title="Regenerate"
             ${
               event.seiscomp_oid &&
               !["running", "waiting"].includes(event.shakemap_status)
@@ -313,13 +342,16 @@ function renderEvents(events) {
           >
             <i class="fas fa-rotate-right"></i>
           </button>
+          `
+              : ""
+          }
         </td>
         <td>
           <button
             type="button"
             class="btn btn-sm btn-outline-primary open-gallery-btn"
             data-seiscomp-oid="${escapeHtml(event.seiscomp_oid)}"
-            title="გალერეა"
+            title="Gallery"
           >
             <i class="fas fa-images"></i>
           </button>
@@ -340,7 +372,7 @@ function renderEvents(events) {
   const hasRunningStatus = sortedEvents.some((event) =>
     ["running", "waiting"].includes(event.shakemap_status)
   );
-  eventsStatus.textContent = `ჩაიტვირთა ${sortedEvents.length} ივენთი.`;
+  eventsStatus.textContent = `Loaded ${sortedEvents.length} events.`;
   totalEvents.textContent = String(sortedEvents.length);
   lastUpdated.textContent = getLatestCreatedAt(sortedEvents);
   bindGalleryButtons();
@@ -350,7 +382,7 @@ function renderEvents(events) {
 
 // /api/events-დან მონაცემების წამოღება და UI-ის განახლება.
 async function loadEvents() {
-  eventsStatus.textContent = "ივენთები იტვირთება...";
+  eventsStatus.textContent = "Loading events...";
 
   try {
     const response = await fetch("/api/events", {
@@ -361,7 +393,7 @@ async function loadEvents() {
 
     if (!response.ok) {
       eventsTableBody.innerHTML = "";
-      showAlert("alertPlaceholder", "danger", payload.error || "ივენთების ჩატვირთვა ვერ მოხერხდა.");
+      showAlert("alertPlaceholder", "danger", payload.error || "Failed to load events.");
       totalEvents.textContent = "—";
       lastUpdated.textContent = "—";
       return;
@@ -370,7 +402,7 @@ async function loadEvents() {
     renderEvents(payload);
   } catch (error) {
     eventsTableBody.innerHTML = "";
-    eventsStatus.textContent = "მოთხოვნა ჩავარდა ივენთების ჩატვირთვისას.";
+    eventsStatus.textContent = "Request failed while loading events.";
     totalEvents.textContent = "—";
     lastUpdated.textContent = "—";
     scheduleRunningStatusPoll(true);

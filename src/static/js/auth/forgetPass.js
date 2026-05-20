@@ -26,16 +26,16 @@ function sendEmail(event) {
         btn.disabled = false;
         if (data.message) {
             closeModal('resetPasswordModal');
-            showAlert('alertPlaceholder', 'success', data.message || ' გთხოვთ შეამოწმოთ ელ.ფოსტა, ვერიფიკაციის ლინკი გამოგზავნილია.');
+            showAlert('alertPlaceholder', 'success', data.message || 'Please check your email. Verification link has been sent.');
             modalForm.reset();
         } else {
-            showAlert('alertPlaceholder', 'danger', data.error || ' გაუმართავი ელ.ფოსტა.');
+            showAlert('alertPlaceholder', 'danger', data.error || 'Invalid email address.');
 
         }
     })
     .catch(error => {
         console.error('Error:', error);
-        showAlert('alertPlaceholder', 'danger', 'მოთხოვნა ჩავარდა. სცადეთ თავიდან.');
+        showAlert('alertPlaceholder', 'danger', 'Request failed. Please try again.');
         btn.disabled = false;
     });
 }
@@ -44,9 +44,9 @@ document.getElementById('modalResetPassword').onsubmit = sendEmail;
 document.addEventListener('DOMContentLoaded', function() {
 
     if (message == 'invalid'){
-        showAlert('alertPlaceholder', 'danger', 'პაროლის აღდგენის ლინკი არასწორია.');
+        showAlert('alertPlaceholder', 'danger', 'Password reset link is invalid.');
     }else if (message == 'expired'){
-        showAlert('alertPlaceholder', 'danger', 'პაროლის აღდგენის ლინკს გაუვიდა ვადა.');
+        showAlert('alertPlaceholder', 'danger', 'Password reset link has expired.');
     }
 
 } )

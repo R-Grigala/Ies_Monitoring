@@ -5,7 +5,7 @@ function login(event) {
     const retypePassword = document.getElementById('retypePassword').value;
     const hasToken = typeof token !== "undefined" && token !== null && String(token).trim() !== "";
     if (!hasToken) {
-        showAlert('alertPlaceholder', 'danger', 'არასწორი ან ცარიელი reset ტოკენი.');
+        showAlert('alertPlaceholder', 'danger', 'Invalid or empty reset token.');
         return;
     }
 
@@ -25,20 +25,19 @@ function login(event) {
     .then(response => response.json())
     .then(data => {
         if (data.message) {
-            // JWT ტოკენების შენახვა localStorage-ში
-            showAlert('alertPlaceholder', 'success', data.message || ' პაროლი წარმატებით შეიცვალა.');
+            showAlert('alertPlaceholder', 'success', data.message || 'Password changed successfully.');
             setTimeout(() => {
                 clearSessionData();
             }, 1000); // Optional delay (1 second)
             // Redirect to /projects page
         } else {
-            showAlert('alertPlaceholder', 'danger', data.error || ' გაუმართავი ავტორიზაცია.');
+            showAlert('alertPlaceholder', 'danger', data.error || 'Invalid authorization.');
 
         }
     })
     .catch(error => {
         console.error('Error:', error);
-        showAlert('alertPlaceholder', 'danger', 'მოთხოვნა ჩავარდა. გთხოვთ სცადოთ თავიდან.');
+        showAlert('alertPlaceholder', 'danger', 'Request failed. Please try again.');
     });
 }
 

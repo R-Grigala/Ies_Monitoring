@@ -8,33 +8,34 @@ function escapeHtml(value) {
   return div.innerHTML;
 }
 
-function requireEventsAuth(actionLabel = "ამ მოქმედების შესრულება") {
-  const token = window.localStorage.getItem("access_token");
+async function requireEventsAuth(actionLabel = "perform this action") {
+  let token = window.localStorage.getItem("access_token");
   if (!token) {
-    showAlert("alertPlaceholder", "danger", `${actionLabel}-თვის გაიარე ავტორიზაცია.`);
+    showAlert("alertPlaceholder", "danger", `Please log in to ${actionLabel}.`);
     return false;
   }
 
   if (typeof isTokenExpired === "function" && isTokenExpired(token)) {
-    showAlert("alertPlaceholder", "danger", `${actionLabel}-თვის საჭიროა ხელახალი ავტორიზაცია.`);
-    return false;
-  }
-
-  const permissionsToken = window.localStorage.getItem("permissions_token");
-  let permissions = null;
-  if (permissionsToken) {
-    try {
-      const payload = JSON.parse(atob(permissionsToken.split(".")[1]));
-      permissions = payload?.sub || null;
-    } catch (error) {
-      permissions = null;
+    if (typeof refreshToken === "function") {
+      const refreshedToken = await refreshToken();
+      if (!refreshedToken) {
+        showAlert("alertPlaceholder", "danger", `Please sign in again to ${actionLabel}.`);
+        return false;
+      }
+      token = refreshedToken;
+    } else {
+      showAlert("alertPlaceholder", "danger", `Please sign in again to ${actionLabel}.`);
+      return false;
     }
   }
 
-  // თუ permissions_token არ იკითხება, მოდალის გახსნას არ ვბლოკავთ:
-  // საბოლოო ვალიდაცია მაინც backend-ზე ხდება.
-  if (permissions && !permissions.can_events && !permissions.is_admin) {
-    showAlert("alertPlaceholder", "danger", `${actionLabel}-ის უფლება არ გაქვს.`);
+  const hasEventsPermission =
+    typeof window.hasPermission === "function"
+      ? window.hasPermission("can_events")
+      : true;
+
+  if (typeof window.hasPermission === "function" && !hasEventsPermission) {
+    showAlert("alertPlaceholder", "danger", `You do not have permission to ${actionLabel}.`);
     return false;
   }
 
@@ -48,14 +49,24 @@ function bindCreateEventAuthGuard() {
     return;
   }
 
-  // Bootstrap-ის ავტომატურ data-bs-toggle მექანიზმს ვთიშავთ,
-  // რომ მოდალის გახსნა სრულად ჩვენი auth-check-ით იმართოს.
+  const canManageEvents =
+    typeof window.hasPermission === "function"
+      ? window.hasPermission("can_events")
+      : false;
+
+  if (!canManageEvents) {
+    createEventButton.classList.add("d-none");
+    return;
+  }
+
+  createEventButton.classList.remove("d-none");
+
   createEventButton.removeAttribute("data-bs-toggle");
   createEventButton.removeAttribute("data-bs-target");
 
-  createEventButton.addEventListener("click", (event) => {
+  createEventButton.addEventListener("click", async (event) => {
     event.preventDefault();
-    if (!requireEventsAuth("მიწისძვრის დამატება")) {
+    if (!(await requireEventsAuth("add an earthquake"))) {
       if (createEventModalElement && typeof bootstrap !== "undefined") {
         bootstrap.Modal.getOrCreateInstance(createEventModalElement).hide();
       }
@@ -68,10 +79,11 @@ function bindCreateEventAuthGuard() {
   });
 }
 
+
 function renderEvents(events) {
   if (!Array.isArray(events) || events.length === 0) {
     eventsTableBody.innerHTML = "";
-    eventsStatus.textContent = "ივენთები ვერ მოიძებნა.";
+    eventsStatus.textContent = "No events found.";
     return;
   }
 
@@ -80,6 +92,10 @@ function renderEvents(events) {
     const bTime = new Date(b.origin_time || 0).getTime();
     return bTime - aTime;
   });
+  const canManageEvents =
+    typeof window.hasPermission === "function"
+      ? window.hasPermission("can_events")
+      : false;
   eventsById.clear();
   sortedEvents.forEach((event) => eventsById.set(String(event.event_id), event));
   window.eventsById = eventsById;
@@ -89,17 +105,20 @@ function renderEvents(events) {
       (event) => `
       <tr>
         <td>
+          ${
+            canManageEvents
+              ? `
           <div class="d-flex align-items-center gap-1">
             <button
               type="button"
               class="btn btn-sm btn-outline-secondary edit-event-btn d-inline-flex align-items-center justify-content-center"
               onclick="openEditEventModal('${escapeHtml(event.event_id)}')"
-              title="ივენთის რედაქტირება"
-              aria-label="ივენთის რედაქტირება"
+              title="Edit event"
+              aria-label="Edit event"
             >
               <img
                 src="/static/img/pen-solid.svg"
-                alt="რედაქტირება"
+                alt="Edit"
                 style="width: 14px; height: 14px;"
               >
             </button>
@@ -107,16 +126,19 @@ function renderEvents(events) {
               type="button"
               class="btn btn-sm btn-outline-danger d-inline-flex align-items-center justify-content-center"
               onclick="deleteEvent('${escapeHtml(event.event_id)}')"
-              title="ივენთის წაშლა"
-              aria-label="ივენთის წაშლა"
+              title="Delete event"
+              aria-label="Delete event"
             >
               <img
                 src="/static/img/trash-solid.svg"
-                alt="წაშლა"
+                alt="Delete"
                 style="width: 14px; height: 14px;"
               >
             </button>
           </div>
+          `
+              : ""
+          }
         </td>
         <td>${escapeHtml(event.event_id)}</td>
         <td>${escapeHtml(event.seiscomp_oid)}</td>
@@ -131,7 +153,7 @@ function renderEvents(events) {
     )
     .join("");
 
-  eventsStatus.textContent = `ჩაიტვირთა ${sortedEvents.length} მიწისძვრა.`;
+  eventsStatus.textContent = `Loaded ${sortedEvents.length} earthquakes.`;
 }
 
 function renderEventsAndMap(events) {
@@ -142,7 +164,7 @@ function renderEventsAndMap(events) {
 }
 
 async function loadEvents() {
-  eventsStatus.textContent = "მიწისძვრები იტვირთება...";
+  eventsStatus.textContent = "Loading earthquakes...";
 
   try {
     const response = await fetch("/api/events", {
@@ -153,14 +175,14 @@ async function loadEvents() {
 
     if (!response.ok) {
       eventsTableBody.innerHTML = "";
-      eventsStatus.textContent = payload.error || "მიწისძვრების ჩატვირთვა ვერ მოხერხდა.";
+      eventsStatus.textContent = payload.error || "Failed to load earthquakes.";
       return;
     }
 
     renderEventsAndMap(Array.isArray(payload) ? payload : []);
   } catch {
     eventsTableBody.innerHTML = "";
-    eventsStatus.textContent = "მოთხოვნა ჩავარდა მიწისძვრების ჩატვირთვისას.";
+    eventsStatus.textContent = "Request failed while loading earthquakes.";
   }
 }
 window.escapeHtml = escapeHtml;

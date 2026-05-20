@@ -1,7 +1,15 @@
 import logging
-
+from flask import jsonify
 from flask_restx import Resource
-from flask_jwt_extended import create_access_token, create_refresh_token, jwt_required, get_jwt_identity, current_user
+from flask_jwt_extended import (
+    create_access_token,
+    create_refresh_token,
+    jwt_required,
+    get_jwt_identity,
+    current_user,
+    set_refresh_cookies,
+    unset_refresh_cookies,
+)
 
 from src.models import User, Role
 from src.api.nsmodels import auth_ns, registration_parser, auth_parser
@@ -21,7 +29,7 @@ class RegistrationApi(Resource):
         # ვამოწმებთ, აქვს თუ არა მიმდინარე მომხმარებელს ახალი ანგარიშის რეგისტრაციის უფლება.
         if not (current_user.check_permission('is_admin') or current_user.check_permission('can_users')):
             logger.warning("Registration denied: actor_uuid=%s missing permissions", current_user.uuid)
-            return {"error": "არ გაქვს მომხმარებლის რეგისტრაციის ნებართვა."}, 403
+            return {"error": "You do not have permission to register users."}, 403
 
 
         args = registration_parser.parse_args()
@@ -34,7 +42,7 @@ class RegistrationApi(Resource):
         # ვამოწმებთ, ემთხვევა თუ არა პაროლის წესებს და განმეორებით შეყვანას.
         if args["password"] != args["passwordRepeat"]:
             logger.info("Registration failed: email=%s password mismatch", normalized_email)
-            return {"error": "პაროლები არ ემთხვევა."}, 400
+            return {"error": "Passwords do not match."}, 400
 
         try:
             validate_password(args["password"])
@@ -44,12 +52,12 @@ class RegistrationApi(Resource):
 
         if User.query.filter_by(email=normalized_email).first():
             logger.info("Registration failed: email=%s already exists", normalized_email)
-            return {"error": "ელ.ფოსტის მისამართი უკვე რეგისტრირებულია."}, 400
+            return {"error": "Email address is already registered."}, 400
 
         role = Role.query.filter_by(name=args["role_name"]).first()
         if not role:
             logger.info("Registration failed: email=%s role not found=%s", normalized_email, args["role_name"])
-            return {"error": "როლი ვერ მოიძებნა."}, 400
+            return {"error": "Role not found."}, 400
 
         new_user = User(
             name=args["name"],
@@ -62,65 +70,85 @@ class RegistrationApi(Resource):
         new_user.create()
         logger.info("Registration success: email=%s role=%s", normalized_email, role.name)
 
-        return {"message": "მომხმარებელი წარმატებით დარეგისტრირდა."}, 200
+        return {"message": "User registered successfully."}, 200
     
 @auth_ns.route('/login')
-@auth_ns.doc(responses={200: 'OK', 400: 'Invalid Argument', 401: 'JWT Token Expires', 403: 'Forbidden', 404: 'Not Found'})
 class AuthorizationApi(Resource):
+
     @auth_ns.doc(parser=auth_parser)
     def post(self):
-        args = auth_parser.parse_args()
         try:
-            normalized_email = normalize_email(args["email"])
-        except ValueError:
-            logger.info("Login failed: invalid email format")
-            return {"error": "შეყვანილი პაროლი ან ელ.ფოსტა არასწორია."}, 400
+            args = auth_parser.parse_args()
 
-        # მომხმარებელს ვეძებთ ელფოსტის მიხედვით.
-        user = User.query.filter_by(email=normalized_email).first()
-        if not user:
-            logger.info("Login failed: email=%s user not found", normalized_email)
-            return {"error": "შეყვანილი პაროლი ან ელ.ფოსტა არასწორია."}, 400
+            try:
+                normalized_email = normalize_email(args["email"])
+            except ValueError:
+                return {
+                    "error": "Invalid email or password."
+                }, 400
 
-        # ვამოწმებთ, ემთხვევა თუ არა პაროლი.
-        if user.check_password(args["password"]):
+            user = User.query.filter_by(email=normalized_email).first()
+            if not user or not user.check_password(args["password"]):
+                return {
+                    "error": "Invalid email or password."
+                }, 400
 
-            # ვქმნით ტოკენებს მომხმარებლის UUID იდენტობით.
-            access_token = create_access_token(identity=user.uuid)
+            if not user.role:
+                logger.warning("Login denied: user_uuid=%s has no role", user.uuid)
+                return {"error": "User role not found."}, 403
+
+            permissions = user.role.get_permissions()
+            access_token = create_access_token(
+                identity=user.uuid,
+                additional_claims={
+                    "role": user.role.name,
+                    "permissions": permissions
+                }
+            )
             refresh_token = create_refresh_token(identity=user.uuid)
 
-            # ვიღებთ უფლებებს და ვქმნით permissions ტოკენს.
-            permissions = user.role.get_permissions()
-
-            permissions_token = create_access_token(identity={
-                **permissions
+            response = jsonify({
+                "message": "Authorization successful.",
+                "access_token": access_token
             })
-
-            logger.info("Login success: user_uuid=%s email=%s", user.uuid, user.email)
-
-            return {
-                "message": "წარმატებით გაიარეთ ავტორიზაცია.",
-                "access_token": access_token,
-                "refresh_token": refresh_token,
-                "permissions_token": permissions_token
-            }, 200
-        
-        # თუ პაროლი არასწორია, ვაბრუნებთ ავტორიზაციის შეცდომას.
-        else:
-            logger.info("Login failed: email=%s invalid password", normalized_email)
-            return {"error": "შეყვანილი პაროლი ან ელ.ფოსტა არასწორია."}, 400
+            set_refresh_cookies(response, refresh_token)
+            return response
+        except Exception:
+            logger.exception("Login failed with unexpected error")
+            return {"error": "Internal error occurred during authorization."}, 500
 
 @auth_ns.route('/refresh')
-@auth_ns.doc(responses={200: 'OK', 400: 'Invalid Argument', 401: 'JWT Token Expires', 403: 'Forbidden', 404: 'Not Found'})
 class AccessTokenRefreshApi(Resource):
+
     @jwt_required(refresh=True)
-    @auth_ns.doc(security='JsonWebToken')
     def post(self):
         identity = get_jwt_identity()
-        access_token = create_access_token(identity=identity)
-        logger.info("Access token refresh success: identity=%s", identity)
-        response = {
-            "access_token": access_token
-        }
+        user = User.query.filter_by(uuid=identity).first()
+        if not user:
+            return {"error": "User not found."}, 404
+        if not user.role:
+            return {"error": "User role not found."}, 403
+
+        permissions = user.role.get_permissions()
+        access_token = create_access_token(
+            identity=user.uuid,
+            additional_claims={
+                "role": user.role.name,
+                "permissions": permissions
+            }
+        )
+
+        return {"access_token": access_token}, 200
+
+@auth_ns.route('/logout')
+class LogoutApi(Resource):
+
+    def post(self):
+
+        response = jsonify({
+            "message": "logout success"
+        })
+
+        unset_refresh_cookies(response)
 
         return response

@@ -1,8 +1,6 @@
 function clearSessionData(redirect = true) {
     // Remove all session-related data
     localStorage.removeItem('access_token');
-    localStorage.removeItem('refresh_token');
-    localStorage.removeItem('permissions_token');
     
     // Optionally redirect the user to the login page or another page
     if (redirect) {
@@ -12,33 +10,55 @@ function clearSessionData(redirect = true) {
 
 function isTokenExpired(token) {
     if (!token) return true;
+    try {
+        const payload = decodeJwtPayload(token);
+        if (!payload) return true;
+        const currentTime = Date.now() / 1000; // Current time in seconds
+        return currentTime > payload.exp;
+    } catch (error) {
+        return true;
+    }
+}
 
-    const payload = JSON.parse(atob(token.split('.')[1]));
-    const currentTime = Date.now() / 1000; // Current time in seconds
+function decodeJwtPayload(token) {
+    if (!token) return null;
+    try {
+        const payloadPart = token.split('.')[1];
+        if (!payloadPart) return null;
 
-    return currentTime > payload.exp;
+        // JWT payload is base64url encoded; atob() needs normalization.
+        const base64 = payloadPart.replace(/-/g, '+').replace(/_/g, '/');
+        const padded = base64 + '='.repeat((4 - (base64.length % 4)) % 4);
+        return JSON.parse(atob(padded));
+    } catch (error) {
+        return null;
+    }
+}
+
+function getAccessTokenClaims() {
+    const token = localStorage.getItem('access_token');
+    return decodeJwtPayload(token);
+}
+
+function hasPermission(permissionName) {
+    const claims = getAccessTokenClaims();
+    const permissions = claims?.permissions;
+    if (!permissions) return false;
+    return Boolean(permissions.is_admin || permissions[permissionName]);
 }
 
 // Define the refreshToken function globally
 function refreshToken() {
-    const refreshToken = localStorage.getItem('refresh_token');
-
-    if (!refreshToken) {
-        clearSessionData(); // Clear session data and redirect to login
-        return Promise.reject('No refresh token available');
-    }
-
     return fetch('/api/refresh', {
         method: 'POST',
+        credentials: 'include',
         headers: {
-            'Authorization': `Bearer ${refreshToken}`,
             'Content-Type': 'application/json'
         }
     })
     .then(response => {
         if (response.status === 401) {
-            // alert("გთხოვთ ხელახლა გაიაროთ ავტორიზაცია.");
-            showAlert('alertPlaceholder', 'danger', ' გთხოვთ ხელახლა გაიაროთ ავტორიზაცია.');
+            showAlert('alertPlaceholder', 'danger', 'Please sign in again.');
             clearSessionData(); // Clear session data and redirect to login
             return Promise.reject('Unauthorized');
         }
@@ -62,22 +82,43 @@ function refreshToken() {
 }
 
 function makeApiRequest(url, options) {
+    options = options || {};
+    options.headers = options.headers || {};
+    options.credentials = 'include';
+
     const token = localStorage.getItem('access_token');
-    
+
+    if (!token) {
+        return fetch(url, options)
+            .then(async (response) => {
+                let data = null;
+                try {
+                    data = await response.json();
+                } catch (error) {
+                    data = null;
+                }
+                return data;
+            });
+    }
+
     // Check if the token is expired
     if (isTokenExpired(token)) {
         return refreshToken().then(newToken => {
-            options.headers = options.headers || {};
             options.headers['Authorization'] = `Bearer ${newToken}`;
             return fetch(url, options);
+        }).then(async (response) => {
+            let data = null;
+            try {
+                data = await response.json();
+            } catch (error) {
+                data = null;
+            }
+            return data;
         });
     }
 
     // Ensure the Authorization header is set
-    if (token) {
-        options.headers = options.headers || {};
-        options.headers['Authorization'] = `Bearer ${token}`;
-    }
+    options.headers['Authorization'] = `Bearer ${token}`;
 
     return fetch(url, options)
         .then(response => {
@@ -90,16 +131,17 @@ function makeApiRequest(url, options) {
                         return fetch(url, options);
                     });
             }
-            if (response.status === 422) {
-                // Unprocessable Entity - likely related to the request data
-                localStorage.removeItem('access_token');
-                window.location.href = '/login';
-            } 
-            else {
-                return response;
-            }
+            return response;
         })
-        .then(response => response.json())
+        .then(async response => {
+            let data = null;
+            try {
+                data = await response.json();
+            } catch (error) {
+                data = null;
+            }
+            return data;
+        })
         .catch(error => {
             console.error('API Request Error:', error);
             // Handle errors appropriately
@@ -144,10 +186,10 @@ function closeModal(modalName) {
 }
 
 function showConfirmModal({
-    title = 'დადასტურება',
-    message = 'ნამდვილად გსურთ მოქმედების შესრულება?',
-    confirmText = 'დადასტურება',
-    cancelText = 'გაუქმება',
+    title = 'Confirmation',
+    message = 'Are you sure you want to perform this action?',
+    confirmText = 'Confirm',
+    cancelText = 'Cancel',
     confirmClass = 'btn-danger'
 } = {}) {
     return new Promise((resolve) => {
@@ -195,11 +237,7 @@ function showConfirmModal({
 }
 
 function getPermissions(){
-    // Getting permissions token from local storage, decoding it and then returning them
-    
-    const encodedPermissions = localStorage.getItem('permissions_token');
-    const decodedPermissions = jwt_decode(encodedPermissions).sub;
-    return decodedPermissions;
+    return getAccessTokenClaims()?.permissions || null;
 }
 
 function initPasswordToggle({
@@ -239,6 +277,7 @@ function initPasswordToggle({
 
 window.showConfirmModal = showConfirmModal;
 window.initPasswordToggle = initPasswordToggle;
+window.hasPermission = hasPermission;
 
 
 // The DOMContentLoaded event listener
