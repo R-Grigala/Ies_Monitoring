@@ -8,32 +8,35 @@ function escapeHtml(value) {
   return div.innerHTML;
 }
 
-function requireEventsAuth(actionLabel = "ამ მოქმედების შესრულება") {
-  const token = window.localStorage.getItem("access_token");
+async function requireEventsAuth(actionLabel = "ამ მოქმედების შესრულება") {
+  let token = window.localStorage.getItem("access_token");
   if (!token) {
     showAlert("alertPlaceholder", "danger", `${actionLabel}-თვის გაიარე ავტორიზაცია.`);
     return false;
   }
 
   if (typeof isTokenExpired === "function" && isTokenExpired(token)) {
-    showAlert("alertPlaceholder", "danger", `${actionLabel}-თვის საჭიროა ხელახალი ავტორიზაცია.`);
-    return false;
-  }
-
-  const permissionsToken = window.localStorage.getItem("permissions_token");
-  let permissions = null;
-  if (permissionsToken) {
-    try {
-      const payload = JSON.parse(atob(permissionsToken.split(".")[1]));
-      permissions = payload?.sub || null;
-    } catch (error) {
-      permissions = null;
+    if (typeof refreshToken === "function") {
+      const refreshedToken = await refreshToken();
+      if (!refreshedToken) {
+        showAlert("alertPlaceholder", "danger", `${actionLabel}-თვის საჭიროა ხელახალი ავტორიზაცია.`);
+        return false;
+      }
+      token = refreshedToken;
+    } else {
+      showAlert("alertPlaceholder", "danger", `${actionLabel}-თვის საჭიროა ხელახალი ავტორიზაცია.`);
+      return false;
     }
   }
 
-  // თუ permissions_token არ იკითხება, მოდალის გახსნას არ ვბლოკავთ:
+  const hasEventsPermission =
+    typeof window.hasPermission === "function"
+      ? window.hasPermission("can_events")
+      : true;
+
+  // თუ permissions ვერ ვამოწმებთ, მოდალის გახსნას არ ვბლოკავთ:
   // საბოლოო ვალიდაცია მაინც backend-ზე ხდება.
-  if (permissions && !permissions.can_events && !permissions.is_admin) {
+  if (typeof window.hasPermission === "function" && !hasEventsPermission) {
     showAlert("alertPlaceholder", "danger", `${actionLabel}-ის უფლება არ გაქვს.`);
     return false;
   }
@@ -48,14 +51,26 @@ function bindCreateEventAuthGuard() {
     return;
   }
 
+  const canManageEvents =
+    typeof window.hasPermission === "function"
+      ? window.hasPermission("can_events")
+      : false;
+
+  if (!canManageEvents) {
+    createEventButton.classList.add("d-none");
+    return;
+  }
+
+  createEventButton.classList.remove("d-none");
+
   // Bootstrap-ის ავტომატურ data-bs-toggle მექანიზმს ვთიშავთ,
   // რომ მოდალის გახსნა სრულად ჩვენი auth-check-ით იმართოს.
   createEventButton.removeAttribute("data-bs-toggle");
   createEventButton.removeAttribute("data-bs-target");
 
-  createEventButton.addEventListener("click", (event) => {
+  createEventButton.addEventListener("click", async (event) => {
     event.preventDefault();
-    if (!requireEventsAuth("მიწისძვრის დამატება")) {
+    if (!(await requireEventsAuth("მიწისძვრის დამატება"))) {
       if (createEventModalElement && typeof bootstrap !== "undefined") {
         bootstrap.Modal.getOrCreateInstance(createEventModalElement).hide();
       }
@@ -67,6 +82,7 @@ function bindCreateEventAuthGuard() {
     }
   });
 }
+
 
 function renderEvents(events) {
   if (!Array.isArray(events) || events.length === 0) {
@@ -80,6 +96,10 @@ function renderEvents(events) {
     const bTime = new Date(b.origin_time || 0).getTime();
     return bTime - aTime;
   });
+  const canManageEvents =
+    typeof window.hasPermission === "function"
+      ? window.hasPermission("can_events")
+      : false;
   eventsById.clear();
   sortedEvents.forEach((event) => eventsById.set(String(event.event_id), event));
   window.eventsById = eventsById;
@@ -89,6 +109,9 @@ function renderEvents(events) {
       (event) => `
       <tr>
         <td>
+          ${
+            canManageEvents
+              ? `
           <div class="d-flex align-items-center gap-1">
             <button
               type="button"
@@ -117,6 +140,9 @@ function renderEvents(events) {
               >
             </button>
           </div>
+          `
+              : ""
+          }
         </td>
         <td>${escapeHtml(event.event_id)}</td>
         <td>${escapeHtml(event.seiscomp_oid)}</td>
