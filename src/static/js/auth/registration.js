@@ -8,7 +8,7 @@ function registration(event) {
 
     // Check if passwords match
     if (password !== passwordRepeat) {
-        showAlert('alertPlaceholder', 'danger', 'შეყვანილი პაროლები ერთმანეთს არ ემთხვევა ერთმანეთს.');
+        showAlert('alertPlaceholder', 'danger', 'Passwords do not match.');
         return;
     }
     
@@ -45,7 +45,7 @@ function registration(event) {
                 window.location.href = '/accounts';  // Redirect after success
             }, 2000);
         } else {
-            showAlert('alertPlaceholder', 'danger', data.error || 'რეგისტრაციისას მოხდა შეცდომა.');
+            showAlert('alertPlaceholder', 'danger', data.error || 'An error occurred during registration.');
         }
     })
     .catch(error => {

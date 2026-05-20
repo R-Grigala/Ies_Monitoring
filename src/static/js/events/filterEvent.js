@@ -36,7 +36,7 @@ function filterEventForm(event) {
     }
 
     if (filterStatus) {
-        filterStatus.textContent = "ფილტრაცია მიმდინარეობს...";
+        filterStatus.textContent = "Filtering events...";
     }
 
     const query = buildFilterQuery();
@@ -57,7 +57,7 @@ function filterEventForm(event) {
             }
 
             if (!response.ok) {
-                return { error: data?.error || "ფილტრაცია ვერ შესრულდა." };
+                return { error: data?.error || "Filtering failed." };
             }
 
             return data;
@@ -66,7 +66,7 @@ function filterEventForm(event) {
             if (!Array.isArray(data)) {
                 if (window.renderEventsAndMap) window.renderEventsAndMap([]);
                 if (filterStatus) {
-                    filterStatus.textContent = data?.error || "ფილტრაცია ვერ შესრულდა.";
+                    filterStatus.textContent = data?.error || "Filtering failed.";
                 }
                 return;
             }
@@ -76,14 +76,14 @@ function filterEventForm(event) {
             }
 
             if (filterStatus) {
-                filterStatus.textContent = `გაფილტრულია ${data.length} მიწისძვრა.`;
+                filterStatus.textContent = `${data.length} earthquakes filtered.`;
             }
         })
         .catch((error) => {
             console.error("Error fetching filtered events:", error);
             if (window.renderEventsAndMap) window.renderEventsAndMap([]);
             if (filterStatus) {
-                filterStatus.textContent = "ფილტრაციის მოთხოვნა ჩავარდა.";
+                filterStatus.textContent = "Filtering request failed.";
             }
         });
 

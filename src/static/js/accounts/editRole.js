@@ -57,7 +57,7 @@ function submitEditRoleForm() {
         if (result.message) {
             window.location.reload(); // Reload to reflect changes
         } else if (result.error) {
-            showAlert('alertPlaceholder', 'danger', result.error || 'როლის განახლების შეცდომა');
+            showAlert('alertPlaceholder', 'danger', result.error || 'Role update failed.');
         }
     })
     .catch(error => console.error('Error updating role:', error));

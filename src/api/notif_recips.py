@@ -17,7 +17,7 @@ logger = logging.getLogger("app.notifications")
 
 def _require_manage_users_permission():
     if not current_user.check_permission("can_users"):
-        return {"error": "არ გაქვს მიმღებების მართვის ნებართვა."}, 403
+        return {"error": "You do not have permission to manage recipients."}, 403
     return None, None
 
 
@@ -51,7 +51,7 @@ class PhoneRecipientListAPI(Resource):
                 is_active=bool(args.get("is_active")),
             )
             recipient.create()
-            return {"message": "ტელეფონის მიმღები წარმატებით დაემატა.", "id": recipient.id}, 201
+            return {"message": "Phone recipient created successfully.", "id": recipient.id}, 201
         except Exception as exc:
             logger.exception("Create phone recipient failed")
             return {"error": str(exc)}, 400
@@ -69,7 +69,7 @@ class PhoneRecipientDetailAPI(Resource):
 
         recipient = PhoneRecipient.query.get(recipient_id)
         if not recipient:
-            return {"error": "ტელეფონის მიმღები ვერ მოიძებნა."}, 404
+            return {"error": "Phone recipient not found."}, 404
         return recipient, 200
 
     @jwt_required()
@@ -82,7 +82,7 @@ class PhoneRecipientDetailAPI(Resource):
 
         recipient = PhoneRecipient.query.get(recipient_id)
         if not recipient:
-            return {"error": "ტელეფონის მიმღები ვერ მოიძებნა."}, 404
+            return {"error": "Phone recipient not found."}, 404
 
         args = phone_recipient_parser.parse_args()
         try:
@@ -91,7 +91,7 @@ class PhoneRecipientDetailAPI(Resource):
             recipient.staff_member = bool(args.get("staff_member"))
             recipient.is_active = bool(args.get("is_active"))
             recipient.save()
-            return {"message": "ტელეფონის მიმღები წარმატებით განახლდა."}, 200
+            return {"message": "Phone recipient updated successfully."}, 200
         except Exception as exc:
             logger.exception("Update phone recipient failed: id=%s", recipient_id)
             return {"error": str(exc)}, 400
@@ -105,10 +105,10 @@ class PhoneRecipientDetailAPI(Resource):
 
         recipient = PhoneRecipient.query.get(recipient_id)
         if not recipient:
-            return {"error": "ტელეფონის მიმღები ვერ მოიძებნა."}, 404
+            return {"error": "Phone recipient not found."}, 404
 
         recipient.delete()
-        return {"message": "ტელეფონის მიმღები წარმატებით წაიშალა."}, 200
+        return {"message": "Phone recipient deleted successfully."}, 200
 
 
 @notification_ns.route("/email_recipients")
@@ -141,7 +141,7 @@ class EmailRecipientListAPI(Resource):
                 is_active=bool(args.get("is_active")),
             )
             recipient.create()
-            return {"message": "ელ.ფოსტის მიმღები წარმატებით დაემატა.", "id": recipient.id}, 201
+            return {"message": "Email recipient created successfully.", "id": recipient.id}, 201
         except Exception as exc:
             logger.exception("Create email recipient failed")
             return {"error": str(exc)}, 400
@@ -159,7 +159,7 @@ class EmailRecipientDetailAPI(Resource):
 
         recipient = EmailRecipient.query.get(recipient_id)
         if not recipient:
-            return {"error": "ელ.ფოსტის მიმღები ვერ მოიძებნა."}, 404
+            return {"error": "Email recipient not found."}, 404
         return recipient, 200
 
     @jwt_required()
@@ -172,7 +172,7 @@ class EmailRecipientDetailAPI(Resource):
 
         recipient = EmailRecipient.query.get(recipient_id)
         if not recipient:
-            return {"error": "ელ.ფოსტის მიმღები ვერ მოიძებნა."}, 404
+            return {"error": "Email recipient not found."}, 404
 
         args = email_recipient_parser.parse_args()
         try:
@@ -181,7 +181,7 @@ class EmailRecipientDetailAPI(Resource):
             recipient.staff_member = bool(args.get("staff_member"))
             recipient.is_active = bool(args.get("is_active"))
             recipient.save()
-            return {"message": "ელ.ფოსტის მიმღები წარმატებით განახლდა."}, 200
+            return {"message": "Email recipient updated successfully."}, 200
         except Exception as exc:
             logger.exception("Update email recipient failed: id=%s", recipient_id)
             return {"error": str(exc)}, 400
@@ -195,7 +195,7 @@ class EmailRecipientDetailAPI(Resource):
 
         recipient = EmailRecipient.query.get(recipient_id)
         if not recipient:
-            return {"error": "ელ.ფოსტის მიმღები ვერ მოიძებნა."}, 404
+            return {"error": "Email recipient not found."}, 404
 
         recipient.delete()
-        return {"message": "ელ.ფოსტის მიმღები წარმატებით წაიშალა."}, 200
+        return {"message": "Email recipient deleted successfully."}, 200

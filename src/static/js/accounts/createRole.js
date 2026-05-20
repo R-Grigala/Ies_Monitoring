@@ -25,7 +25,7 @@ function createRole() {
                 showAlert('alertPlaceholder', 'success', data.message);
                 window.location.reload(); // Reload page after success
             }else if (data.error) {
-                showAlert('alertPlaceholder', 'danger', data.error || 'როლის შექმნა ვერ მოხერხდა.');
+                showAlert('alertPlaceholder', 'danger', data.error || 'Failed to create role.');
                 closeModal('createRoleModal');
             }
         })

@@ -36,7 +36,7 @@ class RunShakeMap(Resource):
     @shakemap_ns.doc(parser=shakemap_parser)
     @shakemap_ns.doc(
         security=[{'ApiKeyAuth': []}, {'JsonWebToken': []}],
-        description='ShakeMap-ის გაშვება შესაძლებელია X-API-Key-ით ან JWT Bearer ტოკენით',
+        description='Run ShakeMap using X-API-Key or JWT Bearer token',
     )
     def post(self):
         # --- მოთხოვნის body-ის დამუშავება ---
@@ -45,14 +45,14 @@ class RunShakeMap(Resource):
         # --- ავტორიზაციის შემოწმება ---
         if not is_authorized_request():
             logger.warning("ShakeMap run denied: seiscomp_oid=%s unauthorized", seiscomp_oid)
-            return {'error': 'არ გაქვს წვდომა. მიუთითე სწორი X-API-Key ან JWT ტოკენი.'}, 401
+            return {'error': 'Access denied. Provide a valid X-API-Key or JWT token.'}, 401
 
         try:
             # --- მოვლენის მოძებნა seiscomp_oid-ით ---
             event = SeismicEvent.query.filter_by(seiscomp_oid=seiscomp_oid).first()
             if not event:
                 logger.info("ShakeMap run failed: seiscomp_oid=%s not found", seiscomp_oid)
-                return {"error": f"მოვლენა ვერ მოიძებნა: {seiscomp_oid}"}, 404
+                return {"error": f"Event not found: {seiscomp_oid}"}, 404
 
             shakemap_job = ShakemapJob.query.filter_by(seiscomp_oid=seiscomp_oid).first()
             api_key = request.headers.get("X-API-Key")
@@ -63,7 +63,7 @@ class RunShakeMap(Resource):
             if not is_api_key_request:
                 if not have_permission("can_shakemap"):
                     logger.warning("ShakeMap run denied: seiscomp_oid=%s missing can_shakemap permission", seiscomp_oid)
-                    return {'error': 'არ გაქვს უფლება ShakeMap გაშვებისთვის.'}, 403
+                    return {'error': 'You do not have permission to run ShakeMap.'}, 403
             
             if not shakemap_job:
                 shakemap_job = ShakemapJob(
@@ -82,7 +82,7 @@ class RunShakeMap(Resource):
                 ShakemapJob.STATUS_WAITING
             ):
                 logger.info("ShakeMap run skipped: seiscomp_oid=%s already queued/running", seiscomp_oid)
-                return {"error": f"მოვლენა უკვე რიგშია ან მიმდინარეობს: {seiscomp_oid}"}, 409
+                return {"error": f"Event is already queued or running: {seiscomp_oid}"}, 409
             else:
                 # დასრულებული/failed job-ის ხელახლა გაშვებისას ისევ რიგში ჩავსვათ.
                 shakemap_job.status = ShakemapJob.STATUS_WAITING
@@ -100,7 +100,7 @@ class RunShakeMap(Resource):
             logger.info("ShakeMap queued: seiscomp_oid=%s task_id=%s", seiscomp_oid, async_result.id)
             return {
                 "status": "waiting",
-                "message": "დათვლა რიგში ჩაეშვა.",
+                "message": "Computation has been queued.",
                 "seiscomp_oid": seiscomp_oid,
                 "job_id": shakemap_job.id,
                 "task_id": async_result.id,
@@ -114,7 +114,7 @@ class RunShakeMap(Resource):
                 shakemap_job.save()
             logger.exception("ShakeMap run exception: seiscomp_oid=%s", seiscomp_oid)
             return {
-                "status": "წარუმატებელია",
+                "status": "failed",
                 "event_id": seiscomp_oid,
                 "error": str(e)
             }, 500
@@ -138,7 +138,7 @@ class ShakeMapResults(Resource):
         shakemap_job = ShakemapJob.query.filter_by(seiscomp_oid=seiscomp_oid).first()
         if not shakemap_job:
             logger.info("ShakeMap results failed: seiscomp_oid=%s not found", seiscomp_oid)
-            return {"error": f"მოვლენა ვერ მოიძებნა: {seiscomp_oid}"}, 404
+            return {"error": f"Event not found: {seiscomp_oid}"}, 404
 
         products_path = f"{SHAKEMAP_BASE_PATH}/{seiscomp_oid}/current/products" if seiscomp_oid else None
         images = []
@@ -154,7 +154,7 @@ class ShakeMapResults(Resource):
             )
 
         return {
-            "status": "წარმატებულია",
+            "status": "success",
             "event_id": seiscomp_oid,
             "products_path": products_path,
             "images": images,
@@ -179,7 +179,7 @@ class ShakeMapResultImage(Resource):
         event = SeismicEvent.query.filter_by(seiscomp_oid=seiscomp_oid).first()
         if not event:
             logger.info("ShakeMap image failed: seiscomp_oid=%s event not found", seiscomp_oid)
-            return {"error": f"მოვლენა ვერ მოიძებნა: {seiscomp_oid}"}, 404
+            return {"error": f"Event not found: {seiscomp_oid}"}, 404
 
         filename = ALLOWED_IMAGES.get(image_type)
         if not filename:
@@ -188,7 +188,7 @@ class ShakeMapResultImage(Resource):
                 seiscomp_oid,
                 image_type,
             )
-            return {"error": f"სურათის ტიპი არ არის მხარდაჭერილი: {image_type}"}, 400
+            return {"error": f"Unsupported image type: {image_type}"}, 400
 
         products_path = f'{SHAKEMAP_BASE_PATH}/{seiscomp_oid}/current/products'
         file_path = os.path.join(products_path, filename)
@@ -198,7 +198,7 @@ class ShakeMapResultImage(Resource):
                 seiscomp_oid,
                 filename,
             )
-            return {"error": f"სურათი ვერ მოიძებნა: {filename}"}, 404
+            return {"error": f"Image not found: {filename}"}, 404
 
         logger.info(
             "ShakeMap image success: seiscomp_oid=%s image_type=%s",

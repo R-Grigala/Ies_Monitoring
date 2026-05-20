@@ -29,7 +29,7 @@ class RegistrationApi(Resource):
         # ვამოწმებთ, აქვს თუ არა მიმდინარე მომხმარებელს ახალი ანგარიშის რეგისტრაციის უფლება.
         if not (current_user.check_permission('is_admin') or current_user.check_permission('can_users')):
             logger.warning("Registration denied: actor_uuid=%s missing permissions", current_user.uuid)
-            return {"error": "არ გაქვს მომხმარებლის რეგისტრაციის ნებართვა."}, 403
+            return {"error": "You do not have permission to register users."}, 403
 
 
         args = registration_parser.parse_args()
@@ -42,7 +42,7 @@ class RegistrationApi(Resource):
         # ვამოწმებთ, ემთხვევა თუ არა პაროლის წესებს და განმეორებით შეყვანას.
         if args["password"] != args["passwordRepeat"]:
             logger.info("Registration failed: email=%s password mismatch", normalized_email)
-            return {"error": "პაროლები არ ემთხვევა."}, 400
+            return {"error": "Passwords do not match."}, 400
 
         try:
             validate_password(args["password"])
@@ -52,12 +52,12 @@ class RegistrationApi(Resource):
 
         if User.query.filter_by(email=normalized_email).first():
             logger.info("Registration failed: email=%s already exists", normalized_email)
-            return {"error": "ელ.ფოსტის მისამართი უკვე რეგისტრირებულია."}, 400
+            return {"error": "Email address is already registered."}, 400
 
         role = Role.query.filter_by(name=args["role_name"]).first()
         if not role:
             logger.info("Registration failed: email=%s role not found=%s", normalized_email, args["role_name"])
-            return {"error": "როლი ვერ მოიძებნა."}, 400
+            return {"error": "Role not found."}, 400
 
         new_user = User(
             name=args["name"],
@@ -70,7 +70,7 @@ class RegistrationApi(Resource):
         new_user.create()
         logger.info("Registration success: email=%s role=%s", normalized_email, role.name)
 
-        return {"message": "მომხმარებელი წარმატებით დარეგისტრირდა."}, 200
+        return {"message": "User registered successfully."}, 200
     
 @auth_ns.route('/login')
 class AuthorizationApi(Resource):
@@ -84,18 +84,18 @@ class AuthorizationApi(Resource):
                 normalized_email = normalize_email(args["email"])
             except ValueError:
                 return {
-                    "error": "შეყვანილი პაროლი ან ელ.ფოსტა არასწორია."
+                    "error": "Invalid email or password."
                 }, 400
 
             user = User.query.filter_by(email=normalized_email).first()
             if not user or not user.check_password(args["password"]):
                 return {
-                    "error": "შეყვანილი პაროლი ან ელ.ფოსტა არასწორია."
+                    "error": "Invalid email or password."
                 }, 400
 
             if not user.role:
                 logger.warning("Login denied: user_uuid=%s has no role", user.uuid)
-                return {"error": "მომხმარებლის როლი ვერ მოიძებნა."}, 403
+                return {"error": "User role not found."}, 403
 
             permissions = user.role.get_permissions()
             access_token = create_access_token(
@@ -108,14 +108,14 @@ class AuthorizationApi(Resource):
             refresh_token = create_refresh_token(identity=user.uuid)
 
             response = jsonify({
-                "message": "წარმატებით გაიარეთ ავტორიზაცია.",
+                "message": "Authorization successful.",
                 "access_token": access_token
             })
             set_refresh_cookies(response, refresh_token)
             return response
         except Exception:
             logger.exception("Login failed with unexpected error")
-            return {"error": "ავტორიზაციისას დაფიქსირდა შიდა შეცდომა."}, 500
+            return {"error": "Internal error occurred during authorization."}, 500
 
 @auth_ns.route('/refresh')
 class AccessTokenRefreshApi(Resource):
@@ -125,9 +125,9 @@ class AccessTokenRefreshApi(Resource):
         identity = get_jwt_identity()
         user = User.query.filter_by(uuid=identity).first()
         if not user:
-            return {"error": "მომხმარებელი ვერ მოიძებნა."}, 404
+            return {"error": "User not found."}, 404
         if not user.role:
-            return {"error": "მომხმარებლის როლი ვერ მოიძებნა."}, 403
+            return {"error": "User role not found."}, 403
 
         permissions = user.role.get_permissions()
         access_token = create_access_token(

@@ -26,21 +26,21 @@ async function login(event) {
             data = await response.json();
         } else {
             const textPayload = await response.text();
-            throw new Error(textPayload || 'ლოგინის პასუხი JSON ფორმატში არ დაბრუნდა.');
+            throw new Error(textPayload || 'Login response was not returned as JSON.');
         }
 
         if (data.access_token) {
-            // ვინახავთ მხოლოდ access token-ს. refresh token მოდის HttpOnly cookie-ით.
+            // Store access token only. Refresh token is HttpOnly cookie.
             localStorage.setItem('access_token', data.access_token);
 
             // Redirect to home page
             window.location.href = '/';
         } else {
-            showAlert('alertPlaceholder', 'danger', data.error || ' გაუმართავი ავტორიზაცია.');
+            showAlert('alertPlaceholder', 'danger', data.error || 'Invalid authorization.');
         }
     } catch (error) {
         console.error('Error:', error);
-        showAlert('alertPlaceholder', 'danger', 'ავტორიზაციის დროს მოხდა შეცდომა.');
+        showAlert('alertPlaceholder', 'danger', 'An error occurred during authorization.');
     }
 }
 

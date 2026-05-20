@@ -4,15 +4,15 @@ document.addEventListener("DOMContentLoaded", function() {
     
     // Define static navigation items
     const navItems = [
-        { endpoint: '/', text: 'მთავარი' },
-        { endpoint: '/events', text: 'მიწისძვრები' },
+        { endpoint: '/', text: 'Home' },
+        { endpoint: '/events', text: 'Earthquakes' },
         { endpoint: '/shakemap', text: 'ShakeMap' },
         // Add other static links as needed
     ];
 
     // Define the login and registration links
     const authLinks = [
-        { endpoint: '/login', text: 'შესვლა' }
+        { endpoint: '/login', text: 'Login' }
     ];
 
     // Get the current path
@@ -65,7 +65,7 @@ document.addEventListener("DOMContentLoaded", function() {
 
         const logoutLink = document.createElement('a');
         logoutLink.className = 'btn btn-sm btn-outline-danger';
-        logoutLink.textContent = 'გასვლა';
+        logoutLink.textContent = 'Logout';
         logoutLink.onclick = async function(event) {
             event.preventDefault();
             try {
