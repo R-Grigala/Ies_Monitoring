@@ -7,8 +7,7 @@ import datetime
 
 from src.api.nsmodels import event_ns, event_model, event_parser
 from src.utils import is_authorized_request, have_permission
-from src.models import SeismicEvent, User
-from src.config import Config
+from src.models import SeismicEvent
 
 logger = logging.getLogger("app.events")
 
