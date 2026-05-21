@@ -7,7 +7,7 @@ function buildFilterQuery() {
 
     const eventId = document.getElementById("filterEventId")?.value.trim();
     const seiscompOid = document.getElementById("filterSeiscompOid")?.value.trim();
-    const region = document.getElementById("filterLocation")?.value.trim();
+    const location = document.getElementById("filterLocation")?.value.trim();
     const area = document.getElementById("filterArea")?.value.trim();
     const mlMin = document.getElementById("filterMlMin")?.value.trim();
     const mlMax = document.getElementById("filterMlMax")?.value.trim();
@@ -18,7 +18,7 @@ function buildFilterQuery() {
 
     if (eventId) params.set("event_id", eventId);
     if (seiscompOid) params.set("seiscomp_oid", seiscompOid);
-    if (region) params.set("region", region);
+    if (location) params.set("location", location);
     if (area) params.set("area", area);
     if (mlMin) params.set("ml_min", mlMin);
     if (mlMax) params.set("ml_max", mlMax);
