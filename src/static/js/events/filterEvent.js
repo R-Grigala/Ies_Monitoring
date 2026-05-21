@@ -7,7 +7,7 @@ function buildFilterQuery() {
 
     const eventId = document.getElementById("filterEventId")?.value.trim();
     const seiscompOid = document.getElementById("filterSeiscompOid")?.value.trim();
-    const region = document.getElementById("filterRegion")?.value.trim();
+    const region = document.getElementById("filterLocation")?.value.trim();
     const area = document.getElementById("filterArea")?.value.trim();
     const mlMin = document.getElementById("filterMlMin")?.value.trim();
     const mlMax = document.getElementById("filterMlMax")?.value.trim();

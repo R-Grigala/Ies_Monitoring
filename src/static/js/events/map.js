@@ -53,7 +53,7 @@ function attachInfoWindow(marker, event) {
                 <strong>Depth (km): ${event.depth}</strong><br>
                 <strong>Latitude: ${event.latitude}</strong><br>
                 <strong>Longitude: ${event.longitude}</strong><br>
-                <strong>Region: ${event.region_ge || event.region_en || '-'}</strong><br>
+                <strong>Location: ${event.location_ge || event.location_en || '-'}</strong><br>
             </div>`
     });
     marker.addListener('click', function() {

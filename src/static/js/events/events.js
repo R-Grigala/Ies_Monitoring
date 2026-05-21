@@ -147,7 +147,7 @@ function renderEvents(events) {
         <td>${escapeHtml(event.depth)}</td>
         <td>${escapeHtml(event.latitude)}</td>
         <td>${escapeHtml(event.longitude)}</td>
-        <td>${escapeHtml(event.region_en || event.region_ge || event.area || "-")}</td>
+        <td>${escapeHtml(event.location_en || event.location_ge || event.area || "-")}</td>
       </tr>
     `
     )

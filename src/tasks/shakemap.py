@@ -38,7 +38,7 @@ def run_shakemap(self, job_id):
             "latitude": event.latitude,
             "depth": event.depth,
             "ml": event.ml,
-            "desc": event.region_en or "მოვლენის აღწერა",
+            "desc": event.location_en or "მოვლენის აღწერა",
         }
         logger.info(
             "ShakeMap calculation started: oid=%s time=%s lat=%s lon=%s depth=%s ml=%s desc=%s",

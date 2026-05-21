@@ -37,8 +37,8 @@ def populate_db_core():
         latitude=42.5095,
         longitude=43.5328,
         depth=8,
-        region_ge="ქალაქი ონი - სამხრეთ-აღმოსავლეთი - 8კმ. სოფელი ირი.",
-        region_en="City Oni - South-East - 8km. Village Iri.",
+        location_ge="ქალაქი ონი - სამხრეთ-აღმოსავლეთი - 8კმ. სოფელი ირი.",
+        location_en="City Oni - South-East - 8km. Village Iri.",
         area="local",
         ml=5.33
     )
