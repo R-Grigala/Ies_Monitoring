@@ -1,5 +1,6 @@
 const eventsTableBody = document.getElementById("eventsTableBody");
 const eventsStatus = document.getElementById("eventsStatus");
+const eventsActionHeader = document.getElementById("eventsActionHeader");
 const eventsById = new Map();
 
 function escapeHtml(value) {
@@ -79,8 +80,21 @@ function bindCreateEventAuthGuard() {
   });
 }
 
+function syncActionColumnVisibility(canManageEvents) {
+  if (!eventsActionHeader) {
+    return;
+  }
+  eventsActionHeader.classList.toggle("d-none", !canManageEvents);
+}
+
 
 function renderEvents(events) {
+  const canManageEvents =
+    typeof window.hasPermission === "function"
+      ? window.hasPermission("can_events")
+      : false;
+  syncActionColumnVisibility(canManageEvents);
+
   if (!Array.isArray(events) || events.length === 0) {
     eventsTableBody.innerHTML = "";
     eventsStatus.textContent = "No events found.";
@@ -92,10 +106,6 @@ function renderEvents(events) {
     const bTime = new Date(b.origin_time || 0).getTime();
     return bTime - aTime;
   });
-  const canManageEvents =
-    typeof window.hasPermission === "function"
-      ? window.hasPermission("can_events")
-      : false;
   eventsById.clear();
   sortedEvents.forEach((event) => eventsById.set(String(event.event_id), event));
   window.eventsById = eventsById;
@@ -104,10 +114,10 @@ function renderEvents(events) {
     .map(
       (event) => `
       <tr>
+        ${
+          canManageEvents
+            ? `
         <td>
-          ${
-            canManageEvents
-              ? `
           <div class="d-flex align-items-center gap-1">
             <button
               type="button"
@@ -136,10 +146,10 @@ function renderEvents(events) {
               >
             </button>
           </div>
-          `
-              : ""
-          }
         </td>
+          `
+            : ""
+        }
         <td>${escapeHtml(event.event_id)}</td>
         <td>${escapeHtml(event.seiscomp_oid)}</td>
         <td>${escapeHtml(event.origin_time)}</td>
