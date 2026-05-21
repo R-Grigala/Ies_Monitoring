@@ -2,7 +2,7 @@ import logging
 
 from flask_restx import Resource
 from datetime import datetime
-from sqlalchemy import and_
+from sqlalchemy import and_, or_
 
 from src.api.nsmodels import filter_ns, filter_parser, filter_model
 from src.models import SeismicEvent
@@ -45,8 +45,12 @@ class FilterEventAPI(Resource):
 
         # რეგიონის ფილტრი (თუ გადმოიცა)
         if location:
-            event_query = event_query.filter(SeismicEvent.location_en.like(f"%{location}%"))
-            event_query = event_query.filter(SeismicEvent.location_ge.like(f"%{location}%"))
+            event_query = event_query.filter(
+                or_(
+                    SeismicEvent.location_en.like(f"%{location}%"),
+                    SeismicEvent.location_ge.like(f"%{location}%")
+                )
+            )
 
         # origin_time დიაპაზონის ფილტრი (start/end მნიშვნელობების მიხედვით)
         if start_time and not end_time:
