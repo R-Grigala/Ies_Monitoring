@@ -23,7 +23,7 @@ class FilterEventAPI(Resource):
         # ცვლადებში ვანაწილებთ ფილტრის მნიშვნელობებს.
         event_id = args.get("event_id")
         seiscomp_oid = args.get("seiscomp_oid")
-        region = args.get("region")
+        location = args.get("location")
         area = args.get("area")
         ml_min = args.get("ml_min")
         ml_max = args.get("ml_max")
@@ -44,8 +44,9 @@ class FilterEventAPI(Resource):
             event_query = event_query.filter(SeismicEvent.seiscomp_oid.like(f"%{seiscomp_oid}%"))
 
         # რეგიონის ფილტრი (თუ გადმოიცა)
-        if region:
-            event_query = event_query.filter(SeismicEvent.region_ge.like(f"%{region}%"))
+        if location:
+            event_query = event_query.filter(SeismicEvent.location_en.like(f"%{location}%"))
+            event_query = event_query.filter(SeismicEvent.location_ge.like(f"%{location}%"))
 
         # origin_time დიაპაზონის ფილტრი (start/end მნიშვნელობების მიხედვით)
         if start_time and not end_time:

@@ -15,8 +15,8 @@ filter_model = api.model(
         'latitude': fields.Float(required=True, description='Latitude of the event'),
         'longitude': fields.Float(required=True, description='Longitude of the event'),
         'depth': fields.Float(required=True, description='Depth in km'),
-        'region_ge': fields.String(description='Region GE'),
-        'region_en': fields.String(description='Region EN'),
+        'location_ge': fields.String(description='Location GE'),
+        'location_en': fields.String(description='Location EN'),
         'area': fields.String(description='Area name'),
         'ml': fields.Float(required=True, description='Local Magnitude (ML)'),
         'shakemap_status': fields.String(
@@ -29,7 +29,7 @@ filter_model = api.model(
 filter_parser = reqparse.RequestParser()
 filter_parser.add_argument("event_id", type=int, required=False, location="args", help="Exact event ID")
 filter_parser.add_argument("seiscomp_oid", type=str, required=False, location="args", help="Filter by SeisComP OID substring")
-filter_parser.add_argument("region", type=str, required=False, location="args", help="Filter by region_ge or region_en substring")
+filter_parser.add_argument("location", type=str, required=False, location="args", help="Filter by location_ge or location_en substring")
 filter_parser.add_argument(
     "area",
     type=str,
