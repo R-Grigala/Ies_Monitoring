@@ -7,8 +7,7 @@ import datetime
 
 from src.api.nsmodels import event_ns, event_model, event_parser
 from src.utils import is_authorized_request, have_permission
-from src.models import SeismicEvent, User
-from src.config import Config
+from src.models import SeismicEvent
 
 logger = logging.getLogger("app.events")
 
@@ -75,8 +74,8 @@ class SeismicListAPI(Resource):
             exist_event.latitude = args['latitude']
             exist_event.longitude = args['longitude']
             exist_event.depth = args['depth']
-            exist_event.region_ge = args.get('region_ge')
-            exist_event.region_en = args.get('region_en')
+            exist_event.location_ge = args.get('location_ge')
+            exist_event.location_en = args.get('location_en')
             exist_event.area = args.get('area')
             exist_event.ml = args.get('ml')
 
@@ -96,8 +95,8 @@ class SeismicListAPI(Resource):
                 latitude=args['latitude'],
                 longitude=args['longitude'],
                 depth=args['depth'],
-                region_ge=args.get('region_ge'),
-                region_en=args.get('region_en'),
+                location_ge=args.get('location_ge'),
+                location_en=args.get('location_en'),
                 area=args.get('area'),
                 ml=args.get('ml'),
             )
@@ -159,8 +158,8 @@ class SeismicEventAPI(Resource):
         event.latitude = args['latitude']
         event.longitude = args['longitude']
         event.depth = args['depth']
-        event.region_ge = args.get('region_ge')
-        event.region_en = args.get('region_en')
+        event.location_ge = args.get('location_ge')
+        event.location_en = args.get('location_en')
         event.area = args.get('area')
         event.ml = args.get('ml')
         event.save()

@@ -13,8 +13,8 @@ function buildCreateEventPayload() {
     latitude: Number(document.getElementById("latitudeInput").value),
     longitude: Number(document.getElementById("longitudeInput").value),
     depth: Number(document.getElementById("depthInput").value),
-    region_ge: document.getElementById("regionGeInput").value.trim() || null,
-    region_en: document.getElementById("regionEnInput").value.trim() || null,
+    location_ge: document.getElementById("locationGeInput").value.trim() || null,
+    location_en: document.getElementById("locationEnInput").value.trim() || null,
     area: document.getElementById("areaInput").value.trim() || null,
     ml: Number(document.getElementById("mlInput").value),
   };

@@ -12,8 +12,8 @@ event_model = api.model('SeismicEvent', {
     'latitude': fields.Float(required=True, description='Latitude of the event'),
     'longitude': fields.Float(required=True, description='Longitude of the event'),
     'depth': fields.Float(required=True, description='Depth in km'),
-    'region_ge': fields.String(description='Region GE'),
-    'region_en': fields.String(description='Region EN'),
+    'location_ge': fields.String(description='Location GE'),
+    'location_en': fields.String(description='Location EN'),
     'area': fields.String(description='Area name'),
     'ml': fields.Float(required=True, description='Local Magnitude (ML)'),
     'created_at': fields.DateTime(description='Record creation timestamp (UTC)'),
@@ -32,7 +32,7 @@ event_parser.add_argument("origin_msec", type=int, required=False, help="Millise
 event_parser.add_argument("latitude", type=float, required=True, help="Latitude is required")
 event_parser.add_argument("longitude", type=float, required=True, help="Longitude is required")
 event_parser.add_argument("depth", type=float, required=True, help="Depth is required")
-event_parser.add_argument("region_ge", type=str, required=False, help="Region GE (optional)")
-event_parser.add_argument("region_en", type=str, required=False, help="Region EN (optional)")
+event_parser.add_argument("location_ge", type=str, required=False, help="Location GE (optional)")
+event_parser.add_argument("location_en", type=str, required=False, help="Location EN (optional)")
 event_parser.add_argument("area", type=str, required=False, help="Area (optional)")
 event_parser.add_argument("ml", type=float, required=True, help="Local Magnitude (ML)")

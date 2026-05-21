@@ -38,9 +38,18 @@ def run_shakemap(self, job_id):
             "latitude": event.latitude,
             "depth": event.depth,
             "ml": event.ml,
-            "desc": event.region_en or "მოვლენის აღწერა",
+            "desc": event.location_en or "მოვლენის აღწერა",
         }
-        logger.info("ShakeMap worker started for event: %s", event_oid)
+        logger.info(
+            "ShakeMap calculation started: oid=%s time=%s lat=%s lon=%s depth=%s ml=%s desc=%s",
+            parsed_data["seiscomp_oid"],
+            parsed_data["time"],
+            parsed_data["latitude"],
+            parsed_data["longitude"],
+            parsed_data["depth"],
+            parsed_data["ml"],
+            parsed_data["desc"],
+        )
         run_shakemap_worker(parsed_data)
 
         job.status = ShakemapJob.STATUS_GENERATED
