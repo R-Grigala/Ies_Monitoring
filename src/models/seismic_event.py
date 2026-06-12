@@ -7,8 +7,8 @@ class SeismicEvent(db.Model, BaseModel):
     __tablename__ = "seismic_events"
 
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    event_id = db.Column(db.Integer, nullable=True, index=True)
-    seiscomp_oid = db.Column(db.String(20), nullable=False, index=True)
+    event_id = db.Column(db.Integer, nullable=True, unique=True)
+    seiscomp_oid = db.Column(db.String(20), nullable=False, unique=True)
     origin_time = db.Column(db.DateTime, nullable=False)
     origin_msec = db.Column(db.Integer, default=0)
     latitude = db.Column(db.Float, nullable=False)
