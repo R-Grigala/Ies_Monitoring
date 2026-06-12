@@ -6,7 +6,8 @@ from src.models.base import BaseModel
 class SeismicEvent(db.Model, BaseModel):
     __tablename__ = "seismic_events"
 
-    event_id = db.Column(db.Integer, primary_key=True)
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    event_id = db.Column(db.Integer, nullable=True, index=True)
     seiscomp_oid = db.Column(db.String(20), nullable=False, index=True)
     origin_time = db.Column(db.DateTime, nullable=False)
     origin_msec = db.Column(db.Integer, default=0)
@@ -34,4 +35,4 @@ class SeismicEvent(db.Model, BaseModel):
         return "pending"
 
     def __repr__(self):
-        return f"<SeismicEvent id={self.event_id} lat={self.latitude} lon={self.longitude}>"
+        return f"<SeismicEvent id={self.id} seiscomp_oid={self.seiscomp_oid} lat={self.latitude} lon={self.longitude}>"
