@@ -2,7 +2,6 @@ import logging
 
 from flask_restx import Resource
 from flask import request
-from flask_jwt_extended import get_jwt_identity
 import datetime
 
 from src.api.nsmodels import event_ns, event_model, event_parser
@@ -65,10 +64,15 @@ class SeismicListAPI(Resource):
             }, 400
 
         # --- ვამოწმებთ, არსებობს თუ არა უკვე ეს მოვლენა ---
-        exist_event = SeismicEvent.query.filter_by(event_id=args['event_id']).first()
+        seiscomp_oid = args.get('seiscomp_oid')
+        exist_event = (
+            SeismicEvent.query.filter_by(seiscomp_oid=seiscomp_oid).first()
+            if seiscomp_oid is not None
+            else None
+        )
         if exist_event:
             # -------- არსებული მოვლენის განახლება --------
-            exist_event.seiscomp_oid = args.get('seiscomp_oid')
+            exist_event.event_id = args.get('event_id')
             exist_event.origin_time = origin_time
             exist_event.origin_msec = args.get('origin_msec')
             exist_event.latitude = args['latitude']
@@ -88,8 +92,8 @@ class SeismicListAPI(Resource):
         else:
             # -------- ახალი მოვლენის შექმნა --------
             new_event = SeismicEvent(
-                event_id=args['event_id'],
-                seiscomp_oid=args.get('seiscomp_oid'),
+                event_id=args.get('event_id'),
+                seiscomp_oid=seiscomp_oid,
                 origin_time=origin_time,
                 origin_msec=args.get('origin_msec'),
                 latitude=args['latitude'],
@@ -101,10 +105,10 @@ class SeismicListAPI(Resource):
                 ml=args.get('ml'),
             )
             new_event.create()
-            logger.info("Event created: event_id=%s", new_event.event_id)
+            logger.info("Event created: id=%s event_id=%s", new_event.id, new_event.event_id)
 
             return {
-                'message': f'Earthquake event created successfully: {new_event.event_id}'
+                'message': f'Earthquake event created successfully: {new_event.id}'
             }, 201
 
 

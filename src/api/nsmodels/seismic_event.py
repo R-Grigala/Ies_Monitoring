@@ -5,7 +5,8 @@ event_ns = api.namespace('Events', description='API endpoint for Seismic event o
 
 # RESTX model for Swagger
 event_model = api.model('SeismicEvent', {
-    'event_id': fields.Integer(required=True, description='Primary key / manually assigned ID'),
+    'id': fields.Integer(readonly=True, description='Auto-generated primary key'),
+    'event_id': fields.Integer(required=False, description='Manually assigned SeisComP event ID (optional, may be empty)'),
     'seiscomp_oid': fields.String(required=True,description='SeisComP OID'),
     'origin_time': fields.DateTime(required=True, description='Origin time of the event'),
     'origin_msec': fields.Integer(description='Milliseconds of origin time'),
@@ -25,7 +26,7 @@ event_model = api.model('SeismicEvent', {
 
 # Request Parser
 event_parser = reqparse.RequestParser()
-event_parser.add_argument("event_id", type=int, required=True, help="Primary key / manually assigned ID is required")
+event_parser.add_argument("event_id", type=int, required=False, help="Manually assigned SeisComP event ID (optional, may be empty)")
 event_parser.add_argument("seiscomp_oid", type=str, required=True, help="SeisComP OID (optional)")
 event_parser.add_argument("origin_time", type=str, required=True, help="Origin time is required (ISO 8601)")
 event_parser.add_argument("origin_msec", type=int, required=False, help="Milliseconds of origin time (optional)")
