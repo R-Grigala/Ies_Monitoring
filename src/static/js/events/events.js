@@ -2,6 +2,7 @@ const eventsTableBody = document.getElementById("eventsTableBody");
 const eventsStatus = document.getElementById("eventsStatus");
 const eventsActionHeader = document.getElementById("eventsActionHeader");
 const eventsById = new Map();
+const getEventKey = (event) => String(event?.id ?? "");
 
 function escapeHtml(value) {
   const div = document.createElement("div");
@@ -107,7 +108,7 @@ function renderEvents(events) {
     return bTime - aTime;
   });
   eventsById.clear();
-  sortedEvents.forEach((event) => eventsById.set(String(event.event_id), event));
+  sortedEvents.forEach((event) => eventsById.set(getEventKey(event), event));
   window.eventsById = eventsById;
 
   eventsTableBody.innerHTML = sortedEvents
@@ -122,7 +123,7 @@ function renderEvents(events) {
             <button
               type="button"
               class="btn btn-sm btn-outline-secondary edit-event-btn d-inline-flex align-items-center justify-content-center"
-              onclick="openEditEventModal('${escapeHtml(event.event_id)}')"
+              onclick="openEditEventModal('${escapeHtml(event.id)}')"
               title="Edit event"
               aria-label="Edit event"
             >
@@ -135,7 +136,7 @@ function renderEvents(events) {
             <button
               type="button"
               class="btn btn-sm btn-outline-danger d-inline-flex align-items-center justify-content-center"
-              onclick="deleteEvent('${escapeHtml(event.event_id)}')"
+              onclick="deleteEvent('${escapeHtml(event.id)}')"
               title="Delete event"
               aria-label="Delete event"
             >
@@ -150,7 +151,7 @@ function renderEvents(events) {
           `
             : ""
         }
-        <td>${escapeHtml(event.event_id)}</td>
+        <td>${escapeHtml(event.event_id ?? "-")}</td>
         <td>${escapeHtml(event.seiscomp_oid)}</td>
         <td>${escapeHtml(event.origin_time)}</td>
         <td>${escapeHtml(event.ml)}</td>
