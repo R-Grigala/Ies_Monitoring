@@ -3,8 +3,9 @@ const addEventSubmitBtn = document.getElementById("addEventSubmitBtn");
 const addEventStatus = document.getElementById("addEventStatus");
 
 function buildCreateEventPayload() {
+  const rawEventId = document.getElementById("eventIdInput").value.trim();
   return {
-    event_id: Number(document.getElementById("eventIdInput").value),
+    event_id: rawEventId ? Number(rawEventId) : null,
     seiscomp_oid: document.getElementById("seiscompOidInput").value.trim(),
     origin_time: document.getElementById("originTimeInput").value.trim(),
     origin_msec: document.getElementById("originMsecInput").value

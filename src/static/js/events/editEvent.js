@@ -5,8 +5,9 @@ const editEventModalElement = document.getElementById("editEventModal");
 const editEventModal = editEventModalElement ? new bootstrap.Modal(editEventModalElement) : null;
 
 function buildEditEventPayload() {
+  const rawEventId = document.getElementById("editEventIdInput").value.trim();
   return {
-    event_id: Number(document.getElementById("editEventIdInput").value),
+    event_id: rawEventId ? Number(rawEventId) : null,
     seiscomp_oid: document.getElementById("editSeiscompOidInput").value.trim(),
     origin_time: document.getElementById("editOriginTimeInput").value.trim(),
     origin_msec: document.getElementById("editOriginMsecInput").value
@@ -15,8 +16,8 @@ function buildEditEventPayload() {
     latitude: Number(document.getElementById("editLatitudeInput").value),
     longitude: Number(document.getElementById("editLongitudeInput").value),
     depth: Number(document.getElementById("editDepthInput").value),
-    region_ge: document.getElementById("editRegionGeInput").value.trim() || null,
-    region_en: document.getElementById("editRegionEnInput").value.trim() || null,
+    location_ge: document.getElementById("editLocationGeInput").value.trim() || null,
+    location_en: document.getElementById("editLocationEnInput").value.trim() || null,
     area: document.getElementById("editAreaInput").value.trim() || null,
     ml: Number(document.getElementById("editMlInput").value),
   };
@@ -40,6 +41,7 @@ window.openEditEventModal = function openEditEventModal(eventId) {
   document.getElementById("editLocationGeInput").value = event.location_ge ?? "";
   document.getElementById("editLocationEnInput").value = event.location_en ?? "";
   document.getElementById("editAreaInput").value = event.area ?? "";
+  editEventForm.dataset.rowId = String(event.id);
   editEventStatus.textContent = "";
   editEventStatus.className = "small mt-3 text-muted";
 
@@ -56,13 +58,20 @@ async function submitEditEvent(event) {
   }
 
   const payload = buildEditEventPayload();
-  const eventId = payload.event_id;
+  const rowId = editEventForm?.dataset?.rowId;
+  if (!rowId) {
+    const message = "Missing event id for update.";
+    editEventStatus.textContent = message;
+    editEventStatus.className = "small mt-3 text-danger";
+    showAlert("alertPlaceholder", "danger", message);
+    return;
+  }
   editEventSubmitBtn.disabled = true;
   editEventStatus.textContent = "Updating event...";
   editEventStatus.className = "small mt-3 text-muted";
 
   try {
-    const data = await window.makeApiRequest(`/api/events/${encodeURIComponent(eventId)}`, {
+    const data = await window.makeApiRequest(`/api/events/${encodeURIComponent(rowId)}`, {
       method: "PUT",
       headers: {
         "Content-Type": "application/json",
