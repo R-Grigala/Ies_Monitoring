@@ -112,7 +112,7 @@ class SeismicListAPI(Resource):
             }, 201
 
 
-@event_ns.route('/events/<int:event_id>')
+@event_ns.route('/events/<int:id>')
 @event_ns.doc(
     responses={
         200: 'OK',
@@ -124,38 +124,36 @@ class SeismicEventAPI(Resource):
     @event_ns.expect(event_model)
     @event_ns.doc(
         security=[{'ApiKeyAuth': []}, {'JsonWebToken': []}],
-        description='Update a seismic event by event_id (requires X-API-Key or JWT Bearer token)',
+        description='Update a seismic event by id (requires X-API-Key or JWT Bearer token)',
     )
-    def put(self, event_id):
-        """აახლებს მიწისძვრის მოვლენას event_id-ით."""
+    def put(self, id):
+        """Update seismic event by primary key id."""
         if not is_authorized_request():
-            logger.warning("Event update denied: event_id=%s unauthorized", event_id)
+            logger.warning("Event update denied: id=%s unauthorized", id)
             return {'error': 'Access denied. You are not authorized.'}, 401
         if not have_permission("can_events"):
-            logger.warning("Event update denied: event_id=%s missing can_events permission", event_id)
+            logger.warning("Event update denied: id=%s missing can_events permission", id)
             return {'error': 'You do not have permission to edit earthquakes.'}, 403
 
         args = event_parser.parse_args()
-        body_event_id = args.get("event_id")
-        if body_event_id is not None and int(body_event_id) != int(event_id):
-            return {'error': 'URL event_id and body event_id do not match.'}, 400
 
-        event = SeismicEvent.query.filter_by(event_id=event_id).first()
+        event = SeismicEvent.query.filter_by(id=id).first()
         if not event:
-            logger.info("Event update failed: event_id=%s not found", event_id)
-            return {'error': f'Earthquake event not found: {event_id}'}, 404
+            logger.info("Event update failed: id=%s not found", id)
+            return {'error': f'Earthquake event not found: {id}'}, 404
 
         try:
             origin_time = datetime.datetime.fromisoformat(args['origin_time'])
         except Exception:
             logger.info(
-                "Event update failed: event_id=%s invalid origin_time format",
-                event_id,
+                "Event update failed: id=%s invalid origin_time format",
+                id,
             )
             return {
                 'error': 'Invalid origin_time format (use ISO 8601, e.g. 2025-10-24T12:20:00).'
             }, 400
 
+        event.event_id = args.get('event_id')
         event.seiscomp_oid = args.get('seiscomp_oid')
         event.origin_time = origin_time
         event.origin_msec = args.get('origin_msec')
@@ -168,24 +166,24 @@ class SeismicEventAPI(Resource):
         event.ml = args.get('ml')
         event.save()
 
-        logger.info("Event updated via PUT: event_id=%s", event_id)
-        return {'message': f'Earthquake event updated successfully: {event_id}'}, 200
+        logger.info("Event updated via PUT: id=%s event_id=%s", id, event.event_id)
+        return {'message': f'Earthquake event updated successfully: {id}'}, 200
 
-    @event_ns.doc(security='JsonWebToken', description='Delete a seismic event by event_id (requires JWT Bearer token)')
-    def delete(self, event_id):
-        """შლის მიწისძვრის მოვლენას event_id-ით (მომხმარებელი უნდა იყოს ავტორიზირებული)."""
+    @event_ns.doc(security='JsonWebToken', description='Delete a seismic event by id (requires JWT Bearer token)')
+    def delete(self, id):
+        """Delete seismic event by primary key id (requires authorization)."""
         if not is_authorized_request():
-            logger.warning("Event delete denied: event_id=%s unauthorized", event_id)
+            logger.warning("Event delete denied: id=%s unauthorized", id)
             return {'error': 'Access denied. Provide a valid JWT token.'}, 401
         if not have_permission("can_events"):
-            logger.warning("Event delete denied: event_id=%s missing can_events permission", event_id)
+            logger.warning("Event delete denied: id=%s missing can_events permission", id)
             return {'error': 'You do not have permission to delete earthquakes.'}, 403
 
-        event = SeismicEvent.query.filter_by(event_id=event_id).first()
+        event = SeismicEvent.query.filter_by(id=id).first()
         if not event:
-            logger.info("Event delete failed: event_id=%s not found", event_id)
-            return {'error': f'Earthquake event not found: {event_id}'}, 404
+            logger.info("Event delete failed: id=%s not found", id)
+            return {'error': f'Earthquake event not found: {id}'}, 404
 
         event.delete()
-        logger.info("Event deleted: event_id=%s", event_id)
-        return {'message': f'Earthquake event deleted successfully: {event_id}'}, 200
+        logger.info("Event deleted: id=%s", id)
+        return {'message': f'Earthquake event deleted successfully: {id}'}, 200
