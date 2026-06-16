@@ -84,9 +84,9 @@ class SeismicListAPI(Resource):
             exist_event.ml = args.get('ml')
 
             exist_event.save()
-            logger.info("Event updated: event_id=%s", exist_event.event_id)
+            logger.info("Event updated: seiscomp_oid=%s", seiscomp_oid)
             return {
-                'message': f'Earthquake event updated successfully: {exist_event.event_id}'
+                'message': f'Earthquake event updated successfully: {seiscomp_oid}'
             }, 200
 
         else:
@@ -105,7 +105,7 @@ class SeismicListAPI(Resource):
                 ml=args.get('ml'),
             )
             new_event.create()
-            logger.info("Event created: id=%s event_id=%s", new_event.id, new_event.event_id)
+            logger.info("Event created: id=%s seiscomp_oid=%s", new_event.id, seiscomp_oid)
 
             return {
                 'message': f'Earthquake event created successfully: {new_event.id}'
@@ -166,7 +166,7 @@ class SeismicEventAPI(Resource):
         event.ml = args.get('ml')
         event.save()
 
-        logger.info("Event updated via PUT: id=%s event_id=%s", id, event.event_id)
+        logger.info("Event updated via PUT: id=%s seiscomp_oid=%s", id, event.seiscomp_oid)
         return {'message': f'Earthquake event updated successfully: {id}'}, 200
 
     @event_ns.doc(security='JsonWebToken', description='Delete a seismic event by id (requires JWT Bearer token)')
