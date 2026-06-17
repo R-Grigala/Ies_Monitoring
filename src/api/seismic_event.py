@@ -6,7 +6,7 @@ import datetime
 
 from src.api.nsmodels import event_ns, event_model, event_parser
 from src.utils import is_authorized_request, have_permission
-from src.models import SeismicEvent
+from src.models import SeismicEvent, ShakemapJob
 
 logger = logging.getLogger("app.events")
 
@@ -183,6 +183,17 @@ class SeismicEventAPI(Resource):
         if not event:
             logger.info("Event delete failed: id=%s not found", id)
             return {'error': f'Earthquake event not found: {id}'}, 404
+
+        # Delete related ShakeMap job first (if exists) to keep DB consistent.
+        shakemap_job = ShakemapJob.query.filter_by(seiscomp_oid=event.seiscomp_oid).first()
+        if shakemap_job:
+            shakemap_job.delete()
+            logger.info(
+                "Related ShakeMap job deleted: event_id=%s seiscomp_oid=%s job_id=%s",
+                id,
+                event.seiscomp_oid,
+                shakemap_job.id,
+            )
 
         event.delete()
         logger.info("Event deleted: id=%s", id)
