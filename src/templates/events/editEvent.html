@@ -13,7 +13,14 @@
           </div>
           <div class="col-md-6">
             <label for="editSeiscompOidInput" class="form-label">SeisComP OID *</label>
-            <input id="editSeiscompOidInput" type="text" class="form-control" required>
+            <input
+              id="editSeiscompOidInput"
+              type="text"
+              class="form-control"
+              required
+              readonly
+              title="SeisComP OID cannot be edited after event creation."
+            >
           </div>
           <div class="col-md-6">
             <label for="editOriginTimeInput" class="form-label">Origin Time (ISO 8601) *</label>
