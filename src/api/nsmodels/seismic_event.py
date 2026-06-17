@@ -27,7 +27,6 @@ event_model = api.model('SeismicEvent', {
 # Request Parser
 event_parser = reqparse.RequestParser()
 event_parser.add_argument("event_id", type=int, required=False, help="Manually assigned SeisComP event ID (optional, may be empty)")
-event_parser.add_argument("seiscomp_oid", type=str, required=True, help="SeisComP OID (optional)")
 event_parser.add_argument("origin_time", type=str, required=True, help="Origin time is required (ISO 8601)")
 event_parser.add_argument("origin_msec", type=int, required=False, help="Milliseconds of origin time (optional)")
 event_parser.add_argument("latitude", type=float, required=True, help="Latitude is required")

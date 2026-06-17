@@ -6,9 +6,11 @@ const editEventModal = editEventModalElement ? new bootstrap.Modal(editEventModa
 
 function buildEditEventPayload() {
   const rawEventId = document.getElementById("editEventIdInput").value.trim();
+  const fixedSeiscompOid = editEventForm?.dataset?.seiscompOid || "";
   return {
     event_id: rawEventId ? Number(rawEventId) : null,
-    seiscomp_oid: document.getElementById("editSeiscompOidInput").value.trim(),
+    // SeisComP OID is immutable after creation.
+    seiscomp_oid: fixedSeiscompOid,
     origin_time: document.getElementById("editOriginTimeInput").value.trim(),
     origin_msec: document.getElementById("editOriginMsecInput").value
       ? Number(document.getElementById("editOriginMsecInput").value)
@@ -42,6 +44,7 @@ window.openEditEventModal = function openEditEventModal(eventId) {
   document.getElementById("editLocationEnInput").value = event.location_en ?? "";
   document.getElementById("editAreaInput").value = event.area ?? "";
   editEventForm.dataset.rowId = String(event.id);
+  editEventForm.dataset.seiscompOid = String(event.seiscomp_oid ?? "");
   editEventStatus.textContent = "";
   editEventStatus.className = "small mt-3 text-muted";
 

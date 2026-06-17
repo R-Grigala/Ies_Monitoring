@@ -121,7 +121,7 @@ class SeismicListAPI(Resource):
     }
 )
 class SeismicEventAPI(Resource):
-    @event_ns.expect(event_model)
+    @event_ns.expect(event_parser)
     @event_ns.doc(
         security=[{'ApiKeyAuth': []}, {'JsonWebToken': []}],
         description='Update a seismic event by id (requires X-API-Key or JWT Bearer token)',
@@ -154,7 +154,7 @@ class SeismicEventAPI(Resource):
             }, 400
 
         event.event_id = args.get('event_id')
-        event.seiscomp_oid = args.get('seiscomp_oid')
+        event.seiscomp_oid = event.seiscomp_oid # SeisComP OID cannot be edited after event creation.
         event.origin_time = origin_time
         event.origin_msec = args.get('origin_msec')
         event.latitude = args['latitude']
