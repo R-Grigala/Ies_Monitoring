@@ -6,7 +6,7 @@ import datetime
 
 from src.api.nsmodels import event_ns, event_model, event_parser
 from src.utils import is_authorized_request, have_permission
-from src.models import SeismicEvent
+from src.models import SeismicEvent, ShakemapJob
 
 logger = logging.getLogger("app.events")
 
@@ -121,7 +121,7 @@ class SeismicListAPI(Resource):
     }
 )
 class SeismicEventAPI(Resource):
-    @event_ns.expect(event_model)
+    @event_ns.expect(event_parser)
     @event_ns.doc(
         security=[{'ApiKeyAuth': []}, {'JsonWebToken': []}],
         description='Update a seismic event by id (requires X-API-Key or JWT Bearer token)',
@@ -154,7 +154,7 @@ class SeismicEventAPI(Resource):
             }, 400
 
         event.event_id = args.get('event_id')
-        event.seiscomp_oid = args.get('seiscomp_oid')
+        event.seiscomp_oid = event.seiscomp_oid # SeisComP OID cannot be edited after event creation.
         event.origin_time = origin_time
         event.origin_msec = args.get('origin_msec')
         event.latitude = args['latitude']
@@ -183,6 +183,17 @@ class SeismicEventAPI(Resource):
         if not event:
             logger.info("Event delete failed: id=%s not found", id)
             return {'error': f'Earthquake event not found: {id}'}, 404
+
+        # Delete related ShakeMap job first (if exists) to keep DB consistent.
+        shakemap_job = ShakemapJob.query.filter_by(seiscomp_oid=event.seiscomp_oid).first()
+        if shakemap_job:
+            shakemap_job.delete()
+            logger.info(
+                "Related ShakeMap job deleted: event_id=%s seiscomp_oid=%s job_id=%s",
+                id,
+                event.seiscomp_oid,
+                shakemap_job.id,
+            )
 
         event.delete()
         logger.info("Event deleted: id=%s", id)
