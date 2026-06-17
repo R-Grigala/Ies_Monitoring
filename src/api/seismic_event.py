@@ -1,7 +1,6 @@
 import logging
 
 from flask_restx import Resource
-from flask import request
 import datetime
 
 from src.api.nsmodels import event_ns, event_model, event_parser
@@ -32,7 +31,7 @@ class SeismicListAPI(Resource):
         logger.info("Events list success: count=%s", len(events))
         return events
 
-    @event_ns.expect(event_model)
+    @event_ns.expect(event_parser)
     @event_ns.doc(
         security=[{'ApiKeyAuth': []}, {'JsonWebToken': []}],
         description='Create or update a seismic event (requires X-API-Key or JWT Bearer token)',
