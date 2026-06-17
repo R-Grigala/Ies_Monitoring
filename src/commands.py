@@ -47,6 +47,8 @@ def populate_db_core():
     click.echo("Creating Role")
     role = Role(name="Admin", is_admin=True, can_users=True, can_shakemap=True, can_events=True)
     role.create()
+    role = Role(name="API_USER", is_admin=False, can_users=False, can_shakemap=True, can_events=True)
+    role.create()
     role = Role(name="User")
     role.create()
 
@@ -59,6 +61,16 @@ def populate_db_core():
         role_id=1
     )
     admin_user.create()
+
+    click.echo("Creating API_USER User")
+    api_user = User (
+        name="API",
+        lastname="USER",
+        email="api_user@iliauni.edu.ge",
+        password="ApiUser1",
+        role_id=2
+    )
+    api_user.create()
 
 # --- Click CLI commands (thin wrappers around core logic) ---
 

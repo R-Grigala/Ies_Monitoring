@@ -70,6 +70,7 @@ def configure_logging(app):
             "app.filters": {"handlers": ["filters_file"], "level": "INFO", "propagate": False},
             "app.auth": {"handlers": ["auth_file"], "level": "INFO", "propagate": False},
             "app.shakemap": {"handlers": ["shakemap_file"], "level": "INFO", "propagate": False},
+            "app.shakemap_api": {"handlers": ["shakemap_file"], "level": "INFO", "propagate": False},
             "app.run_shakemap": {"handlers": ["run_shakemap_file"], "level": "INFO", "propagate": False},
             "werkzeug": {"handlers": ["requests_file"], "level": "INFO", "propagate": False},
         },

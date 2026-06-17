@@ -8,7 +8,7 @@ from flask_jwt_extended import get_jwt_identity
 
 from src.utils import is_authorized_request, have_permission
 from src.api.nsmodels import shakemap_ns, shakemap_parser, shakemap_model
-from src.models import SeismicEvent, ShakemapJob
+from src.models import SeismicEvent, ShakemapJob, User
 from src.tasks.shakemap import run_shakemap
 from src.config import Config
 
@@ -20,7 +20,7 @@ ALLOWED_IMAGES = {
     "pgv": "pgv.jpg",
 }
 
-logger = logging.getLogger("app.shakemap")
+logger = logging.getLogger("app.shakemap_api")
 
 @shakemap_ns.route("/shakemap")
 @shakemap_ns.doc(
@@ -47,7 +47,13 @@ class RunShakeMap(Resource):
             logger.warning("ShakeMap run denied: seiscomp_oid=%s unauthorized", seiscomp_oid)
             return {'error': 'Access denied. Provide a valid X-API-Key or JWT token.'}, 401
 
+        # --- უფლების შემოწმება ---
+        if not have_permission("can_shakemap"):
+            logger.warning("ShakeMap run denied: missing can_shakemap permission")
+            return {'error': 'You do not have permission to run ShakeMap.'}, 403
+
         try:
+            logger.info("ShakeMap run requested: seiscomp_oid=%s", seiscomp_oid)
             # --- მოვლენის მოძებნა seiscomp_oid-ით ---
             event = SeismicEvent.query.filter_by(seiscomp_oid=seiscomp_oid).first()
             if not event:
@@ -56,14 +62,9 @@ class RunShakeMap(Resource):
 
             shakemap_job = ShakemapJob.query.filter_by(seiscomp_oid=seiscomp_oid).first()
             api_key = request.headers.get("X-API-Key")
-            is_api_key_request = bool(api_key and api_key == Config.API_KEY)
-            user_uuid = "API_USER" if is_api_key_request else get_jwt_identity()
+            api_user = User.query.filter_by(email="api_user@iliauni.edu.ge").first()
+            user_uuid = api_user.uuid if api_key else get_jwt_identity()
 
-            # --- უფლების შემოწმება ---
-            if not is_api_key_request:
-                if not have_permission("can_shakemap"):
-                    logger.warning("ShakeMap run denied: seiscomp_oid=%s missing can_shakemap permission", seiscomp_oid)
-                    return {'error': 'You do not have permission to run ShakeMap.'}, 403
             
             if not shakemap_job:
                 shakemap_job = ShakemapJob(
