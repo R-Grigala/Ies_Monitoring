@@ -2,6 +2,10 @@
 
 Real-time earthquake notification platform for Android and iOS devices.
 
+## Project Management
+
+- Trello Board: [IES Monitoring](https://trello.com/b/ShiKsW69/iesmonitoring)
+
 ## Features
 
 - Real-time earthquake event processing
