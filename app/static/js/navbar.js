@@ -82,7 +82,11 @@ document.addEventListener("DOMContentLoaded", function() {
             iconImg.style.verticalAlign = 'middle';
             profileButton.appendChild(iconImg);
             profileButton.onclick = function() {
-                openUserModal();
+                if (typeof window.openUserModal === "function") {
+                    window.openUserModal();
+                } else {
+                    console.error("openUserModal is not available.");
+                }
             };
             logoutItem.appendChild(profileButton);
             
