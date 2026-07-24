@@ -5,15 +5,15 @@ from app.models.base import BaseModel
 class UserPermission(db.Model, BaseModel):
     __tablename__ = "user_permissions"
 
-    id = db.Column(db.BigInteger, primary_key=True)
-    user_id = db.Column(db.BigInteger, db.ForeignKey("users.id"), nullable=False, index=True)
-    permission_id = db.Column(db.BigInteger, db.ForeignKey("permissions.id"), nullable=False, index=True)
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False, index=True)
+    permission_id = db.Column(db.Integer, db.ForeignKey("permissions.id"), nullable=False, index=True)
 
-    granted_by_user_id = db.Column(db.BigInteger, db.ForeignKey("users.id"), nullable=True)
+    granted_by_user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
     granted_at = db.Column(db.DateTime, nullable=False, default=db.func.now())
 
     degranted_at = db.Column(db.DateTime, nullable=True)
-    degranted_by_user_id = db.Column(db.BigInteger, db.ForeignKey("users.id"), nullable=True)
+    degranted_by_user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
 
     user = db.relationship("User", foreign_keys=[user_id], back_populates="user_permissions")
     permission = db.relationship("Permission", foreign_keys=[permission_id], back_populates="user_permissions")

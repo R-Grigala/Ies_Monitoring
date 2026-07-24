@@ -12,7 +12,7 @@ from app.utils.validators import normalize_email
 class User(db.Model, BaseModel):
     __tablename__ = "users"
 
-    id = db.Column(db.BigInteger, primary_key=True)
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     uuid = db.Column(db.String(36), unique=True, nullable=False, default=lambda: str(uuid.uuid4()))
 
     # Profile fields
@@ -29,8 +29,8 @@ class User(db.Model, BaseModel):
     # Audit fields
     created_at = db.Column(db.DateTime, nullable=False, default=datetime.now())
     updated_at = db.Column(db.DateTime, nullable=False, default=datetime.now(), onupdate=datetime.now())
-    created_by_user_id = db.Column(db.BigInteger, db.ForeignKey("users.id"), nullable=True)
-    updated_by_user_id = db.Column(db.BigInteger, db.ForeignKey("users.id"), nullable=True)
+    created_by_user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
+    updated_by_user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
 
     user_permissions = db.relationship(
         "UserPermission",
