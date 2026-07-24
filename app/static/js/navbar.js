@@ -22,9 +22,9 @@ document.addEventListener("DOMContentLoaded", function() {
             clearSessionData();
             return;
         }
-        localStorage.removeItem('access_token');
-        localStorage.removeItem('refresh_token');
-        const loginPath = i18n ? i18n.localizePath('/login') : '/login';
+        localStorage.removeItem("access_token");
+        localStorage.removeItem("refresh_token");
+        const loginPath = i18n ? i18n.localizePath("/login") : "/login";
         window.location.href = loginPath;
     }
     
@@ -98,18 +98,28 @@ document.addEventListener("DOMContentLoaded", function() {
         logoutLink.onclick = async function(event) {
             event.preventDefault();
             try {
-                const response = await fetch('/api/auth/logout', {
-                    method: 'POST',
-                    credentials: 'include',
-                    headers: {
-                        'accept': 'application/json'
-                    }
-                });
-                if (response.status === 401 || response.status === 403) {
-                    console.info('User is not authorized anymore, forcing local logout.');
+                if (typeof window.makeApiRequest === "function") {
+                    await window.makeApiRequest("/api/auth/logout", {
+                        method: "POST",
+                        // prevent refresh-loop for explicit logout
+                        skipAuthRefresh: true,
+                    });
+                } else {
+                    await fetch("/api/auth/logout", {
+                        method: "POST",
+                        credentials: "include",
+                        headers: { accept: "application/json" },
+                    });
                 }
             } catch (error) {
                 console.error('Logout request failed:', error);
+                if (typeof window.showAlert === "function") {
+                    window.showAlert(
+                        "alertPlaceholder",
+                        "danger",
+                        i18n ? i18n.t("alerts.logout_failed", "Logout request failed.") : "Logout request failed."
+                    );
+                }
             } finally {
                 clearLocalSession();
             }

@@ -38,7 +38,11 @@ async function login(event) {
             const i18n = window.I18n;
             window.location.href = i18n ? i18n.localizePath('/') : '/';
         } else {
-            showAlert('alertPlaceholder', 'danger', data.error || (i18n ? i18n.t('alerts.invalid_auth', 'Invalid authorization.') : 'Invalid authorization.'));
+            showAlert(
+                'alertPlaceholder',
+                'danger',
+                data.message || data.error || (i18n ? i18n.t('alerts.invalid_auth', 'Invalid authorization.') : 'Invalid authorization.')
+            );
         }
     } catch (error) {
         console.error('Error:', error);

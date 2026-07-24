@@ -60,13 +60,29 @@
     box-shadow: 0 1rem 2rem rgba(0, 0, 0, 0.08);
 }
 
+#UserModal .modal-content {
+    border: 0;
+    border-radius: 1rem;
+    box-shadow: 0 1rem 2rem rgba(0, 0, 0, 0.08);
+}
+
 @media (max-width: 575.98px) {
     #resetPasswordModal .modal-dialog {
         margin: 0.75rem;
     }
 
+    #UserModal .modal-dialog {
+        margin: 0.75rem;
+    }
+
     #resetPasswordModal .modal-body,
     #resetPasswordModal .modal-header {
+        padding-left: 1rem;
+        padding-right: 1rem;
+    }
+
+    #UserModal .modal-body,
+    #UserModal .modal-header {
         padding-left: 1rem;
         padding-right: 1rem;
     }
