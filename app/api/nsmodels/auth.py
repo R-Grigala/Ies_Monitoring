@@ -53,3 +53,31 @@ auth_parser.add_argument(
     type=str,
     help="Password",
 )
+
+request_reset_password_parser = reqparse.RequestParser()
+request_reset_password_parser.add_argument(
+    "email",
+    required=True,
+    type=str,
+    help="Email address of the user",
+)
+
+reset_password_parser = reqparse.RequestParser()
+reset_password_parser.add_argument(
+    "token",
+    required=True,
+    type=str,
+    help="Token for password reset",
+)
+reset_password_parser.add_argument(
+    "password",
+    required=True,
+    type=str,
+    help="New password",
+)
+reset_password_parser.add_argument(
+    "retype_password",
+    required=True,
+    type=str,
+    help="Repeat the password",
+)
