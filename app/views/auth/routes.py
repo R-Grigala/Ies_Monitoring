@@ -65,7 +65,7 @@ def reset_password(token, lang=None):
             return redirect(url_for('auth.auth', lang=lang, message=uuid))
         return redirect(url_for('auth.auth', message=uuid))
 
-    return render_template("resetPass.html", token=token)
+    return render_template("resetPassword.html", token=token)
 
 
 @auth_blueprint.route("/change_password")
@@ -77,4 +77,4 @@ def change_password(lang=None):
         return redirect(url_for("auth.change_password", lang=_preferred_lang()))
     if raw_lang is not None and lang is None:
         return redirect(url_for("auth.change_password", lang="en"))
-    return render_template("changePass.html")
+    return render_template("changePassword.html")

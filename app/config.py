@@ -12,13 +12,18 @@ class Config:
     TEMPLATES_FOLDERS = path.join(BASE_DIR, "app", "templates")
 
     SECRET_KEY = os.getenv("SECRET_KEY") or os.getenv("MY_SECRET_KEY", "default_secret_key")
-    MY_SECRET_KEY = SECRET_KEY
+
     JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY", SECRET_KEY)
-    API_KEY = os.getenv("API_KEY")
+    API_KEY = os.getenv("API_KEY", "default_api_key")
     LOG_DIR = os.getenv("LOG_DIR", path.join(BASE_DIR, "logs"))
     LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
     LOG_MAX_BYTES = int(os.getenv("LOG_MAX_BYTES", 5 * 1024 * 1024))
     LOG_BACKUP_COUNT = int(os.getenv("LOG_BACKUP_COUNT", 5))
+
+    MAIL_SERVER = os.getenv("MAIL_SERVER")
+    MAIL_PORT = os.getenv("MAIL_PORT")
+    MAIL_USERNAME = os.getenv("MAIL_USERNAME")
+    MAIL_PASSWORD = os.getenv("MAIL_PASSWORD")
 
     JWT_TOKEN_LOCATION = ["headers", "cookies"]
     JWT_HEADER_NAME = "Authorization"
