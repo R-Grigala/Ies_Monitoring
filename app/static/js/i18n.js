@@ -95,8 +95,8 @@
             "index.flow.deliver.title": "4) მიწოდება",
             "index.flow.deliver.text": "შეტყობინებების გაგზავნა FCM/APNs-ით და ოპერაციული API-ების მიწოდება.",
 
-            "login.welcome": "კეთილი დაბრუნება",
-            "login.subtitle": "გასაგრძელებლად შედით IES Monitoring-ში.",
+            "login.welcome": "ავტორიზაცია",
+            "login.subtitle": "ავტორიზაცია IES Monitoring საიტზე.",
             "login.email.label": "ელფოსტა",
             "login.email.placeholder": "შეიყვანეთ ელფოსტა",
             "login.password.label": "პაროლი",

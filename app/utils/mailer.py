@@ -8,9 +8,9 @@ import logging
 
 from app.config import Config
 
-logger = logging.getLogger("app.mail")
+logger = logging.getLogger("app.mailer")
 
-class Mail:
+class Mailer:
     email_address=Config.MAIL_USERNAME
     email_password=Config.MAIL_PASSWORD
     host=Config.MAIL_SERVER

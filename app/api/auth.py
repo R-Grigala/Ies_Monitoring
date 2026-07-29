@@ -1,7 +1,7 @@
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
 
-from flask import current_app, jsonify
+from flask import current_app, jsonify, request
 from flask_jwt_extended import (
     current_user,
     get_jwt,
@@ -13,9 +13,9 @@ from flask_jwt_extended import (
 )
 from flask_restx import Resource
 
-from app.api.nsmodels import auth_ns, auth_parser, registration_parser
+from app.api.nsmodels import auth_ns, auth_parser, registration_parser, request_reset_password_parser, reset_password_parser
 from app.models import User
-from app.utils import normalize_email, validate_password
+from app.utils import normalize_email, validate_password, mailer, url_serializer
 from app.utils.refresh_tokens import (
     RefreshTokenError,
     find_by_jti,
@@ -214,3 +214,94 @@ class LogoutAllApi(Resource):
         )
         unset_jwt_cookies(response)
         return response
+
+@auth_ns.route('/request_reset_password')
+@auth_ns.doc(responses={200: 'OK', 400: 'Invalid Argument', 401: 'JWT Token Expires', 403: 'Forbidden', 404: 'Not Found'})
+class RequestResetPasswordApi(Resource):
+    @auth_ns.doc(parser=request_reset_password_parser)
+    def post(self):
+        ''' Request for reset password '''
+        args = request_reset_password_parser.parse_args()
+        email = args.get('email')
+
+        user = User.query.filter_by(email=email).first()
+
+        if not user:
+            logger.info("Reset password request failed: email=%s user not found", email)
+            return {'error' : 'No user exists with the provided email.'}, 400
+        
+        token = url_serializer.generate_token(data=user.uuid, salt='reset_password')
+        reset_url = f'{request.url_root}reset_password/{token}'
+
+        subject = 'Password reset'
+        message = f'Hello,\nTo reset your password, please visit the following link: {reset_url}'
+        
+        last_sent = user.last_sent_email
+        current_time = datetime.now()
+        if last_sent is not None:
+            difference = current_time - last_sent
+            if difference < timedelta(seconds=60):
+                logger.info("Reset password request throttled: user_uuid=%s", user.uuid)
+                return {'error': f'Please try again in {int(60 - difference.total_seconds())} seconds.'}, 400
+
+        try:
+            status = mailer.send_mail(emails=[email], subject=subject, message=message)
+
+            if not status:
+                logger.error("Reset password request email send failed: user_uuid=%s", user.uuid)
+                return{'error': 'An error occurred while sending email.'}, 400
+            
+            current_time = datetime.now()
+
+            user.last_sent_email = current_time
+            user.save()
+            logger.info("Reset password request success: user_uuid=%s", user.uuid)
+
+            return {'message': 'Please check your email, a verification link has been sent.'}, 200
+        except Exception as err:
+            logger.exception("Reset password request exception: email=%s", email)
+            return {'error': f'An error occurred while sending email: {err}'}, 400
+
+
+@auth_ns.route('/reset_password')
+@auth_ns.doc(responses={200: 'OK', 400: 'Invalid Argument', 401: 'JWT Token Expires', 403: 'Forbidden', 404: 'Not Found'})
+class ResetPasswordApi(Resource):
+    @auth_ns.doc(parser=reset_password_parser)
+    def put(self):
+        ''' Reset password '''
+        args = reset_password_parser.parse_args()
+
+        token = args.get('token')
+        uuid = url_serializer.unload_token(token=token,salt='reset_password', max_age_seconds=300)
+
+        if uuid == 'invalid':
+            logger.info("Forgot password failed: invalid token")
+            return {'error': 'Invalid token.'}, 400
+        elif uuid == 'expired':
+            logger.info("Forgot password failed: expired token")
+            return {'error': 'Token has expired.'}, 400
+        
+        user = User.query.filter_by(uuid=uuid).first()
+        if not user:
+            logger.info("Reset password failed: token user missing uuid=%s", uuid)
+            return {'error': 'User not found.'}, 404
+        
+        if args.get('password') != args.get("retype_password"):
+            logger.info("Reset password failed: user_uuid=%s password mismatch", user.uuid)
+            return {"error": "Passwords do not match."}, 400
+
+        try:
+            validate_password(args.get("password"))
+        except ValueError as err:
+            logger.info("Reset password failed: user_uuid=%s password policy error", user.uuid)
+            return {"error": str(err)}, 400
+
+        password = args.get('password')
+        try:
+            user.password = password
+            user.save()
+            logger.info("Reset password success: user_uuid=%s", user.uuid)
+            return {'message': 'Password reset successfully.'}, 200
+        except Exception:
+            logger.exception("Reset password exception: user_uuid=%s", user.uuid)
+            return {'error': 'An error occurred while changing password.'}, 400
