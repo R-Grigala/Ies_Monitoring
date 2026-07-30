@@ -1,0 +1,82 @@
+<div class="modal fade" id="registrationModal" tabindex="-1" aria-labelledby="registrationModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-semibold" id="registrationModalLabel" data-i18n="registration.title">Register User</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body pt-2">
+                <p class="text-muted mb-4" data-i18n="registration.subtitle">Create a new account for IES Monitoring.</p>
+
+                <form id="registrationForm" novalidate>
+                    <div class="row g-3">
+                        <div class="col-12 col-md-6">
+                            <label class="form-label" for="registrationFirstName" data-i18n="registration.first_name">First name</label>
+                            <input type="text" class="form-control form-control-lg" id="registrationFirstName" autocomplete="given-name" required>
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <label class="form-label" for="registrationLastName" data-i18n="registration.last_name">Last name</label>
+                            <input type="text" class="form-control form-control-lg" id="registrationLastName" autocomplete="family-name" required>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label" for="registrationEmail" data-i18n="registration.email">Email</label>
+                            <input type="email" class="form-control form-control-lg" id="registrationEmail" autocomplete="email" required>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label" for="registrationPassword" data-i18n="registration.password">Password</label>
+                            <div class="input-group input-group-lg">
+                                <input
+                                    type="password"
+                                    class="form-control"
+                                    id="registrationPassword"
+                                    autocomplete="new-password"
+                                    required
+                                >
+                                <button type="button" id="toggleRegistrationPassword" class="btn btn-outline-secondary togglePassword">
+                                    <img
+                                        src="{{ url_for('static', filename='images/eye-hide.svg') }}"
+                                        alt="Toggle password"
+                                        width="20"
+                                        height="20"
+                                        class="togglePasswordImg"
+                                        id="toggleRegistrationPasswordImg"
+                                    >
+                                </button>
+                            </div>
+                            <div class="form-text" data-i18n="registration.password_hint">
+                                At least 12 characters with upper, lower, digit and special character.
+                            </div>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label" for="registrationPasswordRepeat" data-i18n="registration.password_repeat">Repeat password</label>
+                            <div class="input-group input-group-lg">
+                                <input
+                                    type="password"
+                                    class="form-control"
+                                    id="registrationPasswordRepeat"
+                                    autocomplete="new-password"
+                                    required
+                                >
+                                <button type="button" id="toggleRegistrationPasswordRepeat" class="btn btn-outline-secondary togglePassword">
+                                    <img
+                                        src="{{ url_for('static', filename='images/eye-hide.svg') }}"
+                                        alt="Toggle password"
+                                        width="20"
+                                        height="20"
+                                        class="togglePasswordImg"
+                                        id="toggleRegistrationPasswordRepeatImg"
+                                    >
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="d-grid d-md-flex justify-content-md-end gap-2 mt-4">
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal" data-i18n="registration.cancel">Cancel</button>
+                        <button type="submit" class="btn btn-primary" id="registrationSubmit" data-i18n="registration.submit">Register</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
