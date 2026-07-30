@@ -8,3 +8,9 @@ venv/
 .pytest_cache/
 .coverage
 htmlcov/
+
+# Generated recipient contact lists
+/services/staff_number_list
+/services/staff_mail_list
+/services/number_list
+/services/mail_list
