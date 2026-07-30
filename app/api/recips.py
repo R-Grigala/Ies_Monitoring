@@ -28,11 +28,11 @@ logger = logging.getLogger("app.recips")
 
 
 def _permission_denied():
-    return {"error": "forbidden", "message": "Missing required permission: can_recip"}, 403
+    return {"error": "forbidden", "message": "Missing required permission: can_recips"}, 403
 
 
-def _require_can_recip():
-    if not current_user.check_permission("can_recip"):
+def _require_can_recips():
+    if not current_user.check_permission("can_recips"):
         return _permission_denied()
     return None
 
@@ -75,8 +75,8 @@ class RecipsApi(Resource):
     @recips_ns.marshal_with(recip_list_response_model, code=200)
     @recips_ns.response(403, "Forbidden", error_model)
     def get(self):
-        """List all recipients (requires can_recip)."""
-        denied = _require_can_recip()
+        """List all recipients (requires can_recips)."""
+        denied = _require_can_recips()
         if denied:
             return denied
 
@@ -90,8 +90,8 @@ class RecipsApi(Resource):
     @recips_ns.response(400, "Validation Error", error_model)
     @recips_ns.response(403, "Forbidden", error_model)
     def post(self):
-        """Create a recipient (requires can_recip)."""
-        denied = _require_can_recip()
+        """Create a recipient (requires can_recips)."""
+        denied = _require_can_recips()
         if denied:
             return denied
 
@@ -121,8 +121,8 @@ class RecipDetailApi(Resource):
     @recips_ns.response(403, "Forbidden", error_model)
     @recips_ns.response(404, "Not Found", error_model)
     def get(self, recip_id):
-        """Get a recipient by id (requires can_recip)."""
-        denied = _require_can_recip()
+        """Get a recipient by id (requires can_recips)."""
+        denied = _require_can_recips()
         if denied:
             return denied
 
@@ -139,8 +139,8 @@ class RecipDetailApi(Resource):
     @recips_ns.response(403, "Forbidden", error_model)
     @recips_ns.response(404, "Not Found", error_model)
     def put(self, recip_id):
-        """Update a recipient by id (requires can_recip)."""
-        denied = _require_can_recip()
+        """Update a recipient by id (requires can_recips)."""
+        denied = _require_can_recips()
         if denied:
             return denied
 
@@ -173,8 +173,8 @@ class RecipDetailApi(Resource):
     @recips_ns.response(403, "Forbidden", error_model)
     @recips_ns.response(404, "Not Found", error_model)
     def delete(self, recip_id):
-        """Delete a recipient and its channels (requires can_recip)."""
-        denied = _require_can_recip()
+        """Delete a recipient and its channels (requires can_recips)."""
+        denied = _require_can_recips()
         if denied:
             return denied
 
@@ -199,8 +199,8 @@ class RecipEmailsApi(Resource):
     @recips_ns.response(404, "Not Found", error_model)
     @recips_ns.response(409, "Conflict", error_model)
     def post(self, recip_id):
-        """Add an email to a recipient (requires can_recip)."""
-        denied = _require_can_recip()
+        """Add an email to a recipient (requires can_recips)."""
+        denied = _require_can_recips()
         if denied:
             return denied
 
@@ -246,8 +246,8 @@ class RecipEmailDetailApi(Resource):
     @recips_ns.response(404, "Not Found", error_model)
     @recips_ns.response(409, "Conflict", error_model)
     def put(self, email_id):
-        """Update a recipient email (requires can_recip)."""
-        denied = _require_can_recip()
+        """Update a recipient email (requires can_recips)."""
+        denied = _require_can_recips()
         if denied:
             return denied
 
@@ -287,8 +287,8 @@ class RecipEmailDetailApi(Resource):
     @recips_ns.response(403, "Forbidden", error_model)
     @recips_ns.response(404, "Not Found", error_model)
     def delete(self, email_id):
-        """Delete a recipient email (requires can_recip)."""
-        denied = _require_can_recip()
+        """Delete a recipient email (requires can_recips)."""
+        denied = _require_can_recips()
         if denied:
             return denied
 
@@ -323,8 +323,8 @@ class RecipNumbersApi(Resource):
     @recips_ns.response(404, "Not Found", error_model)
     @recips_ns.response(409, "Conflict", error_model)
     def post(self, recip_id):
-        """Add a phone number to a recipient (requires can_recip)."""
-        denied = _require_can_recip()
+        """Add a phone number to a recipient (requires can_recips)."""
+        denied = _require_can_recips()
         if denied:
             return denied
 
@@ -370,8 +370,8 @@ class RecipNumberDetailApi(Resource):
     @recips_ns.response(404, "Not Found", error_model)
     @recips_ns.response(409, "Conflict", error_model)
     def put(self, number_id):
-        """Update a recipient phone number (requires can_recip)."""
-        denied = _require_can_recip()
+        """Update a recipient phone number (requires can_recips)."""
+        denied = _require_can_recips()
         if denied:
             return denied
 
@@ -411,8 +411,8 @@ class RecipNumberDetailApi(Resource):
     @recips_ns.response(403, "Forbidden", error_model)
     @recips_ns.response(404, "Not Found", error_model)
     def delete(self, number_id):
-        """Delete a recipient phone number (requires can_recip)."""
-        denied = _require_can_recip()
+        """Delete a recipient phone number (requires can_recips)."""
+        denied = _require_can_recips()
         if denied:
             return denied
 

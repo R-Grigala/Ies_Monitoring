@@ -2,21 +2,21 @@ from flask import Flask, g, redirect, render_template, request, url_for
 
 from app.config import get_config
 from app.commands import init_db, populate_db
-from app.views import auth_blueprint, accounts_blueprint
+from app.views import auth_blueprint, accounts_blueprint, notify_blueprint
 from app.extensions import db, migrate, jwt, api as restx_api
 from app.logger import configure_logging
 from app import api as api_package # ensure namespaces are imported
 
 # Register blueprints
-BLUEPRINTS = [auth_blueprint, accounts_blueprint]
+BLUEPRINTS = [auth_blueprint, accounts_blueprint, notify_blueprint]
 COMMANDS = [init_db, populate_db]
 SUPPORTED_LANGS = {"en", "ka"}
 DEFAULT_LANG = "en"
 
 
-def create_app():
+def create_app(config_object=None):
     app = Flask(__name__)
-    app.config.from_object(get_config())
+    app.config.from_object(config_object or get_config())
     configure_logging(app)
 
     @app.route("/")

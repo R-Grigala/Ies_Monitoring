@@ -57,6 +57,84 @@ function closeModal(modalId) {
     created.hide();
 }
 
+function confirmDelete(options = {}) {
+    const i18n = window.I18n;
+    const modalElement = document.getElementById("confirmDeleteModal");
+    const titleElement = document.getElementById("confirmDeleteModalLabel");
+    const messageElement = document.getElementById("confirmDeleteMessage");
+    const confirmButton = document.getElementById("confirmDeleteConfirm");
+    const cancelButton = document.getElementById("confirmDeleteCancel");
+
+    if (!modalElement || !window.bootstrap?.Modal) {
+        const fallbackMessage =
+            options.message ||
+            (i18n
+                ? i18n.t("confirm.delete.message", "Are you sure you want to delete this item?")
+                : "Are you sure you want to delete this item?");
+        return Promise.resolve(window.confirm(fallbackMessage));
+    }
+
+    const title =
+        options.title ||
+        (i18n ? i18n.t("confirm.delete.title", "Confirm delete") : "Confirm delete");
+    const message =
+        options.message ||
+        (i18n
+            ? i18n.t(
+                  "confirm.delete.message",
+                  "Are you sure you want to delete this item? This action cannot be undone."
+              )
+            : "Are you sure you want to delete this item? This action cannot be undone.");
+    const confirmText =
+        options.confirmText ||
+        (i18n ? i18n.t("confirm.delete.confirm", "Delete") : "Delete");
+    const cancelText =
+        options.cancelText ||
+        (i18n ? i18n.t("confirm.delete.cancel", "Cancel") : "Cancel");
+
+    if (titleElement) {
+        titleElement.textContent = title;
+    }
+    if (messageElement) {
+        messageElement.textContent = message;
+    }
+    if (confirmButton) {
+        confirmButton.textContent = confirmText;
+    }
+    if (cancelButton) {
+        cancelButton.textContent = cancelText;
+    }
+
+    const modal = window.bootstrap.Modal.getOrCreateInstance(modalElement);
+
+    return new Promise((resolve) => {
+        let settled = false;
+
+        const finish = (result) => {
+            if (settled) {
+                return;
+            }
+            settled = true;
+            confirmButton?.removeEventListener("click", onConfirm);
+            modalElement.removeEventListener("hidden.bs.modal", onHidden);
+            resolve(result);
+        };
+
+        const onConfirm = () => {
+            finish(true);
+            modal.hide();
+        };
+
+        const onHidden = () => {
+            finish(false);
+        };
+
+        confirmButton?.addEventListener("click", onConfirm);
+        modalElement.addEventListener("hidden.bs.modal", onHidden);
+        modal.show();
+    });
+}
+
 function initPasswordToggle(options = {}) {
     const eyeViewPath = options.eyeViewPath || "/static/images/eye-view.svg";
     const eyeHidePath = options.eyeHidePath || "/static/images/eye-hide.svg";
@@ -198,5 +276,6 @@ window.showAlert = showAlert;
 window.isTokenExpired = isTokenExpired;
 window.clearSessionData = clearSessionData;
 window.closeModal = closeModal;
+window.confirmDelete = confirmDelete;
 window.initPasswordToggle = initPasswordToggle;
 window.makeApiRequest = makeApiRequest;

@@ -60,6 +60,11 @@ def populate_db_core():
             "Permissions Management",
             "Manage and assign permissions to any user.",
         ),
+        (
+            "can_recips",
+            "Recips Management",
+            "Manage and assign recips to any user.",
+        ),
     ]
     permissions = [
         _ensure_permission(code, name, description)
