@@ -5,3 +5,4 @@
 """
 
 from app.views.auth.routes import auth_blueprint
+from app.views.accounts.routes import accounts_blueprint
