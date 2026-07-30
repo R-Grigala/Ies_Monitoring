@@ -1,5 +1,19 @@
 # მომხმარებლებისა და უფლებების მართვის დიზაინი (Accounts and Permissions Design)
 
+## Implementation Status
+
+| ნაწილი | სტატუსი |
+|--------|---------|
+| Own profile GET/PUT `/api/accounts/user` | Implemented |
+| Accounts list/detail/update/delete | Implemented (`can_users`) |
+| Permission flags on profile (`can_users`, `can_recips`) | Implemented |
+| Permissions REST CRUD + assign/revoke APIs | Planned (models + seed only) |
+| Permission codes seeded | `can_users`, `can_permissions`, `can_recips` |
+
+აქტუალური endpoint-ები: [`09-api-inventory.md`](09-api-inventory.md).
+
+---
+
 ## 1. დოკუმენტის მიზანი
 
 დოკუმენტის მიზანია მომხმარებლების (Accounts) და უფლებების (Permissions) მართვის არქიტექტურის, მონაცემთა მოდელების, API Endpoint-ებისა და ავტორიზაციის მექანიზმების აღწერა.
@@ -39,22 +53,30 @@ Permissions
 ## Accounts
 
 - საკუთარი პროფილის მიღება;
-- საკუთარი პროფილის განახლება;
+- საკუთარი პროფილის განახლება (`first_name`, `last_name`);
 - მომხმარებლების სიის მიღება;
 - მომხმარებლის დეტალური ინფორმაციის მიღება;
 - მომხმარებლის რედაქტირება;
-- მომხმარებლის აქტივაცია/დეაქტივაცია.
+- მომხმარებლის აქტივაცია/დეაქტივაცია;
+- მომხმარებლის წაშლა (როცა FK blockers იძლევა საშუალებას);
+- საკუთარი ანგარიშის დეაქტივაცია/წაშლა აკრძალულია.
 
 ---
 
 ## Permissions
 
+Implemented:
+
+- Permission models (`permissions`, `user_permissions`);
+- Runtime check via `user.check_permission(code)`;
+- Seed via `flask populate_db`.
+
+Planned (REST API ჯერ არ არის):
+
 - უფლებების სიის მართვა;
 - ახალი უფლებების შექმნა;
-- არსებული უფლებების განახლება;
-- მომხმარებლისთვის უფლებების მინიჭება;
-- მომხმარებლისთვის უფლებების გაუქმება;
-- Endpoint-ებზე წვდომის კონტროლი.
+- არსებული უფლებების განახლება / soft deactivate;
+- მომხმარებლისთვის უფლებების მინიჭება / გაუქმება API-ით.
 
 ---
 
@@ -172,12 +194,12 @@ permissions
 
 # 6. სტანდარტული უფლებები
 
-| Code | აღწერა |
-|------|---------|
-| can_users | მომხმარებლების მართვა |
-| can_permissions | ნებისმიერი Permission-ის შექმნა/განახლება/დეაქტივაცია და მინიჭება/გაუქმება ნებისმიერ მომხმარებელზე |
-| can_notifications | შეტყობინებების მართვა |
-| can_events | მიწისძვრის მოვლენების მართვა |
+| Code | სტატუსი | აღწერა |
+|------|---------|---------|
+| can_users | Seeded + used | რეგისტრაცია + accounts admin UI/API |
+| can_permissions | Seeded | Permissions REST governance (API planned) |
+| can_recips | Seeded + used | Notification recipients (`/api/recips`, `/notify`) |
+| can_events | Planned | მიწისძვრის მოვლენების მართვა |
 
 
 ---
@@ -189,45 +211,52 @@ permissions
 ### საკუთარი პროფილის მიღება
 
 ```http
-GET /api/user
+GET /api/accounts/user
 ```
+
+Auth: JWT.
+
+Response includes profile fields plus boolean flags:
+
+- `can_users`
+- `can_recips`
+
+(გამოითვლება `check_permission`-ით, არა სრული permission list-ით.)
 
 ---
 
 ### საკუთარი პროფილის განახლება
 
 ```http
-PUT /api/user
+PUT /api/accounts/user
 ```
+
+Auth: JWT. Body: `first_name`, `last_name`.
 
 ---
 
 ## მომხმარებლების მართვა
 
+Required Permission ყველა admin endpoint-ზე:
+
+```text
+can_users
+```
+
 ### მომხმარებლების სიის მიღება
 
 ```http
-GET /api/accounts
+GET /api/accounts/accounts
 ```
 
-Required Permission:
-
-```text
-can_permissions
-```
+Response: `{ "items": [...], "total": N }`.
 
 ---
 
 ### მომხმარებლის დეტალური ინფორმაციის მიღება
 
 ```http
-GET /api/accounts/{uuid}
-```
-
-Required Permission:
-
-```text
-can_permissions
+GET /api/accounts/accounts/{uuid}
 ```
 
 ---
@@ -235,18 +264,32 @@ can_permissions
 ### მომხმარებლის განახლება
 
 ```http
-PUT /api/accounts/{uuid}
+PUT /api/accounts/accounts/{uuid}
 ```
 
-Required Permission:
+Fields: `first_name`, `last_name`, `email`, `is_active`.
 
-```text
-can_permissions
-```
+წესი: მომხმარებელს არ შეუძლია საკუთარი ანგარიშის დეაქტივაცია.
 
 ---
 
-## უფლებების მართვა
+### მომხმარებლის წაშლა
+
+```http
+DELETE /api/accounts/accounts/{uuid}
+```
+
+წესები:
+
+- საკუთარი ანგარიშის წაშლა აკრძალულია;
+- თუ FK blockers ხელს უშლის (RESTRICT), ბრუნდება conflict/error;
+- წარმატებისას hard delete.
+
+---
+
+## უფლებების მართვა (Planned)
+
+ქვემოთ აღწერილი Permissions REST API ჯერ **არ არის იმპლემენტირებული**. მოდელები და seed არსებობს; runtime შემოწმება მუშაობს `check_permission`-ით.
 
 ### უფლებების სიის მიღება
 
@@ -323,12 +366,12 @@ can_permissions
 
 ---
 
-## მომხმარებლის უფლებების მართვა
+## მომხმარებლის უფლებების მართვა (Planned)
 
 ### მომხმარებლის უფლებების მიღება
 
 ```http
-GET /api/accounts/{uuid}/permissions
+GET /api/accounts/accounts/{uuid}/permissions
 ```
 
 Required Permission:
@@ -342,7 +385,7 @@ can_permissions
 ### მომხმარებლისთვის უფლებების მინიჭება
 
 ```http
-POST /api/accounts/{uuid}/permissions
+POST /api/accounts/accounts/{uuid}/permissions
 ```
 
 Required Permission:
@@ -364,7 +407,7 @@ Request:
 ### მომხმარებლის უფლების გაუქმება
 
 ```http
-DELETE /api/accounts/{uuid}/permissions/{permission_id}
+DELETE /api/accounts/accounts/{uuid}/permissions/{permission_id}
 ```
 
 Required Permission:
@@ -409,14 +452,13 @@ Permission assignment უსაფრთხოების წესები:
 
 ## API Contract (საერთო წესები)
 
-- List endpoint-ები (`/api/accounts`, `/api/permissions`) იყენებს pagination-ს: `page`, `page_size`, `sort`, `q`;
-- `page_size` მაქსიმუმი: `100`;
+- Accounts list ამჟამად აბრუნებს `{ items, total }` (pagination query params — planned);
 - ყველა შეცდომა ბრუნდება ერთიანი ფორმატით:
 
 ```json
 {
   "error": "forbidden",
-  "message": "Missing required permission: can_permissions"
+  "message": "Missing required permission: can_users"
 }
 ```
 

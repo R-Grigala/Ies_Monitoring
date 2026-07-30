@@ -4,302 +4,193 @@
 
 დოკუმენტის მიზანია მიწისძვრებისა და სისტემური შეტყობინებების მიმღებთა (Recipients) მართვის არქიტექტურისა და მონაცემთა მოდელების აღწერა.
 
-მოდული უზრუნველყოფს:
+### Implementation Status
 
-- SMS მიმღებების მართვას;
-- Email მიმღებების მართვას;
-- შეტყობინებების მიმღებთა ადმინისტრირებას;
-- თანამშრომლებისა და გარე მიმღებების გამიჯვნას;
-- შეტყობინებების არხების (Channels) მომავალი გაფართოების შესაძლებლობას.
+| ნაწილი | სტატუსი |
+|--------|---------|
+| Recipients (`recips` + emails + numbers) | Implemented |
+| Admin UI `/notify` | Implemented |
+| Permission `can_recips` | Implemented |
+| Push / Devices / Queue / History / Templates | Planned |
 
 ---
 
-# 2. არქიტექტურული მიდგომა
+## 2. არქიტექტურული მიდგომა
 
-Notification მოდული დამოუკიდებელია Identity Module-ისგან.
+Notification Recipients დამოუკიდებელია Identity Users-ისგან.
 
-SMS და Email მიმღებები არ არიან სისტემის მომხმარებლები და არ გადიან ავტორიზაციას.
+მიმღები არის კონტაქტის ერთეული (`recip`), რომელსაც შეიძლება ჰქონდეს რამდენიმე email და რამდენიმე ტელეფონის ნომერი.
 
 ```text
-Users
-    │
-    └── Identity Service
+recips
+  ├── recip_emails
+  └── recip_numbers
+```
 
-SMS Contacts
-Email Contacts
+```text
+Users (Identity)
     │
-    └── Notification Service
+    └── can_recips permission → manage Recips API / Notify UI
+
+Recips (Notification contacts)
+    │
+    └── used later by delivery services (planned)
 ```
 
 ---
 
-# 3. მოდულის პასუხისმგებლობები
+## 3. მოდულის პასუხისმგებლობები (implemented)
 
-## SMS Contacts
-
-- SMS მიმღებების დამატება;
-- SMS მიმღებების განახლება;
-- SMS მიმღებების გააქტიურება/დეაქტივაცია;
-- თანამშრომლების და გარე კონტაქტების მართვა.
-
----
-
-## Email Contacts
-
-- Email მიმღებების დამატება;
-- Email მიმღებების განახლება;
-- Email მიმღებების გააქტიურება/დეაქტივაცია;
-- თანამშრომლების და გარე კონტაქტების მართვა.
+- Recipient-ების შექმნა / განახლება / წაშლა;
+- Email არხების დამატება / განახლება / წაშლა;
+- Phone არხების დამატება / განახლება / წაშლა;
+- Staff / External გამიჯვნა (`is_staff`);
+- Soft disable არხზე ან მთელ recipient-ზე (`is_active`).
 
 ---
 
-# 4. მონაცემთა მოდელი
+## 4. მონაცემთა მოდელი
 
-## sms_contacts
+## recips
 
 | ველი | ტიპი | აღწერა |
 |------|------|---------|
-| id | bigint | პირველადი გასაღები |
-| name | varchar(255) | მიმღების სახელი |
-| phone_number | varchar(50) | ტელეფონის ნომერი |
-| description | varchar(500) | დამატებითი აღწერა |
-| is_staff | boolean | თანამშრომლის სტატუსი |
+| id | int | პირველადი გასაღები |
+| username | varchar(255) | მიმღების სახელი / აღწერა |
+| is_staff | boolean | თანამშრომელია თუ გარე კონტაქტი |
 | is_active | boolean | აქტიური სტატუსი |
 | created_at | datetime | შექმნის თარიღი |
 | updated_at | datetime | განახლების თარიღი |
+| created_by_user_id | int \| null | ვინ შექმნა |
+| updated_by_user_id | int \| null | ვინ განაახლა |
 
 ---
 
-## email_contacts
+## recip_emails
 
 | ველი | ტიპი | აღწერა |
 |------|------|---------|
-| id | bigint | პირველადი გასაღები |
-| name | varchar(255) | მიმღების სახელი |
-| email | varchar(255) | ელ-ფოსტა |
-| description | varchar(500) | დამატებითი აღწერა |
-| is_staff | boolean | თანამშრომლის სტატუსი |
+| id | int | პირველადი გასაღები |
+| recip_id | int | FK → recips.id |
+| email | varchar(255) | უნიკალური ელ-ფოსტა |
 | is_active | boolean | აქტიური სტატუსი |
-| created_at | datetime | შექმნის თარიღი |
-| updated_at | datetime | განახლების თარიღი |
+| created_at / updated_at | datetime | აუდიტი |
+| created_by_user_id / updated_by_user_id | int \| null | აუდიტი |
 
 ---
 
-# 5. DB Constraints
+## recip_numbers
 
-## sms_contacts
+| ველი | ტიპი | აღწერა |
+|------|------|---------|
+| id | int | პირველადი გასაღები |
+| recip_id | int | FK → recips.id |
+| phone_number | varchar(50) | უნიკალური ნომერი, ფორმატი `+9955XXXXXXXX` |
+| is_active | boolean | აქტიური სტატუსი |
+| created_at / updated_at | datetime | აუდიტი |
+| created_by_user_id / updated_by_user_id | int \| null | აუდიტი |
 
-- `phone_number` -> `UNIQUE INDEX`
-- `is_staff` -> `DEFAULT FALSE`
-- `is_active` -> `DEFAULT TRUE`
+Constraints:
+
+- `recip_emails.email` → UNIQUE
+- `recip_numbers.phone_number` → UNIQUE
+- emails/numbers cascade-ით იშლება recipient-თან ერთად
 
 ---
 
-## email_contacts
+## 5. API Endpoint-ები
 
-- `email` -> `UNIQUE INDEX`
-- `is_staff` -> `DEFAULT FALSE`
-- `is_active` -> `DEFAULT TRUE`
-
----
-
-# 6. Entity Relationship
-
-ამ ეტაპზე კონტაქტები არ არის დაკავშირებული `users` ცხრილთან.
+Required Permission ყველა endpoint-ზე:
 
 ```text
-sms_contacts
-
-email_contacts
+can_recips
 ```
 
-ორივე დამოუკიდებლად ფუნქციონირებს.
-
----
-
-# 7. API Endpoint-ები
-
-## SMS Contacts
-
-### SMS კონტაქტების სიის მიღება
+### Recipients
 
 ```http
-GET /api/sms_contacts
+GET    /api/recips/
+POST   /api/recips/
+GET    /api/recips/{id}
+PUT    /api/recips/{id}
+DELETE /api/recips/{id}
 ```
 
-Required Permission:
+Create body მაგალითი:
 
-```text
-can_notifications
+```json
+{
+  "username": "NSMC Duty Officer",
+  "is_staff": true,
+  "is_active": true
+}
+```
+
+List response:
+
+```json
+{
+  "items": [ { "id": 1, "username": "...", "emails": [], "numbers": [] } ],
+  "total": 1
+}
 ```
 
 ---
 
-### SMS კონტაქტის დამატება
+### Email channels
 
 ```http
-POST /api/sms_contacts
+POST   /api/recips/{id}/emails
+PUT    /api/recips/emails/{email_id}
+DELETE /api/recips/emails/{email_id}
 ```
 
-Required Permission:
-
-```text
-can_notifications
+```json
+{ "email": "duty@example.ge", "is_active": true }
 ```
 
 ---
 
-### SMS კონტაქტის განახლება
+### Phone channels
 
 ```http
-PUT /api/sms_contacts/{id}
+POST   /api/recips/{id}/numbers
+PUT    /api/recips/numbers/{number_id}
+DELETE /api/recips/numbers/{number_id}
 ```
 
-Required Permission:
-
-```text
-can_notifications
-```
-
----
-
-### SMS კონტაქტის წაშლა
-
-```http
-DELETE /api/sms_contacts/{id}
-```
-
-Required Permission:
-
-```text
-can_notifications
+```json
+{ "phone_number": "+995599123456", "is_active": true }
 ```
 
 ---
 
-## Email Contacts
+## 6. Web UI
 
-### Email კონტაქტების სიის მიღება
-
-```http
-GET /api/email_contacts
-```
-
-Required Permission:
-
-```text
-can_notifications
-```
+- გვერდი: `/<lang>/notify`
+- Navbar-ში ჩანს მხოლოდ `can_recips` უფლების მქონე მომხმარებლისთვის
+- CRUD + email/phone მართვა modal-ებით
 
 ---
 
-### Email კონტაქტის დამატება
-
-```http
-POST /api/email_contacts
-```
-
-Required Permission:
-
-```text
-can_notifications
-```
-
----
-
-### Email კონტაქტის განახლება
-
-```http
-PUT /api/email_contacts/{id}
-```
-
-Required Permission:
-
-```text
-can_notifications
-```
-
----
-
-### Email კონტაქტის წაშლა
-
-```http
-DELETE /api/email_contacts/{id}
-```
-
-Required Permission:
-
-```text
-can_notifications
-```
-
----
-
-# 8. გამოყენების მაგალითები
-
-## SMS Contact
-
-```text
-Name: NSMC Duty Officer
-Phone Number: +995599123456
-Description: მორიგე სეისმოლოგი
-Is Staff: true
-```
-
----
-
-## Email Contact
-
-```text
-Name: Emergency Service
-Email: emergency@example.ge
-Description: საგანგებო სიტუაციების მართვის სამსახური
-Is Staff: false
-```
-
----
-
-# 9. უსაფრთხოების მექანიზმები
+## 7. უსაფრთხოება
 
 - JWT Authentication;
-- Permission-Based Authorization;
-- Audit Logging;
-- Rate Limiting;
-- Soft Disable (`is_active=false`).
+- Permission check: `can_recips`;
+- Email normalize/validate;
+- Georgian phone normalize (`+9955XXXXXXXX`);
+- Soft disable (`is_active=false`);
+- Audit user ids recipient/channel ჩანაწერებზე.
 
 ---
 
-# 10. Audit Logging
-
-სისტემა ინახავს:
-
-- კონტაქტის შექმნას;
-- კონტაქტის განახლებას;
-- კონტაქტის წაშლას;
-- კონტაქტის გააქტიურებას;
-- კონტაქტის დეაქტივაციას.
-
----
-
-# 11. არქიტექტურული გადაწყვეტილება
-
-Notification Recipients ინახება დამოუკიდებელ ცხრილებში და არ არის დაკავშირებული მომხმარებლების (Users) სისტემასთან.
-
-ეს მიდგომა უზრუნველყოფს:
-
-- მარტივ ადმინისტრირებას;
-- გარე ორგანიზაციების მხარდაჭერას;
-- ავტორიზაციის სისტემისგან დამოუკიდებლობას;
-- Notification Module-ის დამოუკიდებელ განვითარებას.
-
----
-
-# 12. მომავალი გაფართოებები
+## 8. მომავალი გაფართოებები (Planned)
 
 შემდეგ ეტაპზე Notification Module გაფართოვდება:
 
-- Push Notifications;
+- Push Notifications (FCM / APNs);
 - Device Management;
 - Notification History;
 - Notification Templates;
-- Notification Queue & Retry Mechanism.
+- Notification Queue & Retry Mechanism;
+- მიწისძვრის მოვლენებთან ავტომატური მიწოდების ინტეგრაცია.
