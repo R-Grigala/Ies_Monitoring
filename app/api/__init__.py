@@ -7,5 +7,12 @@ from app.api.auth import (
     LogoutAllApi,
 )
 
-from app.api.auth import RegistrationApi, AuthorizationApi, AccessTokenRefreshApi, LogoutApi
 from app.api.accounts import CurrentUserApi, AccountsApi, AccountDetailApi
+from app.api.recips import (
+    RecipsApi,
+    RecipDetailApi,
+    RecipEmailsApi,
+    RecipEmailDetailApi,
+    RecipNumbersApi,
+    RecipNumberDetailApi,
+)

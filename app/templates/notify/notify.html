@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+
+{% block title %}
+    IES Monitoring - Notify
+{% endblock %}
+
+{% block body %}
+<div class="py-4 py-lg-5">
+    <div class="card border-0 shadow-sm">
+        <div class="card-body p-4 p-lg-5">
+            <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-start gap-3 mb-4">
+                <div>
+                    <h2 class="h3 mb-2" data-i18n="notify.title">Recipients</h2>
+                    <p class="text-muted mb-0" data-i18n="notify.subtitle">Manage notification recipients, emails and phone numbers.</p>
+                </div>
+                <div class="d-flex align-items-center gap-2">
+                    <button
+                        type="button"
+                        class="btn btn-primary"
+                        id="addRecipButton"
+                        onclick="openCreateRecipModal()"
+                    >
+                        <span data-i18n="notify.add">Add recipient</span>
+                    </button>
+                    <span class="badge rounded-pill text-bg-primary fs-6 px-3 py-2" id="recipsTotal">0</span>
+                </div>
+            </div>
+
+            <div class="row g-3 mb-4">
+                <div class="col-12 col-lg-6">
+                    <input
+                        type="search"
+                        id="recipsSearch"
+                        class="form-control form-control-lg"
+                        placeholder="Search by name, email or phone"
+                        data-i18n-placeholder="notify.search.placeholder"
+                        autocomplete="off"
+                    >
+                </div>
+            </div>
+
+            <div id="recipsLoading" class="text-center py-5">
+                <div class="spinner-border text-primary" role="status" aria-hidden="true"></div>
+                <p class="text-muted mt-3 mb-0" data-i18n="notify.loading">Loading recipients...</p>
+            </div>
+
+            <div id="recipsEmpty" class="d-none text-center py-5">
+                <p class="text-muted mb-0" data-i18n="notify.empty">No recipients found.</p>
+            </div>
+
+            <div id="recipsTableWrap" class="d-none table-responsive">
+                <table class="table table-hover align-middle mb-0 notify-table">
+                    <thead class="table-light">
+                        <tr>
+                            <th scope="col" data-i18n="notify.table.name">Name</th>
+                            <th scope="col" data-i18n="notify.table.channels">Channels</th>
+                            <th scope="col" data-i18n="notify.table.staff">Staff</th>
+                            <th scope="col" data-i18n="notify.table.status">Status</th>
+                            <th scope="col" data-i18n="notify.table.updated">Updated</th>
+                            <th scope="col" class="text-end" data-i18n="notify.table.actions">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="recipsTableBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% include "notify/createRecip.html" %}
+{% include "notify/editRecip.html" %}
+{% endblock %}
+
+{% block scripts %}
+<script type="text/javascript" src="{{ url_for('static', filename='js/notify/notify.js') }}" defer></script>
+<script type="text/javascript" src="{{ url_for('static', filename='js/notify/createRecip.js') }}" defer></script>
+<script type="text/javascript" src="{{ url_for('static', filename='js/notify/editRecip.js') }}" defer></script>
+{% endblock %}

@@ -193,9 +193,9 @@ async function deleteAccount(userUuid) {
         return;
     }
 
-    const confirmed = window.confirm(
-        t("accounts.delete.confirm", "Are you sure you want to delete this account?")
-    );
+    const confirmed = await window.confirmDelete({
+        message: t("accounts.delete.confirm", "Are you sure you want to delete this account?"),
+    });
     if (!confirmed) {
         return;
     }
