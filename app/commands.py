@@ -25,24 +25,46 @@ def init_db_core():
     db.drop_all()
     db.create_all()
 
-def populate_db_core():
-    click.echo("Ensuring permission exists...")
-    permission = Permission.query.filter_by(code="can_permissions").first()
+def _ensure_permission(code, name, description):
+    """Create or re-activate a permission by code."""
+    permission = Permission.query.filter_by(code=code).first()
     if not permission:
         permission = Permission(
-            code="can_permissions",
-            name="Permissions Management",
-            description="Manage and assign permissions to any user.",
+            code=code,
+            name=name,
+            description=description,
             is_active=True,
         )
         permission.create()
-        click.echo("Created permission: can_permissions")
+        click.echo(f"Created permission: {code}")
     elif not permission.is_active:
         permission.is_active = True
         permission.deactivated_at = None
         permission.deactivated_by_user_id = None
         permission.save()
-        click.echo("Re-activated permission: can_permissions")
+        click.echo(f"Re-activated permission: {code}")
+    else:
+        click.echo(f"Permission already exists: {code}")
+    return permission
+
+def populate_db_core():
+    click.echo("Ensuring permissions exist...")
+    seed_permissions = [
+        (
+            "can_users",
+            "Users Management",
+            "Register and manage users.",
+        ),
+        (
+            "can_permissions",
+            "Permissions Management",
+            "Manage and assign permissions to any user.",
+        ),
+    ]
+    permissions = [
+        _ensure_permission(code, name, description)
+        for code, name, description in seed_permissions
+    ]
 
     click.echo("Ensuring admin user exists...")
     admin_email = "roma.grigalashvili@iliauni.edu.ge"
@@ -60,23 +82,24 @@ def populate_db_core():
     else:
         click.echo(f"User already exists: {admin_email}")
 
-    click.echo("Ensuring user permission assignment exists...")
-    assignment = UserPermission.query.filter_by(
-        user_id=admin_user.id,
-        permission_id=permission.id,
-        degranted_at=None,
-    ).first()
-
-    if not assignment:
-        assignment = UserPermission(
+    click.echo("Ensuring user permission assignments exist...")
+    for permission in permissions:
+        assignment = UserPermission.query.filter_by(
             user_id=admin_user.id,
             permission_id=permission.id,
-            granted_by_user_id=admin_user.id,
-        )
-        assignment.create()
-        click.echo("Assigned can_permissions to admin user.")
-    else:
-        click.echo("Permission already assigned to admin user.")
+            degranted_at=None,
+        ).first()
+
+        if not assignment:
+            assignment = UserPermission(
+                user_id=admin_user.id,
+                permission_id=permission.id,
+                granted_by_user_id=admin_user.id,
+            )
+            assignment.create()
+            click.echo(f"Assigned {permission.code} to admin user.")
+        else:
+            click.echo(f"Permission already assigned to admin user: {permission.code}")
 
     User.save()
 
