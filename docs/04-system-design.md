@@ -96,10 +96,11 @@ shakemaps
 ## ქვემოდულები
 
 ```text
-notifications
-delivery
-templates
-subscriptions
+recips              # implemented (email/phone contacts)
+notifications       # planned
+delivery            # planned
+templates           # planned
+subscriptions       # planned
 ```
 
 ---
@@ -268,16 +269,21 @@ grafana
 users
 permissions
 user_permissions
+refresh_tokens
 
-devices
-notification_preferences
+recips
+recip_emails
+recip_numbers
 
-earthquakes
-notifications
-notification_logs
+devices                  # planned
+notification_preferences # planned
 
-audit_logs
-system_settings
+earthquakes              # planned
+notifications            # planned
+notification_logs        # planned
+
+audit_logs               # planned
+system_settings          # planned
 ```
 
 ---
@@ -289,7 +295,7 @@ system_settings
 - HTTPS/SSL;
 - JWT Authentication;
 - Permission-Based Authorization;
-- Password Hashing (bcrypt);
+- Password Hashing (Werkzeug);
 - Rate Limiting;
 - Audit Logging.
 

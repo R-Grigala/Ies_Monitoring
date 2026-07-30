@@ -8,6 +8,21 @@ Earthquake Notification System (ENS) წარმოადგენს რეა
 
 ---
 
+## Implementation Status (Backend)
+
+| მოდული | სტატუსი |
+|--------|---------|
+| Identity: Auth (login/register/refresh/logout/reset) | Implemented |
+| Identity: Accounts admin UI/API | Implemented |
+| Permissions models + seed + runtime checks | Implemented |
+| Permissions REST CRUD | Planned |
+| Notification recipients (`recips`) + `/notify` UI | Implemented |
+| Push / Devices / Queue / Earthquake ingest | Planned |
+
+დეტალური API სია: [`09-api-inventory.md`](09-api-inventory.md).
+
+---
+
 # 2. პროექტის მიზანი
 
 პროექტის ძირითადი მიზანია:

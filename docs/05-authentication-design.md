@@ -1,5 +1,18 @@
 # ავთენტიფიკაციის დიზაინი (Authentication Design)
 
+## Implementation Status
+
+| ფუნქცია | სტატუსი |
+|---------|---------|
+| Register (admin, `can_users`) | Implemented |
+| Login / Refresh / Logout / Logout all | Implemented |
+| Request reset + Reset password | Implemented |
+| Change password API | Planned (UI page exists) |
+
+აქტუალური endpoint-ების სია: [`09-api-inventory.md`](09-api-inventory.md).
+
+---
+
 ## 1. მიზანი
 
 ავთენტიფიკაციის მოდულის მიზანია მომხმარებლების უსაფრთხო იდენტიფიკაცია, სისტემაში ავტორიზაცია, სესიის მართვა და პაროლის აღდგენის პროცესების უზრუნველყოფა.
@@ -12,13 +25,13 @@
 
 მოდული უზრუნველყოფს:
 
-- მომხმარებლის რეგისტრაციას;
+- ადმინის მიერ მომხმარებლის რეგისტრაციას (`can_users`);
 - მომხმარებლის ავტორიზაციას (Login);
 - JWT Access Token-ის გენერაციას;
 - Refresh Token-ის გენერაციას და განახლებას;
-- სისტემიდან გამოსვლას (Logout);
-- პაროლის შეცვლას;
-- პაროლის აღდგენას.
+- სისტემიდან გამოსვლას (Logout / Logout all);
+- პაროლის აღდგენას (request + reset);
+- პაროლის შეცვლას (planned API).
 
 ---
 
@@ -39,11 +52,12 @@
 
 | კომპონენტი | ტექნოლოგია |
 |-----------|------------|
-| Authentication | JWT (JSON Web Token) |
-| Password Hashing | bcrypt |
-| Secure Communication | HTTPS/SSL |
-| Database | MySQL |
-| API | REST API |
+| Authentication | JWT (Flask-JWT-Extended) |
+| Password Hashing | Werkzeug (`generate_password_hash` / `check_password_hash`) |
+| Reset tokens | itsdangerous `URLSafeTimedSerializer` (signed URL, TTL 300s) |
+| Secure Communication | HTTPS/SSL (production) |
+| Database | SQLite (dev/test) / MySQL (production) |
+| API | Flask-RESTx |
 
 ---
 
@@ -65,14 +79,15 @@
 POST /api/auth/register
 ```
 
-აღწერა:
+Auth: JWT + `can_users` (self-register არ არის).
 
-ახალი მომხმარებლის რეგისტრაცია.
+Body: `first_name`, `last_name`, `email`, `password`, `passwordRepeat`.
 
 Validation:
 
 - `email` უნდა იყოს ვალიდური და უნიკალური;
-- `password` მინ. 12 სიმბოლო, მინიმუმ 1 დიდი ასო, 1 პატარა ასო, 1 ციფრი, 1 სპეციალური სიმბოლო.
+- `password` მინ. 12 სიმბოლო, მინიმუმ 1 დიდი ასო, 1 პატარა ასო, 1 ციფრი, 1 სპეციალური სიმბოლო;
+- `password` და `passwordRepeat` უნდა ემთხვეოდეს.
 
 ---
 
@@ -130,15 +145,13 @@ Logout ტიპები:
 
 ---
 
-## პაროლის შეცვლა
+## პაროლის შეცვლა (Planned)
 
 ```http
 PUT /api/auth/change_password
 ```
 
-აღწერა:
-
-ავტორიზებული მომხმარებლის პაროლის შეცვლა.
+Web UI (`/<lang>/change_password`) უკვე არსებობს; API endpoint ჯერ არ არის იმპლემენტირებული.
 
 ---
 
@@ -148,15 +161,13 @@ PUT /api/auth/change_password
 POST /api/auth/request_reset_password
 ```
 
-აღწერა:
-
-პაროლის აღდგენის მოთხოვნის გაგზავნა.
+Body: `email`.
 
 უსაფრთხოების წესები:
 
-- პასუხი ყოველთვის ერთნაირია (`თუ ანგარიში არსებობს, ელ-ფოსტა გაიგზავნა`);
-- Endpoint-ზე მოქმედებს IP + email rate limit;
-- cooldown: ერთი მოთხოვნა 60 წამში ერთხელ.
+- პასუხი ყოველთვის ერთნაირია (anti-enumeration);
+- cooldown: 60 წამი ერთ email-ზე, ინახება `users.last_sent_email`-ში;
+- reset link იგზავნება ელ-ფოსტით (`/<lang>/reset_password/<token>`).
 
 ---
 
@@ -166,13 +177,12 @@ POST /api/auth/request_reset_password
 PUT /api/auth/reset_password
 ```
 
-აღწერა:
-
-Reset Token-ის გამოყენებით ახალი პაროლის დაყენება.
+Body: `token`, `password`, `retype_password`.
 
 წესები:
 
-- reset token ერთჯერადია (single-use);
+- token არის signed URL (itsdangerous), TTL = 300 წამი;
+- ცალკე `password_reset_tokens` ცხრილი არ გამოიყენება;
 - წარმატებული reset-ის შემდეგ უქმდება ყველა აქტიური refresh token.
 
 ---
@@ -196,18 +206,20 @@ Reset Token-ის გამოყენებით ახალი პარ�
 
 # 8. მონაცემთა მოდელი
 
-## users
+## users (auth-relevant fields)
 
 | ველი | ტიპი |
 |------|------|
-| id | bigint |
-| uuid | uuid |
+| id | int |
+| uuid | string(36) |
+| first_name / last_name | varchar(100) |
 | email | varchar(255) |
 | password_hash | varchar(255) |
 | is_active | boolean |
-| last_login_at | datetime |
-| created_at | datetime |
-| updated_at | datetime |
+| last_login_at | datetime \| null |
+| last_sent_email | datetime \| null |
+| created_at / updated_at | datetime |
+| created_by_user_id / updated_by_user_id | int \| null |
 
 ---
 
@@ -215,31 +227,24 @@ Reset Token-ის გამოყენებით ახალი პარ�
 
 | ველი | ტიპი |
 |------|------|
-| id | bigint |
-| user_id | bigint |
+| id | int |
+| user_id | int |
 | jti | uuid |
 | family_id | uuid |
 | token_hash | varchar(255) |
-| replaced_by_token_id | bigint |
+| replaced_by_token_id | int \| null |
 | device_info | varchar(255) |
 | ip_address | varchar(45) |
 | expires_at | datetime |
-| revoked_at | datetime |
-| last_used_at | datetime |
+| revoked_at | datetime \| null |
+| last_used_at | datetime \| null |
 | created_at | datetime |
 
 ---
 
 ## password_reset_tokens
 
-| ველი | ტიპი |
-|------|------|
-| id | bigint |
-| user_id | bigint |
-| token_hash | varchar(255) |
-| expires_at | datetime |
-| used_at | datetime |
-| created_at | datetime |
+**არ გამოიყენება.** Reset token არის signed URL payload (user uuid + salt `reset_password`), არ ინახება ცალკე ცხრილში.
 
 ---
 
@@ -249,8 +254,7 @@ Reset Token-ის გამოყენებით ახალი პარ�
 - `users.uuid` -> `UNIQUE INDEX`;
 - `refresh_tokens.jti` -> `UNIQUE INDEX`;
 - `refresh_tokens.user_id`, `refresh_tokens.family_id`, `refresh_tokens.expires_at` -> ინდექსები სწრაფი მოძიებისთვის;
-- `password_reset_tokens.user_id`, `password_reset_tokens.expires_at` -> ინდექსები;
-- ვადაგასული token-ების პერიოდული cleanup job (cron).
+- ვადაგასული refresh token-ების პერიოდული cleanup (planned).
 
 ---
 
@@ -357,15 +361,15 @@ PUT /api/auth/reset_password
 # 15. უსაფრთხოების მექანიზმები
 
 - JWT Authentication;
-- bcrypt Password Hashing;
-- HTTPS/SSL Encryption;
+- Werkzeug Password Hashing;
+- HTTPS/SSL Encryption (production);
 - Token Revocation;
 - Refresh Token Rotation;
-- Refresh Token Replay Detection;
+- Refresh Token Replay Detection (family revoke);
 - Anti-enumeration პასუხები პაროლის აღდგენაზე;
-- Rate Limiting;
+- Email cooldown (`last_sent_email`, 60s);
 - CSRF დაცვა Cookie-based flow-სთვის;
-- Audit Logging.
+- Audit fields მომხმარებელზე (`created_by` / `updated_by`).
 
 ---
 
