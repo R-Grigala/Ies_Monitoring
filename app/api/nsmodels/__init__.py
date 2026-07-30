@@ -7,3 +7,20 @@ from app.api.nsmodels.accounts import (
     account_list_response_model,
     error_model,
 )
+from app.api.nsmodels.recips import (
+    recips_ns,
+    recip_model,
+    recip_email_model,
+    recip_number_model,
+    recip_create_parser,
+    recip_update_parser,
+    recip_email_create_parser,
+    recip_email_update_parser,
+    recip_number_create_parser,
+    recip_number_update_parser,
+    recip_response_model,
+    recip_list_response_model,
+    recip_email_response_model,
+    recip_number_response_model,
+    message_response_model,
+)
