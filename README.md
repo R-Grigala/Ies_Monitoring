@@ -35,6 +35,13 @@ Real-time earthquake notification platform for Android and iOS devices.
 - [Accounts and Permissions Design](docs/06-accounts-and-permissions-design.md)
 - [Notification Design](docs/07-notification-design.md)
 - [Backend Setup](docs/08-backend-setup.md)
+- [API Inventory (Implemented)](docs/09-api-inventory.md)
+
+## Current Backend Status
+
+Implemented: Auth, Accounts admin, Recipients (`/api/recips` + `/notify` UI), permission seed/checks.
+
+Planned: Permissions REST CRUD, change-password API, earthquakes/SeisComP, push delivery, Redis/Celery, health endpoint.
 
 ## Testing
 
