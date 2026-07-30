@@ -1,0 +1,64 @@
+<div class="modal fade" id="editRecipModal" tabindex="-1" aria-labelledby="editRecipModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-semibold" id="editRecipModalLabel" data-i18n="notify.edit.title">Edit Recipient</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body pt-2">
+                <form id="editRecipForm" novalidate>
+                    <input type="hidden" id="editRecipId">
+
+                    <div class="row g-3 mb-4">
+                        <div class="col-12">
+                            <label class="form-label" for="editRecipUsername" data-i18n="notify.form.username">Name</label>
+                            <input type="text" class="form-control form-control-lg" id="editRecipUsername" required>
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" role="switch" id="editRecipIsStaff">
+                                <label class="form-check-label" for="editRecipIsStaff" data-i18n="notify.form.staff">Staff recipient</label>
+                            </div>
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" role="switch" id="editRecipIsActive">
+                                <label class="form-check-label" for="editRecipIsActive" data-i18n="notify.form.active">Active recipient</label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="border-top pt-4 mb-4">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h6 class="mb-0" data-i18n="notify.emails.title">Emails</h6>
+                        </div>
+                        <div id="editRecipEmailsList" class="d-flex flex-column gap-2 mb-3"></div>
+                        <div class="input-group">
+                            <input type="email" class="form-control" id="editRecipNewEmail" placeholder="email@example.com" data-i18n-placeholder="notify.emails.placeholder">
+                            <button type="button" class="btn btn-outline-primary" id="editRecipAddEmail" data-i18n="notify.emails.add">Add email</button>
+                        </div>
+                    </div>
+
+                    <div class="border-top pt-4 mb-4">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h6 class="mb-0" data-i18n="notify.numbers.title">Phone numbers</h6>
+                        </div>
+                        <div id="editRecipNumbersList" class="d-flex flex-column gap-2 mb-3"></div>
+                        <div class="input-group">
+                            <input type="text" class="form-control" id="editRecipNewNumber" placeholder="+9955..." data-i18n-placeholder="notify.numbers.placeholder">
+                            <button type="button" class="btn btn-outline-primary" id="editRecipAddNumber" data-i18n="notify.numbers.add">Add phone</button>
+                        </div>
+                    </div>
+
+                    <div class="d-flex flex-column flex-md-row justify-content-between gap-2">
+                        <button type="button" class="btn btn-outline-danger" id="editRecipDelete" data-i18n="notify.edit.delete">Delete</button>
+                        <div class="d-grid d-md-flex gap-2">
+                            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal" data-i18n="notify.form.cancel">Cancel</button>
+                            <button type="submit" class="btn btn-primary" id="editRecipSubmit" data-i18n="notify.edit.save">Save changes</button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>

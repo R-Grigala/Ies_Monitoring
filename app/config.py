@@ -3,6 +3,7 @@ from datetime import timedelta
 from os import path, sep, pardir
 
 from dotenv import load_dotenv
+from sqlalchemy.pool import StaticPool
 
 load_dotenv(dotenv_path=".env")
 
@@ -69,8 +70,30 @@ class ProductionConfig(Config):
     )
 
 
+class TestingConfig(Config):
+    TESTING = True
+    DEBUG = False
+    SECRET_KEY = "test-secret-key-at-least-32-bytes-long"
+    JWT_SECRET_KEY = "test-jwt-secret-key-at-least-32-bytes"
+    API_KEY = "test-api-key"
+    SQLALCHEMY_DATABASE_URI = "sqlite://"
+    SQLALCHEMY_ENGINE_OPTIONS = {
+        "connect_args": {"check_same_thread": False},
+        "poolclass": StaticPool,
+    }
+    JWT_COOKIE_SECURE = False
+    JWT_COOKIE_CSRF_PROTECT = False
+    JWT_ACCESS_TOKEN_EXPIRES = timedelta(minutes=15)
+    JWT_REFRESH_TOKEN_EXPIRES = timedelta(days=1)
+    LOG_DIR = path.join(Config.BASE_DIR, "logs", "test")
+    LOG_LEVEL = "WARNING"
+    WTF_CSRF_ENABLED = False
+
+
 def get_config():
     env = os.getenv("FLASK_ENV", "development").lower()
     if env == "production":
         return ProductionConfig
+    if env == "testing":
+        return TestingConfig
     return DevelopmentConfig

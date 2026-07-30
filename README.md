@@ -36,6 +36,11 @@ Real-time earthquake notification platform for Android and iOS devices.
 - [Notification Design](docs/07-notification-design.md)
 - [Backend Setup](docs/08-backend-setup.md)
 
-## Backend Quick Start
+## Testing
 
-Backend გაშვების სრული ინსტრუქცია: [`docs/08-backend-setup.md`](docs/08-backend-setup.md)
+```bash
+pip install -r requirements.txt -r requirements-dev.txt
+pytest
+```
+
+API tests live in `tests/` and use an in-memory SQLite database via `TestingConfig`.

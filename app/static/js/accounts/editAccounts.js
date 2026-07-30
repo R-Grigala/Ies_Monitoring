@@ -115,9 +115,9 @@ async function deleteAccountFromModal() {
         return;
     }
 
-    const confirmed = window.confirm(
-        t("accounts.delete.confirm", "Are you sure you want to delete this account?")
-    );
+    const confirmed = await window.confirmDelete({
+        message: t("accounts.delete.confirm", "Are you sure you want to delete this account?"),
+    });
     if (!confirmed) {
         return;
     }
@@ -130,7 +130,7 @@ async function deleteAccountFromModal() {
             method: "DELETE",
         });
         window.onAccountDeleted?.(userUuid);
-        editAccountModal?.hide();
+        window.closeModal("editAccountModal");
         window.showAlert(
             "alertPlaceholder",
             "success",

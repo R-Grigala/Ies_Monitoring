@@ -195,6 +195,6 @@ error_model = recips_ns.model(
     "RecipErrorResponse",
     {
         "error": fields.String(required=True, example="forbidden"),
-        "message": fields.String(required=True, example="Missing required permission: can_recip"),
+        "message": fields.String(required=True, example="Missing required permission: can_recips"),
     },
 )

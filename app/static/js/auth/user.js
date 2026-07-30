@@ -15,7 +15,6 @@ async function openUserModal() {
 
     const emailText = document.getElementById("user_email");
     const roleText = document.getElementById("user_role");
-    const accountsButton = document.getElementById("accountsButton");
 
     try {
         const data = await window.makeApiRequest("/api/accounts/user", { method: "GET" });
@@ -31,22 +30,12 @@ async function openUserModal() {
         emailText.textContent = data.email;
         roleText.textContent = data.is_active ? "Active" : "Inactive";
 
-        if (accountsButton) {
-            accountsButton.style.display = data.can_users ? "inline-block" : "none";
-        }
-
         const modal = new bootstrap.Modal(document.getElementById("UserModal"));
         modal.show();
     } catch (error) {
         console.error("Error fetching data:", error);
         window.showAlert("alertPlaceholder", "danger", error.message || "An error occurred while fetching data.");
     }
-}
-
-// Redirect to the accounts page
-function redirectToAccounts() {
-    const i18n = window.I18n;
-    window.location.href = i18n ? i18n.localizePath('/accounts') : '/accounts';
 }
 
 function submitUserForm(event) {
@@ -86,9 +75,6 @@ if (typeof window.openUserModal !== "function") {
 }
 if (typeof window.submitUserForm !== "function") {
     window.submitUserForm = submitUserForm;
-}
-if (typeof window.redirectToAccounts !== "function") {
-    window.redirectToAccounts = redirectToAccounts;
 }
 if (typeof window.changePassword !== "function") {
     window.changePassword = changePassword;

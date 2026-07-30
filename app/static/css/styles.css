@@ -98,6 +98,23 @@
     border-radius: 1rem;
 }
 
+#createRecipModal .modal-content,
+#editRecipModal .modal-content {
+    border-radius: 1rem;
+}
+
+#confirmDeleteModal .modal-content {
+    border-radius: 1rem;
+}
+
+.notify-table thead th {
+    font-size: 0.875rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--bs-secondary-color);
+    border-bottom-width: 1px;
+}
+
 @media (max-width: 575.98px) {
     #resetPasswordModal .modal-dialog {
         margin: 0.75rem;

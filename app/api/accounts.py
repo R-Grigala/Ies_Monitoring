@@ -79,6 +79,7 @@ class CurrentUserApi(Resource):
             return {"error": "not_found", "message": "User not found."}, 404
         user_data = user.to_dict()
         user_data["can_users"] = user.check_permission("can_users")
+        user_data["can_recips"] = user.check_permission("can_recips")
         return user_data
 
     @jwt_required()
@@ -165,19 +166,19 @@ class AccountDetailApi(Resource):
 
         payload = account_update_parser.parse_args()
 
-        if "first_name" in payload:
+        if payload.get("first_name") is not None:
             value = (payload.get("first_name") or "").strip()
             if not value:
                 return {"error": "validation_error", "message": "first_name cannot be empty."}, 400
             user.first_name = value
 
-        if "last_name" in payload:
+        if payload.get("last_name") is not None:
             value = (payload.get("last_name") or "").strip()
             if not value:
                 return {"error": "validation_error", "message": "last_name cannot be empty."}, 400
             user.last_name = value
 
-        if "email" in payload:
+        if payload.get("email") is not None:
             try:
                 normalized_email = normalize_email(payload.get("email"))
             except ValueError as err:
