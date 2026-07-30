@@ -32,8 +32,7 @@ async function openUserModal() {
         roleText.textContent = data.is_active ? "Active" : "Inactive";
 
         if (accountsButton) {
-            // Role-based exposure is not available in current /api/user payload.
-            accountsButton.style.display = "none";
+            accountsButton.style.display = data.can_users ? "inline-block" : "none";
         }
 
         const modal = new bootstrap.Modal(document.getElementById("UserModal"));

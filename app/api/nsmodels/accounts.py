@@ -21,6 +21,17 @@ account_model = accounts_ns.model(
     },
 )
 
+current_user_model = accounts_ns.inherit(
+    "CurrentAccount",
+    account_model,
+    {
+        "can_users": fields.Boolean(
+            required=False,
+            example=True,
+        ),
+    },
+)
+
 account_update_parser = reqparse.RequestParser()
 account_update_parser.add_argument("first_name", type=str, required=False)
 account_update_parser.add_argument("last_name", type=str, required=False)
@@ -43,10 +54,17 @@ account_list_response_model = accounts_ns.model(
     },
 )
 
+account_delete_response_model = accounts_ns.model(
+    "AccountDeleteResponse",
+    {
+        "message": fields.String(required=True, example="User deleted successfully."),
+    },
+)
+
 error_model = accounts_ns.model(
     "ErrorResponse",
     {
         "error": fields.String(required=True, example="forbidden"),
-        "message": fields.String(required=True, example="Missing required permission: can_permissions"),
+        "message": fields.String(required=True, example="Missing required permission: can_users"),
     },
 )

@@ -1,0 +1,47 @@
+<div class="modal fade" id="editAccountModal" tabindex="-1" aria-labelledby="editAccountModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-semibold" id="editAccountModalLabel" data-i18n="accounts.edit.title">Edit Account</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body pt-2">
+                <form id="editAccountForm" novalidate>
+                    <input type="hidden" id="editAccountUuid">
+
+                    <div class="row g-3">
+                        <div class="col-12 col-md-6">
+                            <label class="form-label" for="editAccountFirstName" data-i18n="accounts.edit.first_name">First name</label>
+                            <input type="text" class="form-control form-control-lg" id="editAccountFirstName" required>
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <label class="form-label" for="editAccountLastName" data-i18n="accounts.edit.last_name">Last name</label>
+                            <input type="text" class="form-control form-control-lg" id="editAccountLastName" required>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label" for="editAccountEmail" data-i18n="accounts.edit.email">Email</label>
+                            <input type="email" class="form-control form-control-lg" id="editAccountEmail" required>
+                        </div>
+                        <div class="col-12">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" role="switch" id="editAccountIsActive">
+                                <label class="form-check-label" for="editAccountIsActive" data-i18n="accounts.edit.active">Active account</label>
+                            </div>
+                            <div class="form-text d-none" id="editAccountActiveHint" data-i18n="accounts.edit.active_self_hint">
+                                You cannot deactivate your own account.
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="d-flex flex-column flex-md-row justify-content-between gap-2 mt-4">
+                        <button type="button" class="btn btn-outline-danger" id="editAccountDelete" data-i18n="accounts.edit.delete">Delete</button>
+                        <div class="d-grid d-md-flex gap-2">
+                            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal" data-i18n="accounts.edit.cancel">Cancel</button>
+                            <button type="submit" class="btn btn-primary" id="editAccountSubmit" data-i18n="accounts.edit.save">Save changes</button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
