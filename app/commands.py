@@ -65,6 +65,11 @@ def populate_db_core():
             "Recips Management",
             "Manage and assign recips to any user.",
         ),
+        (
+            "can_recips_read",
+            "Recips Read-Only",
+            "Read recipients list and details (for service API keys).",
+        ),
     ]
     permissions = [
         _ensure_permission(code, name, description)
