@@ -1,4 +1,11 @@
-from app.api.nsmodels.auth import auth_ns, registration_parser, auth_parser, request_reset_password_parser, reset_password_parser
+from app.api.nsmodels.auth import (
+    auth_ns,
+    registration_parser,
+    auth_parser,
+    request_reset_password_parser,
+    reset_password_parser,
+    register_service_parser,
+)
 from app.api.nsmodels.accounts import (
     accounts_ns,
     account_model,

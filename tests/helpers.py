@@ -10,6 +10,7 @@ PERMISSIONS = (
     ("can_users", "Users Management", "Register and manage users."),
     ("can_permissions", "Permissions Management", "Manage and assign permissions."),
     ("can_recips", "Recips Management", "Manage notification recipients."),
+    ("can_recips_read", "Recips Read-Only", "Read recipients list and details."),
 )
 
 
