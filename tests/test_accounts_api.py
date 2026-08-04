@@ -68,3 +68,61 @@ def test_delete_own_account_forbidden(client, admin_auth_headers, admin_user):
         headers=admin_auth_headers,
     )
     assert response.status_code == 409
+
+
+def test_grant_and_revoke_permission(client, admin_auth_headers, plain_user, permissions):
+    catalog = client.get("/api/permissions/", headers=admin_auth_headers)
+    assert catalog.status_code == 200
+    codes = {item["code"] for item in catalog.get_json()["items"]}
+    assert "can_recips" in codes
+
+    grant = client.post(
+        f"/api/accounts/{plain_user.uuid}/permissions",
+        headers=admin_auth_headers,
+        json={"permission_codes": ["can_recips"]},
+    )
+    assert grant.status_code == 200
+    data = grant.get_json()
+    assert "can_recips" in data["granted"]
+    assert any(item["code"] == "can_recips" for item in data["permissions"])
+
+    listed = client.get(
+        f"/api/accounts/{plain_user.uuid}/permissions",
+        headers=admin_auth_headers,
+    )
+    assert listed.status_code == 200
+    assert any(item["code"] == "can_recips" for item in listed.get_json()["items"])
+
+    detail = client.get(f"/api/accounts/{plain_user.uuid}", headers=admin_auth_headers)
+    assert detail.status_code == 200
+    assert "can_recips" in detail.get_json().get("permissions", [])
+
+    revoke = client.delete(
+        f"/api/accounts/{plain_user.uuid}/permissions/can_recips",
+        headers=admin_auth_headers,
+    )
+    assert revoke.status_code == 200
+    assert "can_recips" in revoke.get_json()["revoked"]
+
+    after = client.get(
+        f"/api/accounts/{plain_user.uuid}/permissions",
+        headers=admin_auth_headers,
+    )
+    assert not any(item["code"] == "can_recips" for item in after.get_json()["items"])
+
+
+def test_cannot_revoke_own_can_users(client, admin_auth_headers, admin_user):
+    response = client.delete(
+        f"/api/accounts/{admin_user.uuid}/permissions/can_users",
+        headers=admin_auth_headers,
+    )
+    assert response.status_code == 409
+
+
+def test_grant_permission_forbidden_without_can_users(client, user_auth_headers, plain_user):
+    response = client.post(
+        f"/api/accounts/{plain_user.uuid}/permissions",
+        headers=user_auth_headers,
+        json={"permission_codes": ["can_recips"]},
+    )
+    assert response.status_code == 403

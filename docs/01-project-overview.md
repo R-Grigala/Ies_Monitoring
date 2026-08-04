@@ -14,8 +14,9 @@ Earthquake Notification System (ENS) წარმოადგენს რეა
 |--------|---------|
 | Identity: Auth (login/register/refresh/logout/reset) | Implemented |
 | Identity: Accounts admin UI/API | Implemented |
+| Service accounts + API keys + Services UI | Implemented |
 | Permissions models + seed + runtime checks | Implemented |
-| Permissions REST CRUD | Planned |
+| Permissions catalog REST (list/create/delete) | Implemented |
 | Notification recipients (`recips`) + `/notify` UI | Implemented |
 | Push / Devices / Queue / Earthquake ingest | Planned |
 

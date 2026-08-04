@@ -10,7 +10,9 @@
 |--------|---------|
 | Recipients (`recips` + emails + numbers) | Implemented |
 | Admin UI `/notify` | Implemented |
-| Permission `can_recips` | Implemented |
+| Permission `can_recips` (write) | Implemented |
+| Permission `can_recips_read` (list/detail) | Implemented |
+| Service API keys for read-only access | Implemented (see Services API) |
 | Push / Devices / Queue / History / Templates | Planned |
 
 ---
@@ -30,7 +32,12 @@ recips
 ```text
 Users (Identity)
     │
-    └── can_recips permission → manage Recips API / Notify UI
+    ├── can_recips → full Recips API / Notify UI
+    └── can_recips_read → list/detail only (often via service API key)
+
+Services (API keys)
+    │
+    └── can_recips_read (typical) → machine access to /api/recips GET
 
 Recips (Notification contacts)
     │
@@ -100,20 +107,40 @@ Constraints:
 
 ## 5. API Endpoint-ები
 
-Required Permission ყველა endpoint-ზე:
+### Read (list / detail)
+
+Required permission (any of):
+
+```text
+can_recips
+can_recips_read
+```
+
+Auth: JWT Bearer **ან** service `X-API-Key`.
+
+```http
+GET    /api/recips/
+GET    /api/recips/{id}
+```
+
+### Write (create / update / delete + channels)
+
+Required permission:
 
 ```text
 can_recips
 ```
 
-### Recipients
-
 ```http
-GET    /api/recips/
 POST   /api/recips/
-GET    /api/recips/{id}
 PUT    /api/recips/{id}
 DELETE /api/recips/{id}
+POST   /api/recips/{id}/emails
+PUT    /api/recips/emails/{email_id}
+DELETE /api/recips/emails/{email_id}
+POST   /api/recips/{id}/numbers
+PUT    /api/recips/numbers/{number_id}
+DELETE /api/recips/numbers/{number_id}
 ```
 
 Create body მაგალითი:
@@ -175,8 +202,9 @@ DELETE /api/recips/numbers/{number_id}
 
 ## 7. უსაფრთხოება
 
-- JWT Authentication;
-- Permission check: `can_recips`;
+- JWT Authentication **ან** service API key (`X-API-Key`);
+- Read: `can_recips` ან `can_recips_read`;
+- Write: `can_recips`;
 - Email normalize/validate;
 - Georgian phone normalize (`+9955XXXXXXXX`);
 - Soft disable (`is_active=false`);

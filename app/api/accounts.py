@@ -1,6 +1,8 @@
 import logging
+from datetime import datetime
 
-from flask_jwt_extended import current_user, get_jwt_identity, jwt_required
+from flask import request
+from flask_jwt_extended import get_jwt_identity, jwt_required
 from flask_restx import Resource, marshal
 from sqlalchemy import or_
 from sqlalchemy.exc import IntegrityError
@@ -14,19 +16,100 @@ from app.api.nsmodels import (
     account_update_response_model,
     account_list_response_model,
     account_delete_response_model,
+    grant_permissions_parser,
+    user_permission_list_response_model,
+    permission_action_response_model,
     error_model,
 )
+from app.api.nsmodels.accounts import JWT_OR_API_KEY
 from app.models import User, Permission, UserPermission, RefreshToken
 from app.utils.auth_utils import require_permissions, resolve_actor
 from app.utils.validators import normalize_email
 
 logger = logging.getLogger("app.accounts")
 
-JWT_OR_API_KEY = ["JsonWebToken", "ApiKeyAuth"]
-
 
 def _require_can_users():
     return require_permissions("can_users")
+
+
+def _require_manage_permissions():
+    """Grant/revoke permissions: can_permissions or can_users."""
+    return require_permissions("can_permissions", "can_users")
+
+
+def _normalize_codes(raw_values):
+    if raw_values is None:
+        return []
+    if isinstance(raw_values, str):
+        values = [raw_values]
+    elif isinstance(raw_values, (list, tuple)):
+        values = list(raw_values)
+    else:
+        values = [str(raw_values)]
+
+    codes = []
+    for item in values:
+        if item is None:
+            continue
+        nested = item if isinstance(item, (list, tuple)) else str(item).split(",")
+        for code in nested:
+            normalized = str(code).strip()
+            if normalized and normalized not in codes:
+                codes.append(normalized)
+    return codes
+
+
+def _normalize_ids(raw_values):
+    if raw_values is None:
+        return []
+    if isinstance(raw_values, int):
+        return [raw_values]
+    if isinstance(raw_values, (list, tuple)):
+        ids = []
+        for item in raw_values:
+            try:
+                value = int(item)
+            except (TypeError, ValueError):
+                continue
+            if value not in ids:
+                ids.append(value)
+        return ids
+    try:
+        return [int(raw_values)]
+    except (TypeError, ValueError):
+        return []
+
+
+def _active_user_permission_rows(user):
+    return (
+        db.session.query(UserPermission, Permission)
+        .join(Permission, Permission.id == UserPermission.permission_id)
+        .filter(
+            UserPermission.user_id == user.id,
+            UserPermission.degranted_at.is_(None),
+            Permission.is_active.is_(True),
+        )
+        .order_by(Permission.code.asc())
+        .all()
+    )
+
+
+def _user_permission_payload(user):
+    items = []
+    for assignment, permission in _active_user_permission_rows(user):
+        items.append(
+            {
+                "id": assignment.id,
+                "permission_id": permission.id,
+                "code": permission.code,
+                "name": permission.name,
+                "description": permission.description,
+                "granted_at": assignment.granted_at.isoformat() if assignment.granted_at else None,
+                "granted_by_user_id": assignment.granted_by_user_id,
+            }
+        )
+    return items
 
 
 def _user_delete_blockers(user):
@@ -141,6 +224,209 @@ class AccountsApi(Resource):
         ), 200
 
 
+@accounts_ns.route("/<string:user_uuid>/permissions")
+class AccountPermissionsApi(Resource):
+    @accounts_ns.doc(security=JWT_OR_API_KEY)
+    @accounts_ns.response(200, "Success", user_permission_list_response_model)
+    @accounts_ns.response(401, "Unauthorized", error_model)
+    @accounts_ns.response(403, "Forbidden", error_model)
+    @accounts_ns.response(404, "Not Found", error_model)
+    def get(self, user_uuid):
+        """List active permissions for a user."""
+        denied = _require_manage_permissions()
+        if denied:
+            return denied
+
+        user = User.query.filter_by(uuid=user_uuid).first()
+        if not user:
+            return {"error": "not_found", "message": "User not found."}, 404
+
+        items = _user_permission_payload(user)
+        return (
+            marshal(
+                {"items": items, "total": len(items), "user_uuid": user.uuid},
+                user_permission_list_response_model,
+            ),
+            200,
+        )
+
+    @accounts_ns.doc(parser=grant_permissions_parser, security=JWT_OR_API_KEY)
+    @accounts_ns.response(200, "Success", permission_action_response_model)
+    @accounts_ns.response(400, "Validation Error", error_model)
+    @accounts_ns.response(401, "Unauthorized", error_model)
+    @accounts_ns.response(403, "Forbidden", error_model)
+    @accounts_ns.response(404, "Not Found", error_model)
+    @accounts_ns.response(409, "Conflict", error_model)
+    def post(self, user_uuid):
+        """Grant one or more permissions to a user (by code and/or id)."""
+        denied = _require_manage_permissions()
+        if denied:
+            return denied
+
+        actor = resolve_actor()
+        user = User.query.filter_by(uuid=user_uuid).first()
+        if not user:
+            return {"error": "not_found", "message": "User not found."}, 404
+
+        args = grant_permissions_parser.parse_args()
+        json_body = request.get_json(silent=True) or {}
+
+        codes = _normalize_codes(args.get("permission_codes") or json_body.get("permission_codes"))
+        ids = _normalize_ids(args.get("permission_ids") or json_body.get("permission_ids"))
+        # Accept simpler body: {"permissions": ["can_recips", ...]}
+        if not codes and not ids:
+            codes = _normalize_codes(json_body.get("permissions"))
+
+        if not codes and not ids:
+            return {
+                "error": "validation_error",
+                "message": "Provide permission_codes and/or permission_ids.",
+            }, 400
+
+        permissions_by_id = {}
+        for permission_id in ids:
+            permission = Permission.query.filter_by(id=permission_id).first()
+            if not permission:
+                return {
+                    "error": "validation_error",
+                    "message": f"Unknown permission id(s): {permission_id}",
+                }, 400
+            permissions_by_id[permission.id] = permission
+
+        for code in codes:
+            permission = Permission.query.filter_by(code=code).first()
+            if not permission:
+                return {
+                    "error": "validation_error",
+                    "message": f"Unknown permission code(s): {code}",
+                }, 400
+            permissions_by_id[permission.id] = permission
+
+        granted = []
+        already = []
+        inactive = []
+        for permission in permissions_by_id.values():
+            if not permission.is_active:
+                inactive.append(permission.code)
+                continue
+
+            active = UserPermission.query.filter_by(
+                user_id=user.id,
+                permission_id=permission.id,
+                degranted_at=None,
+            ).first()
+            if active:
+                already.append(permission.code)
+                continue
+
+            assignment = UserPermission(
+                user_id=user.id,
+                permission_id=permission.id,
+                granted_by_user_id=actor["user_id"],
+            )
+            assignment.create(commit=False)
+            granted.append(permission.code)
+
+        if inactive and not granted and not already:
+            return {
+                "error": "validation_error",
+                "message": f"Inactive permission code(s): {', '.join(inactive)}",
+            }, 400
+
+        if already and not granted:
+            return {
+                "error": "already_assigned",
+                "message": f"Permission already assigned: {', '.join(already)}",
+            }, 409
+
+        UserPermission.save()
+        logger.info(
+            "Permissions granted: actor=%s target_uuid=%s granted=%s already=%s",
+            actor["label"],
+            user.uuid,
+            granted,
+            already,
+        )
+        return (
+            marshal(
+                {
+                    "message": "Permissions granted successfully.",
+                    "granted": granted,
+                    "permissions": _user_permission_payload(user),
+                },
+                permission_action_response_model,
+            ),
+            200,
+        )
+
+
+@accounts_ns.route("/<string:user_uuid>/permissions/<string:permission_code>")
+class AccountPermissionDetailApi(Resource):
+    @accounts_ns.doc(security=JWT_OR_API_KEY)
+    @accounts_ns.response(200, "Success", permission_action_response_model)
+    @accounts_ns.response(401, "Unauthorized", error_model)
+    @accounts_ns.response(403, "Forbidden", error_model)
+    @accounts_ns.response(404, "Not Found", error_model)
+    def delete(self, user_uuid, permission_code):
+        """Revoke an active permission from a user (soft degrant)."""
+        denied = _require_manage_permissions()
+        if denied:
+            return denied
+
+        actor = resolve_actor()
+        user = User.query.filter_by(uuid=user_uuid).first()
+        if not user:
+            return {"error": "not_found", "message": "User not found."}, 404
+
+        permission = Permission.query.filter_by(code=permission_code).first()
+        if not permission:
+            return {"error": "not_found", "message": "Permission not found."}, 404
+
+        assignment = UserPermission.query.filter_by(
+            user_id=user.id,
+            permission_id=permission.id,
+            degranted_at=None,
+        ).first()
+        if not assignment:
+            return {
+                "error": "not_assigned",
+                "message": f"Permission is not assigned: {permission_code}",
+            }, 404
+
+        # Protect last admin from removing own can_users if it would lock everyone out —
+        # only block self-revoke of can_users / can_permissions for own account.
+        if actor["user"] and actor["user"].id == user.id and permission_code in {
+            "can_users",
+            "can_permissions",
+        }:
+            return {
+                "error": "conflict",
+                "message": f"You cannot revoke your own {permission_code} permission.",
+            }, 409
+
+        assignment.degranted_at = datetime.now()
+        assignment.degranted_by_user_id = actor["user_id"]
+        db.session.commit()
+
+        logger.info(
+            "Permission revoked: actor=%s target_uuid=%s code=%s",
+            actor["label"],
+            user.uuid,
+            permission_code,
+        )
+        return (
+            marshal(
+                {
+                    "message": "Permission revoked successfully.",
+                    "revoked": [permission_code],
+                    "permissions": _user_permission_payload(user),
+                },
+                permission_action_response_model,
+            ),
+            200,
+        )
+
+
 @accounts_ns.route("/<string:user_uuid>")
 class AccountDetailApi(Resource):
     @accounts_ns.doc(security=JWT_OR_API_KEY)
@@ -157,7 +443,10 @@ class AccountDetailApi(Resource):
         user = User.query.filter_by(uuid=user_uuid).first()
         if not user:
             return {"error": "not_found", "message": "User not found."}, 404
-        return marshal(user.to_dict(), account_model), 200
+
+        payload = user.to_dict()
+        payload["permissions"] = [item["code"] for item in _user_permission_payload(user)]
+        return payload, 200
 
     @accounts_ns.doc(security=JWT_OR_API_KEY)
     @accounts_ns.expect(account_update_parser)

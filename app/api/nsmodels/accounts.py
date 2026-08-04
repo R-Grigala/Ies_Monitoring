@@ -8,6 +8,8 @@ accounts_ns = api.namespace(
     path="/accounts",
 )
 
+JWT_OR_API_KEY = ["JsonWebToken", "ApiKeyAuth"]
+
 account_model = accounts_ns.model(
     "Account",
     {
@@ -36,11 +38,68 @@ current_user_model = accounts_ns.inherit(
     },
 )
 
+permission_model = accounts_ns.model(
+    "Permission",
+    {
+        "id": fields.Integer(required=True, example=1),
+        "code": fields.String(required=True, example="can_recips"),
+        "name": fields.String(required=True, example="Recips Management"),
+        "description": fields.String(required=False, example="Manage notification recipients."),
+        "is_active": fields.Boolean(required=True, example=True),
+    },
+)
+
+user_permission_model = accounts_ns.model(
+    "UserPermission",
+    {
+        "id": fields.Integer(required=True, example=1),
+        "permission_id": fields.Integer(required=True, example=1),
+        "code": fields.String(required=True, example="can_recips"),
+        "name": fields.String(required=True, example="Recips Management"),
+        "description": fields.String(required=False),
+        "granted_at": fields.String(required=False, example="2026-08-04T12:00:00"),
+        "granted_by_user_id": fields.Integer(required=False, example=1),
+    },
+)
+
+permission_list_response_model = accounts_ns.model(
+    "PermissionListResponse",
+    {
+        "items": fields.List(fields.Nested(permission_model), required=True),
+        "total": fields.Integer(required=True, example=4),
+    },
+)
+
+user_permission_list_response_model = accounts_ns.model(
+    "UserPermissionListResponse",
+    {
+        "items": fields.List(fields.Nested(user_permission_model), required=True),
+        "total": fields.Integer(required=True, example=1),
+        "user_uuid": fields.String(required=True),
+    },
+)
+
 account_update_parser = reqparse.RequestParser()
 account_update_parser.add_argument("first_name", type=str, required=False)
 account_update_parser.add_argument("last_name", type=str, required=False)
 account_update_parser.add_argument("email", type=inputs.email(check=True), required=False)
 account_update_parser.add_argument("is_active", type=inputs.boolean, required=False)
+
+grant_permissions_parser = reqparse.RequestParser()
+grant_permissions_parser.add_argument(
+    "permission_codes",
+    type=str,
+    required=False,
+    action="append",
+    help="Permission codes to grant, e.g. can_recips",
+)
+grant_permissions_parser.add_argument(
+    "permission_ids",
+    type=int,
+    required=False,
+    action="append",
+    help="Permission ids to grant",
+)
 
 account_update_response_model = accounts_ns.model(
     "AccountUpdateResponse",
@@ -62,6 +121,16 @@ account_delete_response_model = accounts_ns.model(
     "AccountDeleteResponse",
     {
         "message": fields.String(required=True, example="User deleted successfully."),
+    },
+)
+
+permission_action_response_model = accounts_ns.model(
+    "PermissionActionResponse",
+    {
+        "message": fields.String(required=True, example="Permissions updated successfully."),
+        "granted": fields.List(fields.String, required=False),
+        "revoked": fields.List(fields.String, required=False),
+        "permissions": fields.List(fields.Nested(user_permission_model), required=False),
     },
 )
 

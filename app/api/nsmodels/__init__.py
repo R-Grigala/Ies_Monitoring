@@ -13,7 +13,23 @@ from app.api.nsmodels.accounts import (
     account_update_response_model,
     account_list_response_model,
     account_delete_response_model,
+    grant_permissions_parser,
+    permission_model,
+    user_permission_model,
+    permission_list_response_model,
+    user_permission_list_response_model,
+    permission_action_response_model,
     error_model,
+)
+from app.api.nsmodels.permissions import (
+    permissions_ns,
+    permission_create_parser,
+    permission_model as catalog_permission_model,
+    permission_list_response_model as catalog_permission_list_response_model,
+    permission_create_response_model,
+    permission_delete_response_model,
+    error_model as permissions_error_model,
+    JWT_OR_API_KEY as PERMISSIONS_JWT_OR_API_KEY,
 )
 from app.api.nsmodels.recips import (
     recips_ns,
