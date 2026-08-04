@@ -13,14 +13,21 @@
                     <h2 class="h3 mb-2" data-i18n="accounts.title">Accounts</h2>
                     <p class="text-muted mb-0" data-i18n="accounts.subtitle">Browse and manage registered users.</p>
                 </div>
-                <div class="d-flex align-items-center gap-2">
-                    <button
-                        type="button"
+                <div class="d-flex flex-wrap align-items-center gap-2">
+                    <a
+                        class="btn btn-outline-primary d-none"
+                        id="accountsServicesButton"
+                        href="{{ url_for('services.services', lang=current_lang) }}"
+                    >
+                        <span data-i18n="accounts.services">Services</span>
+                    </a>
+                    <a
                         class="btn btn-primary"
                         id="addAccountButton"
+                        href="{{ url_for('auth.registration', lang=current_lang) }}"
                     >
                         <span data-i18n="accounts.add">Add user</span>
-                    </button>
+                    </a>
                     <span class="badge rounded-pill text-bg-primary fs-6 px-3 py-2" id="accountsTotal">0</span>
                 </div>
             </div>
@@ -67,11 +74,9 @@
 </div>
 
 {% include "accounts/editAccounts.html" %}
-{% include "auth/registration.html" %}
 {% endblock %}
 
 {% block scripts %}
 <script type="text/javascript" src="{{ url_for('static', filename='js/accounts/accounts.js') }}" defer></script>
 <script type="text/javascript" src="{{ url_for('static', filename='js/accounts/editAccounts.js') }}" defer></script>
-<script type="text/javascript" src="{{ url_for('static', filename='js/auth/registration.js') }}" defer></script>
 {% endblock %}

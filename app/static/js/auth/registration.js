@@ -1,4 +1,3 @@
-let registrationModal = null;
 let registrationAvailablePermissions = [];
 let registrationPermissionsLoadPromise = null;
 
@@ -19,6 +18,16 @@ function escapeHtml(value) {
         .replaceAll("'", "&#39;");
 }
 
+function accountsPath() {
+    const i18n = window.I18n;
+    return i18n ? i18n.localizePath("/accounts") : "/accounts";
+}
+
+function loginPath() {
+    const i18n = window.I18n;
+    return i18n ? i18n.localizePath("/login") : "/login";
+}
+
 function clearRegistrationAlert() {
     const container = document.getElementById(REGISTRATION_ALERT_ID);
     if (container) {
@@ -30,19 +39,6 @@ function showRegistrationAlert(type, message) {
     window.showAlert(REGISTRATION_ALERT_ID, type, message);
 }
 
-function ensureRegistrationModal() {
-    if (registrationModal) {
-        return registrationModal;
-    }
-
-    const modalElement = document.getElementById("registrationModal");
-    if (modalElement && window.bootstrap?.Modal) {
-        registrationModal = bootstrap.Modal.getOrCreateInstance(modalElement);
-    }
-
-    return registrationModal;
-}
-
 function renderRegistrationPermissions(isLoading = false) {
     const container = document.getElementById("registrationPermissions");
     if (!container) {
@@ -50,14 +46,14 @@ function renderRegistrationPermissions(isLoading = false) {
     }
 
     if (isLoading) {
-        container.innerHTML = `<div class="text-muted small">${escapeHtml(
+        container.innerHTML = `<div class="text-muted small py-2 px-1">${escapeHtml(
             t("registration.permissions_loading", "Loading permissions...")
         )}</div>`;
         return;
     }
 
     if (!registrationAvailablePermissions.length) {
-        container.innerHTML = `<div class="text-muted small">${escapeHtml(
+        container.innerHTML = `<div class="text-muted small py-2 px-1">${escapeHtml(
             t("registration.permissions_empty", "No permissions available.")
         )}</div>`;
         return;
@@ -66,21 +62,26 @@ function renderRegistrationPermissions(isLoading = false) {
     container.innerHTML = registrationAvailablePermissions
         .map((permission) => {
             const code = permission.code;
-            const label = permission.name
-                ? `${permission.code} — ${permission.name}`
-                : permission.code;
+            const name = permission.name || permission.code;
+            const description = permission.description
+                ? `<div class="registration-permission-desc text-muted">${escapeHtml(
+                      permission.description
+                  )}</div>`
+                : "";
             return `
-                <div class="form-check">
+                <label class="registration-permission-item" for="reg_perm_${escapeHtml(code)}">
                     <input
                         class="form-check-input registration-permission"
                         type="checkbox"
                         value="${escapeHtml(code)}"
                         id="reg_perm_${escapeHtml(code)}"
                     >
-                    <label class="form-check-label" for="reg_perm_${escapeHtml(code)}">
-                        ${escapeHtml(label)}
-                    </label>
-                </div>
+                    <span class="registration-permission-copy">
+                        <span class="registration-permission-code">${escapeHtml(code)}</span>
+                        <span class="registration-permission-name">${escapeHtml(name)}</span>
+                        ${description}
+                    </span>
+                </label>
             `;
         })
         .join("");
@@ -108,7 +109,9 @@ async function loadRegistrationPermissions() {
         try {
             const data = await window.makeApiRequest("/api/permissions/", { method: "GET" });
             const items = Array.isArray(data.items) ? data.items : [];
-            registrationAvailablePermissions = items.filter((permission) => permission.is_active !== false);
+            registrationAvailablePermissions = items.filter(
+                (permission) => permission.is_active !== false
+            );
         } catch (_error) {
             registrationAvailablePermissions = [];
         } finally {
@@ -120,33 +123,6 @@ async function loadRegistrationPermissions() {
     })();
 
     return registrationPermissionsLoadPromise;
-}
-
-function resetRegistrationForm() {
-    const form = document.getElementById("registrationForm");
-    form?.reset();
-    clearRegistrationAlert();
-    if (registrationAvailablePermissions.length) {
-        renderRegistrationPermissions(false);
-    } else {
-        renderRegistrationPermissions(true);
-    }
-}
-
-function openRegistrationModal() {
-    const modal = ensureRegistrationModal();
-    if (!modal) {
-        window.showAlert?.(
-            PAGE_ALERT_ID,
-            "danger",
-            t("registration.error.failed", "Failed to register user.")
-        );
-        return;
-    }
-
-    resetRegistrationForm();
-    modal.show();
-    void loadRegistrationPermissions();
 }
 
 function mapRegistrationError(error) {
@@ -180,10 +156,45 @@ function mapRegistrationError(error) {
         );
     }
 
+    if (error?.status === 403 || code === "forbidden") {
+        return t(
+            "registration.error.forbidden",
+            "You do not have permission to register users."
+        );
+    }
+
     return (
         error?.message ||
         t("registration.error.failed", "Failed to register user.")
     );
+}
+
+async function ensureCanRegisterUsers() {
+    const accessToken = localStorage.getItem("access_token");
+    if (!accessToken || window.isTokenExpired?.(accessToken)) {
+        window.location.href = loginPath();
+        return false;
+    }
+
+    try {
+        const user = await window.makeApiRequest("/api/accounts/ourself", { method: "GET" });
+        if (!user?.can_users) {
+            window.showAlert(
+                PAGE_ALERT_ID,
+                "danger",
+                t(
+                    "registration.error.forbidden",
+                    "You do not have permission to register users."
+                )
+            );
+            window.location.href = accountsPath();
+            return false;
+        }
+        return true;
+    } catch (_error) {
+        window.location.href = loginPath();
+        return false;
+    }
 }
 
 async function submitRegistrationForm(event) {
@@ -228,40 +239,39 @@ async function submitRegistrationForm(event) {
             payload.permission_codes = permissionCodes;
         }
 
-        const data = await window.makeApiRequest("/api/auth/register", {
+        await window.makeApiRequest("/api/auth/register", {
             method: "POST",
             body: JSON.stringify(payload),
         });
 
-        const user = data.user || {};
-        if (Array.isArray(data.permissions)) {
-            user.permissions = data.permissions;
-        }
-        window.onAccountCreated?.(user);
-        ensureRegistrationModal()?.hide();
-        resetRegistrationForm();
-        window.showAlert(
-            PAGE_ALERT_ID,
-            "success",
-            t("registration.success", "User registered successfully.")
+        // Surface success on accounts list after redirect.
+        sessionStorage.setItem(
+            "accountsFlash",
+            JSON.stringify({
+                type: "success",
+                message: t("registration.success", "User registered successfully."),
+            })
         );
+        window.location.href = accountsPath();
     } catch (error) {
         showRegistrationAlert("danger", mapRegistrationError(error));
-    } finally {
         submitButton.disabled = false;
     }
 }
 
-window.openRegistrationModal = openRegistrationModal;
+document.addEventListener("DOMContentLoaded", async () => {
+    const form = document.getElementById("registrationForm");
+    if (!form) {
+        return;
+    }
 
-document.addEventListener("DOMContentLoaded", () => {
-    ensureRegistrationModal();
+    const allowed = await ensureCanRegisterUsers();
+    if (!allowed) {
+        return;
+    }
 
-    document.getElementById("registrationForm")?.addEventListener("submit", submitRegistrationForm);
-    document.getElementById("addAccountButton")?.addEventListener("click", (event) => {
-        event.preventDefault();
-        openRegistrationModal();
-    });
+    form.addEventListener("submit", submitRegistrationForm);
+    void loadRegistrationPermissions();
 
     window.initPasswordToggle?.({
         fieldId: "registrationPassword",

@@ -1,90 +1,161 @@
-<div class="modal fade" id="registrationModal" tabindex="-1" aria-labelledby="registrationModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
-        <div class="modal-content border-0 shadow">
-            <div class="modal-header border-0 pb-0">
-                <h5 class="modal-title fw-semibold" id="registrationModalLabel" data-i18n="registration.title">Register User</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body pt-2">
-                <div id="registrationAlertPlaceholder" class="mb-3"></div>
-                <p class="text-muted mb-4" data-i18n="registration.subtitle">Create a new account for IES Monitoring.</p>
+{% extends "base.html" %}
 
-                <form id="registrationForm" novalidate>
-                    <div class="row g-3">
-                        <div class="col-12 col-md-6">
-                            <label class="form-label" for="registrationFirstName" data-i18n="registration.first_name">First name</label>
-                            <input type="text" class="form-control form-control-lg" id="registrationFirstName" autocomplete="given-name" required>
-                        </div>
-                        <div class="col-12 col-md-6">
-                            <label class="form-label" for="registrationLastName" data-i18n="registration.last_name">Last name</label>
-                            <input type="text" class="form-control form-control-lg" id="registrationLastName" autocomplete="family-name" required>
-                        </div>
-                        <div class="col-12">
-                            <label class="form-label" for="registrationEmail" data-i18n="registration.email">Email</label>
-                            <input type="email" class="form-control form-control-lg" id="registrationEmail" autocomplete="email" required>
-                        </div>
-                        <div class="col-12">
-                            <label class="form-label" for="registrationPassword" data-i18n="registration.password">Password</label>
-                            <div class="input-group input-group-lg">
-                                <input
-                                    type="password"
-                                    class="form-control"
-                                    id="registrationPassword"
-                                    autocomplete="new-password"
-                                    required
-                                >
-                                <button type="button" id="toggleRegistrationPassword" class="btn btn-outline-secondary togglePassword">
-                                    <img
-                                        src="{{ url_for('static', filename='images/eye-hide.svg') }}"
-                                        alt="Toggle password"
-                                        width="20"
-                                        height="20"
-                                        class="togglePasswordImg"
-                                        id="toggleRegistrationPasswordImg"
-                                    >
-                                </button>
-                            </div>
-                            <div class="form-text" data-i18n="registration.password_hint">
-                                At least 12 characters with upper, lower, digit and special character.
-                            </div>
-                        </div>
-                        <div class="col-12">
-                            <label class="form-label" for="registrationPasswordRepeat" data-i18n="registration.password_repeat">Repeat password</label>
-                            <div class="input-group input-group-lg">
-                                <input
-                                    type="password"
-                                    class="form-control"
-                                    id="registrationPasswordRepeat"
-                                    autocomplete="new-password"
-                                    required
-                                >
-                                <button type="button" id="toggleRegistrationPasswordRepeat" class="btn btn-outline-secondary togglePassword">
-                                    <img
-                                        src="{{ url_for('static', filename='images/eye-hide.svg') }}"
-                                        alt="Toggle password"
-                                        width="20"
-                                        height="20"
-                                        class="togglePasswordImg"
-                                        id="toggleRegistrationPasswordRepeatImg"
-                                    >
-                                </button>
-                            </div>
-                        </div>
-                        <div class="col-12">
-                            <div class="form-label fw-semibold" data-i18n="registration.permissions">Permissions</div>
-                            <div id="registrationPermissions" class="d-flex flex-column gap-2"></div>
-                            <div class="form-text" data-i18n="registration.permissions_hint">
-                                Optional. Grant permissions when creating the account.
-                            </div>
-                        </div>
+{% block title %}
+    IES Monitoring - Register User
+{% endblock %}
+
+{% block body %}
+<div class="py-3 py-md-4 py-lg-5 registration-page">
+    <div class="row justify-content-center align-items-center g-4 g-lg-5">
+        <div class="col-lg-5 col-xl-5 d-none d-lg-block">
+            <img
+                src="{{ url_for('static', filename='images/login_draw.webp') }}"
+                class="img-fluid registration-illustration-img"
+                alt="Register user illustration"
+                data-i18n-alt="registration.illustration.alt"
+            >
+        </div>
+
+        <div class="col-12 col-md-10 col-lg-7 col-xl-6">
+            <div class="card border-0 shadow-sm registration-card">
+                <div class="card-body p-3 p-sm-4 p-lg-5">
+                    <div class="text-center mb-4">
+                        <h1 class="h3 mb-2" data-i18n="registration.title">Register User</h1>
+                        <p class="text-muted mb-0" data-i18n="registration.subtitle">
+                            Create a new account for IES Monitoring.
+                        </p>
                     </div>
 
-                    <div class="d-grid d-md-flex justify-content-md-end gap-2 mt-4">
-                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal" data-i18n="registration.cancel">Cancel</button>
-                        <button type="submit" class="btn btn-primary" id="registrationSubmit" data-i18n="registration.submit">Register</button>
-                    </div>
-                </form>
+                    <div id="registrationAlertPlaceholder" class="mb-3"></div>
+
+                    <form id="registrationForm" novalidate>
+                        <div class="row g-3">
+                            <div class="col-12 col-sm-6">
+                                <label class="form-label" for="registrationFirstName" data-i18n="registration.first_name">First name</label>
+                                <input
+                                    type="text"
+                                    class="form-control form-control-lg"
+                                    id="registrationFirstName"
+                                    autocomplete="given-name"
+                                    required
+                                >
+                            </div>
+                            <div class="col-12 col-sm-6">
+                                <label class="form-label" for="registrationLastName" data-i18n="registration.last_name">Last name</label>
+                                <input
+                                    type="text"
+                                    class="form-control form-control-lg"
+                                    id="registrationLastName"
+                                    autocomplete="family-name"
+                                    required
+                                >
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label" for="registrationEmail" data-i18n="registration.email">Email</label>
+                                <input
+                                    type="email"
+                                    class="form-control form-control-lg"
+                                    id="registrationEmail"
+                                    autocomplete="email"
+                                    inputmode="email"
+                                    required
+                                >
+                            </div>
+                            <div class="col-12 col-sm-6">
+                                <label class="form-label" for="registrationPassword" data-i18n="registration.password">Password</label>
+                                <div class="input-group input-group-lg">
+                                    <input
+                                        type="password"
+                                        class="form-control"
+                                        id="registrationPassword"
+                                        autocomplete="new-password"
+                                        required
+                                    >
+                                    <button
+                                        type="button"
+                                        id="toggleRegistrationPassword"
+                                        class="btn btn-outline-secondary togglePassword"
+                                        aria-label="Toggle password visibility"
+                                    >
+                                        <img
+                                            src="{{ url_for('static', filename='images/eye-hide.svg') }}"
+                                            alt="Toggle password"
+                                            width="20"
+                                            height="20"
+                                            class="togglePasswordImg"
+                                            id="toggleRegistrationPasswordImg"
+                                        >
+                                    </button>
+                                </div>
+                                <div class="form-text" data-i18n="registration.password_hint">
+                                    At least 12 characters with upper, lower, digit and special character.
+                                </div>
+                            </div>
+                            <div class="col-12 col-sm-6">
+                                <label class="form-label" for="registrationPasswordRepeat" data-i18n="registration.password_repeat">Repeat password</label>
+                                <div class="input-group input-group-lg">
+                                    <input
+                                        type="password"
+                                        class="form-control"
+                                        id="registrationPasswordRepeat"
+                                        autocomplete="new-password"
+                                        required
+                                    >
+                                    <button
+                                        type="button"
+                                        id="toggleRegistrationPasswordRepeat"
+                                        class="btn btn-outline-secondary togglePassword"
+                                        aria-label="Toggle password visibility"
+                                    >
+                                        <img
+                                            src="{{ url_for('static', filename='images/eye-hide.svg') }}"
+                                            alt="Toggle password"
+                                            width="20"
+                                            height="20"
+                                            class="togglePasswordImg"
+                                            id="toggleRegistrationPasswordRepeatImg"
+                                        >
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="col-12">
+                                <div class="registration-permissions">
+                                    <div class="mb-2">
+                                        <div class="form-label fw-semibold mb-1" data-i18n="registration.permissions">Permissions</div>
+                                        <div class="form-text mt-0" data-i18n="registration.permissions_hint">
+                                            Optional. Grant permissions when creating the account.
+                                        </div>
+                                    </div>
+                                    <div id="registrationPermissions" class="registration-permissions-list"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="registration-actions d-grid d-sm-flex gap-2 mt-4">
+                            <a
+                                id="registrationCancelLink"
+                                href="{{ url_for('accounts.accounts', lang=current_lang) }}"
+                                class="btn btn-outline-secondary btn-lg order-2 order-sm-1"
+                                data-i18n="registration.cancel"
+                            >Cancel</a>
+                            <button
+                                type="submit"
+                                class="btn btn-primary btn-lg order-1 order-sm-2 flex-sm-grow-1"
+                                id="registrationSubmit"
+                                data-i18n="registration.submit"
+                            >
+                                Register
+                            </button>
+                        </div>
+                    </form>
+                </div>
             </div>
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script type="text/javascript" src="{{ url_for('static', filename='js/auth/registration.js') }}" defer></script>
+{% endblock %}
