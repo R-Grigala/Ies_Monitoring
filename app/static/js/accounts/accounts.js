@@ -233,13 +233,17 @@ async function loadAccounts() {
 
     currentUserUuid = getCurrentUserUuidFromToken();
     setVisibleState("loading");
+    updateServicesAccessButton(false);
 
     try {
         const data = await window.makeApiRequest("/api/accounts/", { method: "GET" });
+        // Accounts list requires can_users — same gate as Services.
+        updateServicesAccessButton(true);
         accountsData = Array.isArray(data.items) ? data.items : [];
         filterAccounts(currentSearchQuery);
     } catch (error) {
         setVisibleState("empty");
+        updateServicesAccessButton(false);
         window.showAlert(
             "alertPlaceholder",
             "danger",
@@ -248,12 +252,33 @@ async function loadAccounts() {
     }
 }
 
+function updateServicesAccessButton(canAccess) {
+    document.getElementById("accountsServicesButton")?.classList.toggle("d-none", !canAccess);
+}
+
 window.onAccountUpdated = onAccountUpdated;
 window.onAccountDeleted = onAccountDeleted;
 window.onAccountCreated = onAccountCreated;
 window.getCurrentAccountsUserUuid = () => currentUserUuid;
 
 document.addEventListener("DOMContentLoaded", () => {
+    try {
+        const rawFlash = sessionStorage.getItem("accountsFlash");
+        if (rawFlash) {
+            sessionStorage.removeItem("accountsFlash");
+            const flash = JSON.parse(rawFlash);
+            if (flash?.message) {
+                window.showAlert(
+                    "alertPlaceholder",
+                    flash.type || "success",
+                    flash.message
+                );
+            }
+        }
+    } catch (_error) {
+        sessionStorage.removeItem("accountsFlash");
+    }
+
     document.getElementById("accountsSearch")?.addEventListener("input", (event) => {
         filterAccounts(event.target.value);
     });

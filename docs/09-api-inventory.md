@@ -159,14 +159,15 @@ Admin seed (`flask populate_db`):
 | Path | Purpose | Permission (navbar) |
 |------|---------|---------------------|
 | `/<lang>/login` | Login | Public |
-| `/<lang>/accounts` | Accounts admin | `can_users` |
-| `/<lang>/services` | Service registration / delete | `can_users` |
+| `/<lang>/accounts` | Accounts admin (+ link to Services) | `can_users` |
+| `/<lang>/registration` | Register new user (full page) | `can_users` (client-checked; API enforces) |
+| `/<lang>/services` | Service registration / delete (from Accounts) | `can_users` |
 | `/<lang>/notify` | Recipients admin | `can_recips` |
 | `/<lang>/change_password` | Change password page | Logged-in (API pending) |
 | `/<lang>/reset_password/<token>` | Reset password | Public |
 | `/<lang>/forgot` (or auth forgot flow) | Request reset | Public |
 
-Registration of users happens from the Accounts page modal (`POST /api/auth/register`), with optional permission checkboxes loaded from `GET /api/permissions/`.  
+Registration of users happens on `/<lang>/registration` (linked from Accounts → Add user). API: `POST /api/auth/register` with optional permissions from `GET /api/permissions/`.  
 Service API keys are shown once after register on the Services page.
 
 UI strings: EN/KA via `app/static/js/i18n.js`.
