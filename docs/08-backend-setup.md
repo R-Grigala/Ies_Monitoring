@@ -44,8 +44,9 @@ flask --app run populate_db
 - `can_users`
 - `can_permissions`
 - `can_recips`
+- `can_recips_read`
 
-და admin მომხმარებელს:
+და admin მომხმარებელს (ყველა permission მინიჭებული):
 
 - email: `roma.grigalashvili@iliauni.edu.ge`
 - password: `PASSWORD` (შეცვალე პროდაქშენამდე)
@@ -68,6 +69,7 @@ python run.py
 | API Base | `http://localhost:5000/api` |
 | Swagger UI | `http://localhost:5000/api/docs` |
 | Accounts UI | `http://localhost:5000/en/accounts` |
+| Services UI | `http://localhost:5000/en/services` |
 | Notify UI | `http://localhost:5000/en/notify` |
 
 > `GET /api/health` ჯერ არ არის იმპლემენტირებული (planned).
@@ -78,7 +80,7 @@ python run.py
 
 ## 7. ტესტები
 
-ტესტები იყენებს `TestingConfig`-ს (in-memory SQLite, CSRF off).
+ტესტები იყენებს `TestingConfig`-ს (in-memory SQLite).
 
 ```bash
 pytest
@@ -90,10 +92,11 @@ python -m pytest -v
 
 ```text
 tests/
-  conftest.py           # app/client/auth fixtures
-  helpers.py            # seed users/permissions helpers
+  conftest.py
+  helpers.py
   test_auth_api.py
   test_accounts_api.py
+  test_services_api.py
   test_recips_api.py
 ```
 

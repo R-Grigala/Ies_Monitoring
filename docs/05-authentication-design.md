@@ -5,6 +5,7 @@
 | ფუნქცია | სტატუსი |
 |---------|---------|
 | Register (admin, `can_users`) | Implemented |
+| Service API key auth (`X-API-Key`) | Implemented (Services module) |
 | Login / Refresh / Logout / Logout all | Implemented |
 | Request reset + Reset password | Implemented |
 | Change password API | Planned (UI page exists) |
@@ -64,10 +65,12 @@
 # 5. Token Storage / Transport Policy
 
 - Access Token ბრუნდება API პასუხში და იგზავნება `Authorization: Bearer <token>` header-ით;
-- Refresh Token ინახება მხოლოდ `HttpOnly + Secure + SameSite=Strict` cookie-ში;
-- Refresh Token არასდროს ინახება `localStorage`-ში;
-- CSRF დაცვისთვის გამოიყენება `SameSite=Strict` + CSRF token შემოწმება state-changing endpoint-ებზე;
+- Refresh Token ინახება მხოლოდ `HttpOnly` cookie-ში (`JWT_REFRESH_COOKIE_PATH=/api/auth`);
+- Refresh Token არასდროს ინახება `localStorage`-ში (Access Token Web UI-ში `localStorage`-ში ინახება);
+- Service clients იყენებენ `X-API-Key` header-ს (raw key only at registration);
 - Logout/reset password-ზე შესაბამისი refresh cookie იშლება.
+
+აქტუალური Services endpoint-ები: [`09-api-inventory.md`](09-api-inventory.md#services--apiservices).
 
 ---
 
@@ -81,7 +84,14 @@ POST /api/auth/register
 
 Auth: JWT + `can_users` (self-register არ არის).
 
-Body: `first_name`, `last_name`, `email`, `password`, `passwordRepeat`.
+Body: `first_name`, `last_name`, `email`, `password`, `passwordRepeat`, optional `permission_codes` / `permissions` (array of catalog codes granted on create).
+
+Errors:
+
+- `email_already_registered` — ელფოსტა უკვე არსებობს;
+- `validation_error` — პაროლი / ველები.
+
+Auth: JWT **ან** service API key + `can_users`.
 
 Validation:
 
