@@ -149,11 +149,12 @@ Earthquake Notification System (ENS) წარმოადგენს რეა
 ## Identity Module
 
 ```text
-authentication
-accounts
-permissions
-devices
-notification_preferences
+authentication          # implemented
+accounts                # implemented
+permissions             # models + checks implemented; REST planned
+services / api_keys     # implemented
+devices                 # planned
+notification_preferences # planned
 ```
 
 ---
@@ -161,7 +162,7 @@ notification_preferences
 ## Earthquake Module
 
 ```text
-earthquakes
+earthquakes             # planned
 events
 magnitudes
 locations
@@ -173,10 +174,11 @@ shakemaps
 ## Notification Module
 
 ```text
-notifications
-templates
-delivery
-subscriptions
+recips                  # implemented (contacts admin)
+notifications           # planned
+templates               # planned
+delivery                # planned
+subscriptions           # planned
 ```
 
 ---

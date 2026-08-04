@@ -39,9 +39,24 @@ Real-time earthquake notification platform for Android and iOS devices.
 
 ## Current Backend Status
 
-Implemented: Auth, Accounts admin, Recipients (`/api/recips` + `/notify` UI), permission seed/checks.
+**Implemented**
 
-Planned: Permissions REST CRUD, change-password API, earthquakes/SeisComP, push delivery, Redis/Celery, health endpoint.
+- Auth: login, admin register, refresh/logout, password reset
+- Accounts admin UI/API (`/api/accounts/...`)
+- Service accounts + API keys UI/API (`/api/services`, `/services`)
+- Recipients UI/API (`/api/recips`, `/notify`)
+- Permissions catalog REST (`/api/permissions`) + user grant/revoke on accounts
+- Permissions seed + runtime checks (`can_users`, `can_permissions`, `can_recips`, `can_recips_read`)
+- JWT + service `X-API-Key` auth
+
+**Planned**
+
+- Change-password API
+- Earthquakes / SeisComP ingest
+- Push delivery, Redis/Celery
+- Health endpoint
+
+Source of truth for endpoints: [docs/09-api-inventory.md](docs/09-api-inventory.md).
 
 ## Testing
 

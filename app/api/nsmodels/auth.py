@@ -39,6 +39,20 @@ registration_parser.add_argument(
     required=True,
     help="Repeat the password",
 )
+registration_parser.add_argument(
+    "permissions",
+    type=str,
+    required=False,
+    action="append",
+    help="Optional permission codes to grant on registration",
+)
+registration_parser.add_argument(
+    "permission_codes",
+    type=str,
+    required=False,
+    action="append",
+    help="Optional permission codes to grant on registration",
+)
 
 auth_parser = reqparse.RequestParser()
 auth_parser.add_argument(

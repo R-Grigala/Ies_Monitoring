@@ -20,7 +20,7 @@ from app.api.nsmodels import (
     request_reset_password_parser,
     reset_password_parser,
 )
-from app.models import User
+from app.models import User, Permission, UserPermission
 from app.utils import normalize_email, validate_password, mailer, url_serializer
 from app.utils.auth_utils import require_permissions, resolve_actor
 from app.utils.refresh_tokens import (
@@ -36,6 +36,28 @@ from app.utils.refresh_tokens import (
 logger = logging.getLogger("app.auth")
 
 JWT_OR_API_KEY = ["JsonWebToken", "ApiKeyAuth"]
+
+
+def _normalize_permission_codes(raw_permissions):
+    if raw_permissions is None:
+        return []
+    if isinstance(raw_permissions, str):
+        values = [raw_permissions]
+    elif isinstance(raw_permissions, (list, tuple)):
+        values = list(raw_permissions)
+    else:
+        values = [str(raw_permissions)]
+
+    codes = []
+    for item in values:
+        if item is None:
+            continue
+        nested = item if isinstance(item, (list, tuple)) else str(item).split(",")
+        for code in nested:
+            normalized = str(code).strip()
+            if normalized and normalized not in codes:
+                codes.append(normalized)
+    return codes
 
 
 def _access_token_expires_in():
@@ -108,6 +130,38 @@ class RegistrationApi(Resource):
                 "message": "Email address is already registered.",
             }, 400
 
+        json_body = request.get_json(silent=True) or {}
+        permission_codes = _normalize_permission_codes(
+            args.get("permission_codes")
+            or args.get("permissions")
+            or json_body.get("permission_codes")
+            or json_body.get("permissions")
+        )
+
+        permission_objects = []
+        missing = []
+        inactive = []
+        for code in permission_codes:
+            permission = Permission.query.filter_by(code=code).first()
+            if not permission:
+                missing.append(code)
+                continue
+            if not permission.is_active:
+                inactive.append(code)
+                continue
+            permission_objects.append(permission)
+
+        if missing:
+            return {
+                "error": "validation_error",
+                "message": f"Unknown permission code(s): {', '.join(missing)}",
+            }, 400
+        if inactive:
+            return {
+                "error": "validation_error",
+                "message": f"Inactive permission code(s): {', '.join(inactive)}",
+            }, 400
+
         new_user = User(
             first_name=first_name,
             last_name=last_name,
@@ -116,10 +170,33 @@ class RegistrationApi(Resource):
             created_by_user_id=actor["user_id"],
             updated_by_user_id=actor["user_id"],
         )
-        new_user.create()
-        logger.info("Registration success: email=%s actor=%s", normalized_email, actor["label"])
+        new_user.create(commit=False)
 
-        return {"message": "User registered successfully.", "user": new_user.to_dict()}, 200
+        granted = []
+        for permission in permission_objects:
+            assignment = UserPermission(
+                user_id=new_user.id,
+                permission_id=permission.id,
+                granted_by_user_id=actor["user_id"],
+            )
+            assignment.create(commit=False)
+            granted.append(permission.code)
+
+        User.save()
+        logger.info(
+            "Registration success: email=%s actor=%s permissions=%s",
+            normalized_email,
+            actor["label"],
+            granted,
+        )
+
+        user_payload = new_user.to_dict()
+        user_payload["permissions"] = granted
+        return {
+            "message": "User registered successfully.",
+            "user": user_payload,
+            "permissions": granted,
+        }, 200
 
 
 @auth_ns.route("/login")

@@ -7,8 +7,11 @@
 | Own profile GET/PUT `/api/accounts/ourself` | Implemented |
 | Accounts list/detail/update/delete | Implemented (`can_users`) |
 | Permission flags on profile (`can_users`, `can_recips`) | Implemented |
-| Permissions REST CRUD + assign/revoke APIs | Planned (models + seed only) |
-| Permission codes seeded | `can_users`, `can_permissions`, `can_recips` |
+| Service accounts (`services` + `service_permissions`) | Implemented (`/api/services`, `/services` UI) |
+| Permissions catalog REST (list/create/delete `/api/permissions`) | Implemented (`can_permissions` or `can_users`) |
+| Assign/revoke user permissions (`/api/accounts/<uuid>/permissions`) | Implemented |
+| Register with optional permission codes | Implemented |
+| Permission codes seeded | `can_users`, `can_permissions`, `can_recips`, `can_recips_read` |
 
 აქტუალური endpoint-ები: [`09-api-inventory.md`](09-api-inventory.md).
 
@@ -196,9 +199,10 @@ permissions
 
 | Code | სტატუსი | აღწერა |
 |------|---------|---------|
-| can_users | Seeded + used | რეგისტრაცია + accounts admin UI/API |
-| can_permissions | Seeded | Permissions REST governance (API planned) |
-| can_recips | Seeded + used | Notification recipients (`/api/recips`, `/notify`) |
+| can_users | Seeded + used | რეგისტრაცია + accounts + services admin UI/API |
+| can_permissions | Implemented | Permissions catalog CRUD + grant/revoke on accounts |
+| can_recips | Seeded + used | Recipients write + Notify UI |
+| can_recips_read | Seeded + used | Recipients read-only (service keys) |
 | can_events | Planned | მიწისძვრის მოვლენების მართვა |
 
 
@@ -287,67 +291,50 @@ DELETE /api/accounts/{uuid}
 
 ---
 
-## უფლებების მართვა (Planned)
+## უფლებების კატალოგი (Implemented)
 
-ქვემოთ აღწერილი Permissions REST API ჯერ **არ არის იმპლემენტირებული**. მოდელები და seed არსებობს; runtime შემოწმება მუშაობს `check_permission`-ით.
+აქტუალური REST ზედაპირი: [`09-api-inventory.md`](09-api-inventory.md#permissions-catalog--apipermissions).
+
+- `GET/POST /api/permissions/` — სია / შექმნა (ან soft-deleted-ის re-activate)
+- `GET/DELETE /api/permissions/<code_or_id>` — დეტალი / წაშლა (unassigned → hard; assigned → soft deactivate)
+- მომხმარებელზე მინიჭება: `GET/POST/DELETE /api/accounts/<uuid>/permissions`
+- რეგისტრაციაზე მინიჭება: `POST /api/auth/register` + optional `permission_codes`
+
+Required Permission (catalog): `can_permissions` ან `can_users`.
 
 ### უფლებების სიის მიღება
 
 ```http
-GET /api/permissions
-```
-
-Required Permission:
-
-```text
-can_permissions
+GET /api/permissions/
 ```
 
 ---
 
-### უფლების დეაქტივაცია (soft deactivate)
+### უფლების წაშლა / დეაქტივაცია
 
 ```http
-PATCH /api/permissions/{id}/deactivate
+DELETE /api/permissions/{code_or_id}
 ```
 
-Required Permission:
-
-```text
-can_permissions
-```
-
-წესი:
-
-- Permission-ზე hard delete არ გამოიყენება;
-- დეაქტივაციის შემდეგ permission აღარ ინიჭება ახალ მომხმარებლებზე, მაგრამ ისტორიული ჩანაწერები უცვლელად ინახება.
+- თუ assignment არ აქვს → hard delete
+- თუ user/service assignment აქვს → soft deactivate (`is_active=false`); ისტორია ინახება
 
 ---
 
 ### ახალი უფლების შექმნა
 
 ```http
-POST /api/permissions
+POST /api/permissions/
 ```
 
-Required Permission:
-
-```text
-can_permissions
-```
+Body: `code`, `name`, optional `description`.
 
 ---
 
 ### უფლების დეტალების მიღება
 
 ```http
-GET /api/permissions/{id}
-```
-
-Required Permission:
-
-```text
-can_permissions
+GET /api/permissions/{code_or_id}
 ```
 
 ---
@@ -366,7 +353,9 @@ can_permissions
 
 ---
 
-## მომხმარებლის უფლებების მართვა (Planned)
+## მომხმარებლის უფლებების მართვა (Implemented)
+
+ნაწილი იმპლემენტირებულია accounts API-ზე. დეტალები: [`09-api-inventory.md`](09-api-inventory.md).
 
 ### მომხმარებლის უფლებების მიღება
 
@@ -374,11 +363,7 @@ can_permissions
 GET /api/accounts/{uuid}/permissions
 ```
 
-Required Permission:
-
-```text
-can_permissions
-```
+Required Permission: `can_permissions` ან `can_users`.
 
 ---
 
@@ -388,19 +373,17 @@ can_permissions
 POST /api/accounts/{uuid}/permissions
 ```
 
-Required Permission:
-
-```text
-can_permissions
-```
+Required Permission: `can_permissions` ან `can_users`.
 
 Request:
 
 ```json
 {
-  "permission_ids": [1, 2, 3]
+  "permission_codes": ["can_recips", "can_recips_read"]
 }
 ```
+
+ან `permission_ids` / `permissions`.
 
 ---
 

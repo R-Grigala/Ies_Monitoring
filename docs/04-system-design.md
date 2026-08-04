@@ -50,11 +50,12 @@ Monitoring Module
 ## ქვემოდულები
 
 ```text
-authentication
-accounts
-permissions
-devices
-notification_preferences
+authentication          # implemented
+accounts                # implemented
+permissions             # models/seed implemented; REST planned
+services / api_keys     # implemented
+devices                 # planned
+notification_preferences # planned
 ```
 
 ---
@@ -271,6 +272,9 @@ permissions
 user_permissions
 refresh_tokens
 
+services
+service_permissions
+
 recips
 recip_emails
 recip_numbers
@@ -278,7 +282,7 @@ recip_numbers
 devices                  # planned
 notification_preferences # planned
 
-earthquakes              # planned
+earthquakes              # planned (no model in app yet)
 notifications            # planned
 notification_logs        # planned
 

@@ -56,11 +56,6 @@ document.addEventListener("DOMContentLoaded", async function () {
                     i18n ? i18n.localizePath("/accounts") : "/accounts",
                     i18n ? i18n.t("nav.accounts", "Accounts") : "Accounts"
                 );
-                appendNavLink(
-                    navLinksStart,
-                    i18n ? i18n.localizePath("/services") : "/services",
-                    i18n ? i18n.t("nav.services", "Services") : "Services"
-                );
             }
 
             if (user?.can_recips) {

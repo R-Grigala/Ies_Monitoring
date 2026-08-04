@@ -1,8 +1,19 @@
 let editAccountModal = null;
+let editAccountAvailablePermissions = [];
+let currentUserPermissionCodes = new Set();
 
 function t(key, fallback) {
     const i18n = window.I18n;
     return i18n ? i18n.t(key, fallback) : fallback;
+}
+
+function escapeHtml(value) {
+    return String(value ?? "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#39;");
 }
 
 function applySelfAccountRestrictions(userUuid) {
@@ -22,19 +33,119 @@ function applySelfAccountRestrictions(userUuid) {
     if (deleteButton) {
         deleteButton.classList.toggle("d-none", Boolean(isCurrentUser));
     }
+
+    // Disallow unchecking admin self can_users / can_permissions
+    document.querySelectorAll(".edit-account-permission").forEach((input) => {
+        const code = input.value;
+        const isProtected =
+            isCurrentUser && (code === "can_users" || code === "can_permissions") && input.checked;
+        input.disabled = Boolean(isProtected);
+    });
+}
+
+function renderPermissionCheckboxes(selectedCodes) {
+    const container = document.getElementById("editAccountPermissions");
+    if (!container) {
+        return;
+    }
+
+    const selected = new Set(selectedCodes || []);
+    if (!editAccountAvailablePermissions.length) {
+        container.innerHTML = `<div class="text-muted small">${escapeHtml(
+            t("accounts.edit.permissions_empty", "No permissions available.")
+        )}</div>`;
+        return;
+    }
+
+    container.innerHTML = editAccountAvailablePermissions
+        .map((permission) => {
+            const code = permission.code;
+            const checked = selected.has(code) ? "checked" : "";
+            const label = permission.name
+                ? `${permission.code} — ${permission.name}`
+                : permission.code;
+            return `
+                <div class="form-check">
+                    <input
+                        class="form-check-input edit-account-permission"
+                        type="checkbox"
+                        value="${escapeHtml(code)}"
+                        id="perm_${escapeHtml(code)}"
+                        ${checked}
+                    >
+                    <label class="form-check-label" for="perm_${escapeHtml(code)}">
+                        ${escapeHtml(label)}
+                    </label>
+                </div>
+            `;
+        })
+        .join("");
+}
+
+function getSelectedPermissionCodes() {
+    return Array.from(document.querySelectorAll(".edit-account-permission:checked")).map(
+        (input) => input.value
+    );
+}
+
+async function loadAvailablePermissions() {
+    if (editAccountAvailablePermissions.length) {
+        return editAccountAvailablePermissions;
+    }
+    const data = await window.makeApiRequest("/api/permissions/", { method: "GET" });
+    const items = Array.isArray(data.items) ? data.items : [];
+    editAccountAvailablePermissions = items.filter((permission) => permission.is_active !== false);
+    return editAccountAvailablePermissions;
+}
+
+async function syncUserPermissions(userUuid) {
+    const desired = new Set(getSelectedPermissionCodes());
+    const current = new Set(currentUserPermissionCodes);
+    const toGrant = [...desired].filter((code) => !current.has(code));
+    const toRevoke = [...current].filter((code) => !desired.has(code));
+
+    if (toGrant.length) {
+        await window.makeApiRequest(`/api/accounts/${userUuid}/permissions`, {
+            method: "POST",
+            body: JSON.stringify({ permission_codes: toGrant }),
+        });
+    }
+
+    for (const code of toRevoke) {
+        await window.makeApiRequest(`/api/accounts/${userUuid}/permissions/${code}`, {
+            method: "DELETE",
+        });
+    }
+
+    currentUserPermissionCodes = desired;
+    return { granted: toGrant, revoked: toRevoke };
 }
 
 async function openEditAccountModal(userUuid) {
     try {
-        const user = await window.makeApiRequest(`/api/accounts/${userUuid}`, {
-            method: "GET",
-        });
+        const [user] = await Promise.all([
+            window.makeApiRequest(`/api/accounts/${userUuid}`, { method: "GET" }),
+            loadAvailablePermissions(),
+        ]);
+
+        let permissionCodes = Array.isArray(user.permissions) ? user.permissions : [];
+        if (!permissionCodes.length) {
+            const assigned = await window.makeApiRequest(
+                `/api/accounts/${userUuid}/permissions`,
+                { method: "GET" }
+            );
+            permissionCodes = (assigned.items || []).map((item) => item.code);
+        }
+
+        currentUserPermissionCodes = new Set(permissionCodes);
 
         document.getElementById("editAccountUuid").value = user.uuid;
         document.getElementById("editAccountFirstName").value = user.first_name || "";
         document.getElementById("editAccountLastName").value = user.last_name || "";
         document.getElementById("editAccountEmail").value = user.email || "";
         document.getElementById("editAccountIsActive").checked = Boolean(user.is_active);
+
+        renderPermissionCheckboxes(permissionCodes);
         applySelfAccountRestrictions(user.uuid);
 
         editAccountModal?.show();
@@ -81,7 +192,10 @@ async function submitEditAccountForm(event) {
             }),
         });
 
+        await syncUserPermissions(userUuid);
+
         const updatedUser = data.user || data;
+        updatedUser.permissions = getSelectedPermissionCodes();
         window.onAccountUpdated?.(updatedUser);
         editAccountModal?.hide();
         window.showAlert(

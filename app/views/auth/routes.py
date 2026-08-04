@@ -42,7 +42,7 @@ def registration(lang=None):
         return redirect(url_for("auth.registration", lang=_preferred_lang()))
     if raw_lang is not None and lang is None:
         return redirect(url_for("auth.registration", lang="en"))
-    return redirect(url_for("accounts.accounts", lang=lang))
+    return render_template("auth/registration.html")
 
 
 @auth_blueprint.route("/reset_password/<token>")
