@@ -47,7 +47,7 @@ class Config:
             "type": "apiKey",
             "in": "header",
             "name": "X-API-Key",
-            "description": "Provide the internal API key for ingestion",
+            "description": "Service API key from /api/services/. Example: ies_...",
         },
     }
 

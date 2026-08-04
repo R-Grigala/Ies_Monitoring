@@ -1,7 +1,7 @@
 import logging
 
 from flask_jwt_extended import current_user, get_jwt_identity, jwt_required
-from flask_restx import Resource
+from flask_restx import Resource, marshal
 from sqlalchemy import or_
 from sqlalchemy.exc import IntegrityError
 
@@ -17,9 +17,16 @@ from app.api.nsmodels import (
     error_model,
 )
 from app.models import User, Permission, UserPermission, RefreshToken
+from app.utils.auth_utils import require_permissions, resolve_actor
 from app.utils.validators import normalize_email
 
 logger = logging.getLogger("app.accounts")
+
+JWT_OR_API_KEY = ["JsonWebToken", "ApiKeyAuth"]
+
+
+def _require_can_users():
+    return require_permissions("can_users")
 
 
 def _user_delete_blockers(user):
@@ -65,7 +72,7 @@ def _user_delete_blockers(user):
     return blockers
 
 
-@accounts_ns.route("/user")
+@accounts_ns.route("/ourself")
 class CurrentUserApi(Resource):
     @jwt_required()
     @accounts_ns.doc(security="JsonWebToken")
@@ -115,51 +122,58 @@ class CurrentUserApi(Resource):
         return {"message": "Profile updated successfully.", "user": user.to_dict()}, 200
 
 
-@accounts_ns.route("/accounts")
+@accounts_ns.route("/")
 class AccountsApi(Resource):
-    @jwt_required()
-    @accounts_ns.doc(security="JsonWebToken")
-    @accounts_ns.marshal_with(account_list_response_model, code=200)
+    @accounts_ns.doc(security=JWT_OR_API_KEY)
+    @accounts_ns.response(200, "Success", account_list_response_model)
+    @accounts_ns.response(401, "Unauthorized", error_model)
     @accounts_ns.response(403, "Forbidden", error_model)
     def get(self):
-        """List all users (requires can_users)."""
-        if not current_user.check_permission("can_users"):
-            return {"error": "forbidden", "message": "Missing required permission: can_users"}, 403
+        """List all users (JWT or API key with can_users)."""
+        denied = _require_can_users()
+        if denied:
+            return denied
 
         users = User.query.order_by(User.id.asc()).all()
-        return {"items": [u.to_dict() for u in users], "total": len(users)}, 200
+        return marshal(
+            {"items": [u.to_dict() for u in users], "total": len(users)},
+            account_list_response_model,
+        ), 200
 
 
-@accounts_ns.route("/accounts/<string:user_uuid>")
+@accounts_ns.route("/<string:user_uuid>")
 class AccountDetailApi(Resource):
-    @jwt_required()
-    @accounts_ns.doc(security="JsonWebToken")
-    @accounts_ns.marshal_with(account_model, code=200)
+    @accounts_ns.doc(security=JWT_OR_API_KEY)
+    @accounts_ns.response(200, "Success", account_model)
+    @accounts_ns.response(401, "Unauthorized", error_model)
     @accounts_ns.response(403, "Forbidden", error_model)
     @accounts_ns.response(404, "Not Found", error_model)
     def get(self, user_uuid):
-        """Get a single user by UUID (requires can_users)."""
-        if not current_user.check_permission("can_users"):
-            return {"error": "forbidden", "message": "Missing required permission: can_users"}, 403
+        """Get a single user by UUID (JWT or API key with can_users)."""
+        denied = _require_can_users()
+        if denied:
+            return denied
 
         user = User.query.filter_by(uuid=user_uuid).first()
         if not user:
             return {"error": "not_found", "message": "User not found."}, 404
-        return user.to_dict()
+        return marshal(user.to_dict(), account_model), 200
 
-    @jwt_required()
-    @accounts_ns.doc(security="JsonWebToken")
+    @accounts_ns.doc(security=JWT_OR_API_KEY)
     @accounts_ns.expect(account_update_parser)
-    @accounts_ns.marshal_with(account_update_response_model, code=200)
+    @accounts_ns.response(200, "Success", account_update_response_model)
     @accounts_ns.response(400, "Validation Error", error_model)
+    @accounts_ns.response(401, "Unauthorized", error_model)
     @accounts_ns.response(403, "Forbidden", error_model)
     @accounts_ns.response(404, "Not Found", error_model)
     @accounts_ns.response(409, "Conflict", error_model)
     def put(self, user_uuid):
-        """Update a user by UUID (requires can_users)."""
-        if not current_user.check_permission("can_users"):
-            return {"error": "forbidden", "message": "Missing required permission: can_users"}, 403
+        """Update a user by UUID (JWT or API key with can_users)."""
+        denied = _require_can_users()
+        if denied:
+            return denied
 
+        actor = resolve_actor()
         user = User.query.filter_by(uuid=user_uuid).first()
         if not user:
             return {"error": "not_found", "message": "User not found."}, 404
@@ -191,34 +205,39 @@ class AccountDetailApi(Resource):
 
         if payload.get("is_active") is not None:
             new_is_active = bool(payload.get("is_active"))
-            if user.id == current_user.id and not new_is_active:
+            if actor["user"] and user.id == actor["user"].id and not new_is_active:
                 return {
                     "error": "conflict",
                     "message": "You cannot deactivate your own account.",
                 }, 409
             user.is_active = new_is_active
 
-        user.updated_by_user_id = current_user.id
+        user.updated_by_user_id = actor["user_id"]
         db.session.commit()
-        logger.info("Account updated: actor_uuid=%s target_uuid=%s", current_user.uuid, user.uuid)
-        return {"message": "User updated successfully.", "user": user.to_dict()}, 200
+        logger.info("Account updated: actor=%s target_uuid=%s", actor["label"], user.uuid)
+        return marshal(
+            {"message": "User updated successfully.", "user": user.to_dict()},
+            account_update_response_model,
+        ), 200
 
-    @jwt_required()
-    @accounts_ns.doc(security="JsonWebToken")
-    @accounts_ns.marshal_with(account_delete_response_model, code=200)
+    @accounts_ns.doc(security=JWT_OR_API_KEY)
+    @accounts_ns.response(200, "Success", account_delete_response_model)
+    @accounts_ns.response(401, "Unauthorized", error_model)
     @accounts_ns.response(403, "Forbidden", error_model)
     @accounts_ns.response(404, "Not Found", error_model)
     @accounts_ns.response(409, "Conflict", error_model)
     def delete(self, user_uuid):
-        """Delete a user by UUID when related records allow it (requires can_users)."""
-        if not current_user.check_permission("can_users"):
-            return {"error": "forbidden", "message": "Missing required permission: can_users"}, 403
+        """Delete a user by UUID when related records allow it (JWT or API key with can_users)."""
+        denied = _require_can_users()
+        if denied:
+            return denied
 
+        actor = resolve_actor()
         user = User.query.filter_by(uuid=user_uuid).first()
         if not user:
             return {"error": "not_found", "message": "User not found."}, 404
 
-        if user.id == current_user.id:
+        if actor["user"] and user.id == actor["user"].id:
             return {"error": "conflict", "message": "You cannot delete your own account."}, 409
 
         blockers = _user_delete_blockers(user)
@@ -230,11 +249,9 @@ class AccountDetailApi(Resource):
             }, 409
 
         try:
-            # Owned rows can safely go with the user.
             RefreshToken.query.filter_by(user_id=user.id).delete(synchronize_session=False)
             UserPermission.query.filter_by(user_id=user.id).delete(synchronize_session=False)
 
-            # Clear self-references so the row itself is not blocked by its own audit FKs.
             if user.created_by_user_id == user.id:
                 user.created_by_user_id = None
             if user.updated_by_user_id == user.id:
@@ -243,8 +260,8 @@ class AccountDetailApi(Resource):
             user.delete()
         except IntegrityError:
             logger.warning(
-                "Account delete blocked by integrity constraint: actor_uuid=%s target_uuid=%s",
-                current_user.uuid,
+                "Account delete blocked by integrity constraint: actor=%s target_uuid=%s",
+                actor["label"],
                 user_uuid,
             )
             return {
@@ -252,5 +269,5 @@ class AccountDetailApi(Resource):
                 "message": "User cannot be deleted because related database records still reference this account.",
             }, 409
 
-        logger.info("Account deleted: actor_uuid=%s target_uuid=%s", current_user.uuid, user_uuid)
-        return {"message": "User deleted successfully."}, 200
+        logger.info("Account deleted: actor=%s target_uuid=%s", actor["label"], user_uuid)
+        return marshal({"message": "User deleted successfully."}, account_delete_response_model), 200

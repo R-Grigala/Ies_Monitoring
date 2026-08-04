@@ -41,12 +41,12 @@ Password policy: min 12 chars, upper + lower + digit + special. Hashing: Werkzeu
 
 | Method | Path | Auth | Notes |
 |--------|------|------|--------|
-| GET | `/api/accounts/user` | JWT | Current profile + flags `can_users`, `can_recips` |
-| PUT | `/api/accounts/user` | JWT | Update own `first_name`, `last_name` |
-| GET | `/api/accounts/accounts` | JWT + `can_users` | List `{ items, total }` |
-| GET | `/api/accounts/accounts/<uuid>` | JWT + `can_users` | Single user |
-| PUT | `/api/accounts/accounts/<uuid>` | JWT + `can_users` | Update `first_name`, `last_name`, `email`, `is_active`. Cannot deactivate self |
-| DELETE | `/api/accounts/accounts/<uuid>` | JWT + `can_users` | Hard delete when FK blockers allow. Cannot delete self |
+| GET | `/api/accounts/ourself` | JWT | Current profile + flags `can_users`, `can_recips` |
+| PUT | `/api/accounts/ourself` | JWT | Update own `first_name`, `last_name` |
+| GET | `/api/accounts/` | JWT + `can_users` | List `{ items, total }` |
+| GET | `/api/accounts/<uuid>` | JWT + `can_users` | Single user |
+| PUT | `/api/accounts/<uuid>` | JWT + `can_users` | Update `first_name`, `last_name`, `email`, `is_active`. Cannot deactivate self |
+| DELETE | `/api/accounts/<uuid>` | JWT + `can_users` | Hard delete when FK blockers allow. Cannot delete self |
 
 ---
 

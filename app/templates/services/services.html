@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+
+{% block title %}
+    IES Monitoring - Services
+{% endblock %}
+
+{% block body %}
+<div class="py-4 py-lg-5">
+    <div class="card border-0 shadow-sm">
+        <div class="card-body p-4 p-lg-5">
+            <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-start gap-3 mb-4">
+                <div>
+                    <h2 class="h3 mb-2" data-i18n="services.title">Services</h2>
+                    <p class="text-muted mb-0" data-i18n="services.subtitle">
+                        Register API service accounts and manage access keys.
+                    </p>
+                </div>
+                <div class="d-flex align-items-center gap-2">
+                    <button
+                        type="button"
+                        class="btn btn-primary"
+                        id="addServiceButton"
+                        onclick="openRegisterServiceModal()"
+                    >
+                        <span data-i18n="services.add">Register service</span>
+                    </button>
+                    <span class="badge rounded-pill text-bg-primary fs-6 px-3 py-2" id="servicesTotal">0</span>
+                </div>
+            </div>
+
+            <div class="row g-3 mb-4">
+                <div class="col-12 col-lg-6">
+                    <input
+                        type="search"
+                        id="servicesSearch"
+                        class="form-control form-control-lg"
+                        placeholder="Search by name or UUID"
+                        data-i18n-placeholder="services.search.placeholder"
+                        autocomplete="off"
+                    >
+                </div>
+            </div>
+
+            <div id="servicesLoading" class="text-center py-5">
+                <div class="spinner-border text-primary" role="status" aria-hidden="true"></div>
+                <p class="text-muted mt-3 mb-0" data-i18n="services.loading">Loading services...</p>
+            </div>
+
+            <div id="servicesEmpty" class="d-none text-center py-5">
+                <p class="text-muted mb-0" data-i18n="services.empty">No services found.</p>
+            </div>
+
+            <div id="servicesTableWrap" class="d-none table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th scope="col" data-i18n="services.table.name">Name</th>
+                            <th scope="col" data-i18n="services.table.prefix">Key prefix</th>
+                            <th scope="col" data-i18n="services.table.permissions">Permissions</th>
+                            <th scope="col" data-i18n="services.table.status">Status</th>
+                            <th scope="col" data-i18n="services.table.last_used">Last used</th>
+                            <th scope="col" data-i18n="services.table.created">Created</th>
+                            <th scope="col" class="text-end" data-i18n="services.table.actions">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="servicesTableBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% include "services/registerService.html" %}
+{% include "services/apiKeyReveal.html" %}
+{% endblock %}
+
+{% block scripts %}
+<script type="text/javascript" src="{{ url_for('static', filename='js/services/services.js') }}" defer></script>
+{% endblock %}

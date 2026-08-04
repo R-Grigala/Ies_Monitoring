@@ -4,7 +4,7 @@
 
 | ნაწილი | სტატუსი |
 |--------|---------|
-| Own profile GET/PUT `/api/accounts/user` | Implemented |
+| Own profile GET/PUT `/api/accounts/ourself` | Implemented |
 | Accounts list/detail/update/delete | Implemented (`can_users`) |
 | Permission flags on profile (`can_users`, `can_recips`) | Implemented |
 | Permissions REST CRUD + assign/revoke APIs | Planned (models + seed only) |
@@ -211,7 +211,7 @@ permissions
 ### საკუთარი პროფილის მიღება
 
 ```http
-GET /api/accounts/user
+GET /api/accounts/ourself
 ```
 
 Auth: JWT.
@@ -228,7 +228,7 @@ Response includes profile fields plus boolean flags:
 ### საკუთარი პროფილის განახლება
 
 ```http
-PUT /api/accounts/user
+PUT /api/accounts/ourself
 ```
 
 Auth: JWT. Body: `first_name`, `last_name`.
@@ -246,7 +246,7 @@ can_users
 ### მომხმარებლების სიის მიღება
 
 ```http
-GET /api/accounts/accounts
+GET /api/accounts/
 ```
 
 Response: `{ "items": [...], "total": N }`.
@@ -256,7 +256,7 @@ Response: `{ "items": [...], "total": N }`.
 ### მომხმარებლის დეტალური ინფორმაციის მიღება
 
 ```http
-GET /api/accounts/accounts/{uuid}
+GET /api/accounts/{uuid}
 ```
 
 ---
@@ -264,7 +264,7 @@ GET /api/accounts/accounts/{uuid}
 ### მომხმარებლის განახლება
 
 ```http
-PUT /api/accounts/accounts/{uuid}
+PUT /api/accounts/{uuid}
 ```
 
 Fields: `first_name`, `last_name`, `email`, `is_active`.
@@ -276,7 +276,7 @@ Fields: `first_name`, `last_name`, `email`, `is_active`.
 ### მომხმარებლის წაშლა
 
 ```http
-DELETE /api/accounts/accounts/{uuid}
+DELETE /api/accounts/{uuid}
 ```
 
 წესები:
@@ -371,7 +371,7 @@ can_permissions
 ### მომხმარებლის უფლებების მიღება
 
 ```http
-GET /api/accounts/accounts/{uuid}/permissions
+GET /api/accounts/{uuid}/permissions
 ```
 
 Required Permission:
@@ -385,7 +385,7 @@ can_permissions
 ### მომხმარებლისთვის უფლებების მინიჭება
 
 ```http
-POST /api/accounts/accounts/{uuid}/permissions
+POST /api/accounts/{uuid}/permissions
 ```
 
 Required Permission:
@@ -407,7 +407,7 @@ Request:
 ### მომხმარებლის უფლების გაუქმება
 
 ```http
-DELETE /api/accounts/accounts/{uuid}/permissions/{permission_id}
+DELETE /api/accounts/{uuid}/permissions/{permission_id}
 ```
 
 Required Permission:

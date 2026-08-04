@@ -6,7 +6,7 @@ from app.api.auth import (
     LogoutApi,
     LogoutAllApi,
 )
-
+from app.api.services import ServicesApi, ServiceDetailApi
 from app.api.accounts import CurrentUserApi, AccountsApi, AccountDetailApi
 from app.api.recips import (
     RecipsApi,
