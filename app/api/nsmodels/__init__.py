@@ -4,7 +4,6 @@ from app.api.nsmodels.auth import (
     auth_parser,
     request_reset_password_parser,
     reset_password_parser,
-    register_service_parser,
 )
 from app.api.nsmodels.accounts import (
     accounts_ns,
@@ -32,4 +31,14 @@ from app.api.nsmodels.recips import (
     recip_email_response_model,
     recip_number_response_model,
     message_response_model,
+)
+from app.api.nsmodels.services import (
+    services_ns,
+    register_service_parser,
+    service_model,
+    service_list_response_model,
+    service_register_response_model,
+    message_response_model as service_message_response_model,
+    error_model as service_error_model,
+    JWT_OR_API_KEY,
 )

@@ -17,7 +17,7 @@ async function openUserModal() {
     const roleText = document.getElementById("user_role");
 
     try {
-        const data = await window.makeApiRequest("/api/accounts/user", { method: "GET" });
+        const data = await window.makeApiRequest("/api/accounts/ourself", { method: "GET" });
 
         if (!data || data.error) {
             window.showAlert("alertPlaceholder", "danger", data?.error || "An error occurred while fetching data.");
@@ -47,7 +47,7 @@ function submitUserForm(event) {
         last_name: (document.getElementById("user_lastname").value || "").trim(),
     };
 
-    window.makeApiRequest("/api/accounts/user", {
+    window.makeApiRequest("/api/accounts/ourself", {
         method: "PUT",
         body: JSON.stringify(payload),
     })

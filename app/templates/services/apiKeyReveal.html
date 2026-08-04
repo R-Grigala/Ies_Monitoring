@@ -1,0 +1,28 @@
+<div class="modal fade" id="apiKeyRevealModal" tabindex="-1" aria-labelledby="apiKeyRevealModalLabel" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-semibold" id="apiKeyRevealModalLabel" data-i18n="services.apikey.title">
+                    API key created
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body pt-2">
+                <p class="text-muted" data-i18n="services.apikey.warning">
+                    Copy this key now. It will not be shown again.
+                </p>
+                <div class="input-group">
+                    <input type="text" class="form-control form-control-lg font-monospace" id="apiKeyRevealValue" readonly>
+                    <button type="button" class="btn btn-outline-primary" id="apiKeyCopyButton" data-i18n="services.apikey.copy">
+                        Copy
+                    </button>
+                </div>
+            </div>
+            <div class="modal-footer border-0">
+                <button type="button" class="btn btn-primary" data-bs-dismiss="modal" data-i18n="services.apikey.done">
+                    Done
+                </button>
+            </div>
+        </div>
+    </div>
+</div>

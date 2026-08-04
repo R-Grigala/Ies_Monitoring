@@ -12,19 +12,16 @@ from flask_jwt_extended import (
     verify_jwt_in_request,
 )
 from flask_restx import Resource
-from sqlalchemy.exc import IntegrityError
 
 from app.api.nsmodels import (
     auth_ns,
     auth_parser,
     registration_parser,
-    register_service_parser,
     request_reset_password_parser,
     reset_password_parser,
 )
-from app.models import User, Permission, Service, ServicePermission
+from app.models import User
 from app.utils import normalize_email, validate_password, mailer, url_serializer
-from app.utils.api_keys import generate_api_key
 from app.utils.auth_utils import require_permissions, resolve_actor
 from app.utils.refresh_tokens import (
     RefreshTokenError,
@@ -39,31 +36,6 @@ from app.utils.refresh_tokens import (
 logger = logging.getLogger("app.auth")
 
 JWT_OR_API_KEY = ["JsonWebToken", "ApiKeyAuth"]
-
-
-def _normalize_permission_codes(raw_permissions):
-    """Accept list/tuple/str (including comma-separated) and return unique codes."""
-    if raw_permissions is None:
-        return []
-
-    if isinstance(raw_permissions, str):
-        values = [raw_permissions]
-    elif isinstance(raw_permissions, (list, tuple)):
-        values = list(raw_permissions)
-    else:
-        values = [str(raw_permissions)]
-
-    permission_codes = []
-    for item in values:
-        if item is None:
-            continue
-        # Checkbox/form clients may send nested lists or comma-separated values.
-        nested = item if isinstance(item, (list, tuple)) else str(item).split(",")
-        for code in nested:
-            normalized = str(code).strip()
-            if normalized and normalized not in permission_codes:
-                permission_codes.append(normalized)
-    return permission_codes
 
 
 def _access_token_expires_in():
@@ -132,7 +104,7 @@ class RegistrationApi(Resource):
         if User.query.filter_by(email=normalized_email).first():
             logger.info("Registration failed: email=%s already exists", normalized_email)
             return {
-                "error": "conflict",
+                "error": "email_already_registered",
                 "message": "Email address is already registered.",
             }, 400
 
@@ -148,150 +120,6 @@ class RegistrationApi(Resource):
         logger.info("Registration success: email=%s actor=%s", normalized_email, actor["label"])
 
         return {"message": "User registered successfully.", "user": new_user.to_dict()}, 200
-
-
-@auth_ns.route("/register_service")
-@auth_ns.doc(
-    responses={
-        201: "Created",
-        400: "Invalid Argument",
-        401: "Unauthorized",
-        403: "Forbidden",
-    }
-)
-class RegisterServiceApi(Resource):
-    @auth_ns.doc(parser=register_service_parser)
-    @auth_ns.doc(security=JWT_OR_API_KEY)
-    def post(self):
-        """Register a service account and return a one-time raw API key."""
-        denied = require_permissions("can_users")
-        if denied:
-            return denied
-
-        actor = resolve_actor()
-        args = register_service_parser.parse_args()
-        name = (args.get("name") or "").strip()
-        description = (args.get("description") or "").strip() or None
-
-        # Prefer parser values; if frontend sent JSON array, also accept request.json.
-        raw_permissions = args.get("permissions")
-        if not raw_permissions:
-            json_body = request.get_json(silent=True) or {}
-            raw_permissions = json_body.get("permissions")
-
-        if not name:
-            return {"error": "validation_error", "message": "name cannot be empty."}, 400
-
-        permission_codes = _normalize_permission_codes(raw_permissions)
-
-        if not permission_codes:
-            return {
-                "error": "validation_error",
-                "message": "At least one permission is required.",
-            }, 400
-
-        permissions = []
-        missing = []
-        inactive = []
-        for code in permission_codes:
-            permission = Permission.query.filter_by(code=code).first()
-            if not permission:
-                missing.append(code)
-                continue
-            if not permission.is_active:
-                inactive.append(code)
-                continue
-            permissions.append(permission)
-
-        if missing:
-            return {
-                "error": "validation_error",
-                "message": f"Unknown permission code(s): {', '.join(missing)}",
-            }, 400
-        if inactive:
-            return {
-                "error": "validation_error",
-                "message": f"Inactive permission code(s): {', '.join(inactive)}",
-            }, 400
-
-        raw_key, prefix, key_hash = generate_api_key()
-        service = Service(
-            name=name,
-            description=description,
-            api_key_prefix=prefix,
-            api_key_hash=key_hash,
-            is_active=True,
-            created_by_user_id=actor["user_id"],
-            updated_by_user_id=actor["user_id"],
-        )
-        service.create(commit=False)
-
-        assigned_codes = []
-        for permission in permissions:
-            assignment = ServicePermission(
-                service_id=service.id,
-                permission_id=permission.id,
-                granted_by_user_id=actor["user_id"],
-            )
-            assignment.create(commit=False)
-            assigned_codes.append(permission.code)
-
-        Service.save()
-
-        logger.info(
-            "Service registration success: service_uuid=%s name=%s permissions=%s actor=%s",
-            service.uuid,
-            service.name,
-            assigned_codes,
-            actor["label"],
-        )
-        return {
-            "message": "Service registered successfully. Store the api_key now; it will not be shown again.",
-            "service": service.to_dict(),
-            "api_key": raw_key,
-            "permissions": assigned_codes,
-        }, 201
-
-
-@auth_ns.route("/services/<string:service_uuid>")
-class ServiceDetailApi(Resource):
-    @auth_ns.doc(security=JWT_OR_API_KEY)
-    @auth_ns.response(200, "OK")
-    @auth_ns.response(401, "Unauthorized")
-    @auth_ns.response(403, "Forbidden")
-    @auth_ns.response(404, "Not Found")
-    @auth_ns.response(409, "Conflict")
-    def delete(self, service_uuid):
-        """Delete a service and its permission assignments (JWT or API key with can_users)."""
-        denied = require_permissions("can_users")
-        if denied:
-            return denied
-
-        actor = resolve_actor()
-        service = Service.query.filter_by(uuid=service_uuid).first()
-        if not service:
-            return {"error": "not_found", "message": "Service not found."}, 404
-
-        try:
-            ServicePermission.query.filter_by(service_id=service.id).delete(synchronize_session=False)
-            service.delete()
-        except IntegrityError:
-            logger.warning(
-                "Service delete blocked by integrity constraint: actor=%s service_uuid=%s",
-                actor["label"],
-                service_uuid,
-            )
-            return {
-                "error": "conflict",
-                "message": "Service cannot be deleted because related database records still reference it.",
-            }, 409
-
-        logger.info(
-            "Service deleted: actor=%s service_uuid=%s",
-            actor["label"],
-            service_uuid,
-        )
-        return {"message": "Service deleted successfully."}, 200
 
 
 @auth_ns.route("/login")
@@ -393,78 +221,95 @@ class LogoutAllApi(Resource):
         unset_jwt_cookies(response)
         return response
 
-@auth_ns.route('/request_reset_password')
-@auth_ns.doc(responses={200: 'OK', 400: 'Invalid Argument', 401: 'JWT Token Expires', 403: 'Forbidden', 404: 'Not Found'})
+
+@auth_ns.route("/request_reset_password")
+@auth_ns.doc(
+    responses={
+        200: "OK",
+        400: "Invalid Argument",
+        401: "JWT Token Expires",
+        403: "Forbidden",
+        404: "Not Found",
+    }
+)
 class RequestResetPasswordApi(Resource):
     @auth_ns.doc(parser=request_reset_password_parser)
     def post(self):
-        ''' Request for reset password '''
+        """Request for reset password"""
         args = request_reset_password_parser.parse_args()
-        email = args.get('email')
+        email = args.get("email")
 
         user = User.query.filter_by(email=email).first()
 
         if not user:
             logger.info("Reset password request failed: email=%s user not found", email)
-            return {'error' : 'No user exists with the provided email.'}, 400
-        
-        token = url_serializer.generate_token(data=user.uuid, salt='reset_password')
-        reset_url = f'{request.url_root}reset_password/{token}'
+            return {"error": "No user exists with the provided email."}, 400
 
-        subject = 'Password reset'
-        message = f'Hello,\nTo reset your password, please visit the following link: {reset_url}'
-        
+        token = url_serializer.generate_token(data=user.uuid, salt="reset_password")
+        reset_url = f"{request.url_root}reset_password/{token}"
+
+        subject = "Password reset"
+        message = f"Hello,\nTo reset your password, please visit the following link: {reset_url}"
+
         last_sent = user.last_sent_email
         current_time = datetime.now()
         if last_sent is not None:
             difference = current_time - last_sent
             if difference < timedelta(seconds=60):
                 logger.info("Reset password request throttled: user_uuid=%s", user.uuid)
-                return {'error': f'Please try again in {int(60 - difference.total_seconds())} seconds.'}, 400
+                return {"error": f"Please try again in {int(60 - difference.total_seconds())} seconds."}, 400
 
         try:
             status = mailer.send_mail(emails=[email], subject=subject, message=message)
 
             if not status:
                 logger.error("Reset password request email send failed: user_uuid=%s", user.uuid)
-                return{'error': 'An error occurred while sending email.'}, 400
-            
+                return {"error": "An error occurred while sending email."}, 400
+
             current_time = datetime.now()
 
             user.last_sent_email = current_time
             user.save()
             logger.info("Reset password request success: user_uuid=%s", user.uuid)
 
-            return {'message': 'Please check your email, a verification link has been sent.'}, 200
+            return {"message": "Please check your email, a verification link has been sent."}, 200
         except Exception as err:
             logger.exception("Reset password request exception: email=%s", email)
-            return {'error': f'An error occurred while sending email: {err}'}, 400
+            return {"error": f"An error occurred while sending email: {err}"}, 400
 
 
-@auth_ns.route('/reset_password')
-@auth_ns.doc(responses={200: 'OK', 400: 'Invalid Argument', 401: 'JWT Token Expires', 403: 'Forbidden', 404: 'Not Found'})
+@auth_ns.route("/reset_password")
+@auth_ns.doc(
+    responses={
+        200: "OK",
+        400: "Invalid Argument",
+        401: "JWT Token Expires",
+        403: "Forbidden",
+        404: "Not Found",
+    }
+)
 class ResetPasswordApi(Resource):
     @auth_ns.doc(parser=reset_password_parser)
     def put(self):
-        ''' Reset password '''
+        """Reset password"""
         args = reset_password_parser.parse_args()
 
-        token = args.get('token')
-        uuid = url_serializer.unload_token(token=token,salt='reset_password', max_age_seconds=300)
+        token = args.get("token")
+        uuid = url_serializer.unload_token(token=token, salt="reset_password", max_age_seconds=300)
 
-        if uuid == 'invalid':
+        if uuid == "invalid":
             logger.info("Forgot password failed: invalid token")
-            return {'error': 'Invalid token.'}, 400
-        elif uuid == 'expired':
+            return {"error": "Invalid token."}, 400
+        elif uuid == "expired":
             logger.info("Forgot password failed: expired token")
-            return {'error': 'Token has expired.'}, 400
-        
+            return {"error": "Token has expired."}, 400
+
         user = User.query.filter_by(uuid=uuid).first()
         if not user:
             logger.info("Reset password failed: token user missing uuid=%s", uuid)
-            return {'error': 'User not found.'}, 404
-        
-        if args.get('password') != args.get("retype_password"):
+            return {"error": "User not found."}, 404
+
+        if args.get("password") != args.get("retype_password"):
             logger.info("Reset password failed: user_uuid=%s password mismatch", user.uuid)
             return {"error": "Passwords do not match."}, 400
 
@@ -474,12 +319,12 @@ class ResetPasswordApi(Resource):
             logger.info("Reset password failed: user_uuid=%s password policy error", user.uuid)
             return {"error": str(err)}, 400
 
-        password = args.get('password')
+        password = args.get("password")
         try:
             user.password = password
             user.save()
             logger.info("Reset password success: user_uuid=%s", user.uuid)
-            return {'message': 'Password reset successfully.'}, 200
+            return {"message": "Password reset successfully."}, 200
         except Exception:
             logger.exception("Reset password exception: user_uuid=%s", user.uuid)
-            return {'error': 'An error occurred while changing password.'}, 400
+            return {"error": "An error occurred while changing password."}, 400

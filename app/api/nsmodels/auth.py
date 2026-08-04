@@ -81,24 +81,3 @@ reset_password_parser.add_argument(
     type=str,
     help="Repeat the password",
 )
-
-register_service_parser = reqparse.RequestParser()
-register_service_parser.add_argument(
-    "name",
-    type=str,
-    required=True,
-    help="Service name example: recip-export-worker",
-)
-register_service_parser.add_argument(
-    "description",
-    type=str,
-    required=False,
-    help="Optional service description",
-)
-register_service_parser.add_argument(
-    "permissions",
-    type=str,
-    required=True,
-    action="append",
-    help="Permission code to grant. Repeat field or comma-separate, e.g. can_recips_read",
-)

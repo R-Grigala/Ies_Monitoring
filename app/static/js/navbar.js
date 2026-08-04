@@ -48,13 +48,18 @@ document.addEventListener("DOMContentLoaded", async function () {
 
     if (hasValidAccessToken) {
         try {
-            const user = await window.makeApiRequest("/api/accounts/user", { method: "GET" });
+            const user = await window.makeApiRequest("/api/accounts/ourself", { method: "GET" });
 
             if (user?.can_users) {
                 appendNavLink(
                     navLinksStart,
                     i18n ? i18n.localizePath("/accounts") : "/accounts",
                     i18n ? i18n.t("nav.accounts", "Accounts") : "Accounts"
+                );
+                appendNavLink(
+                    navLinksStart,
+                    i18n ? i18n.localizePath("/services") : "/services",
+                    i18n ? i18n.t("nav.services", "Services") : "Services"
                 );
             }
 

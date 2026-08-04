@@ -7,3 +7,4 @@
 from app.views.auth.routes import auth_blueprint
 from app.views.accounts.routes import accounts_blueprint
 from app.views.notify.routes import notify_blueprint
+from app.views.services.routes import services_blueprint
