@@ -47,7 +47,7 @@ class Config:
             "type": "apiKey",
             "in": "header",
             "name": "X-API-Key",
-            "description": "Service API key from /api/auth/register_service. Example: ies_...",
+            "description": "Service API key from /api/services/. Example: ies_...",
         },
     }
 

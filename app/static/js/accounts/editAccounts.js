@@ -26,7 +26,7 @@ function applySelfAccountRestrictions(userUuid) {
 
 async function openEditAccountModal(userUuid) {
     try {
-        const user = await window.makeApiRequest(`/api/accounts/accounts/${userUuid}`, {
+        const user = await window.makeApiRequest(`/api/accounts/${userUuid}`, {
             method: "GET",
         });
 
@@ -71,7 +71,7 @@ async function submitEditAccountForm(event) {
     submitButton.disabled = true;
 
     try {
-        const data = await window.makeApiRequest(`/api/accounts/accounts/${userUuid}`, {
+        const data = await window.makeApiRequest(`/api/accounts/${userUuid}`, {
             method: "PUT",
             body: JSON.stringify({
                 first_name: firstName,
@@ -126,7 +126,7 @@ async function deleteAccountFromModal() {
     deleteButton.disabled = true;
 
     try {
-        const data = await window.makeApiRequest(`/api/accounts/accounts/${userUuid}`, {
+        const data = await window.makeApiRequest(`/api/accounts/${userUuid}`, {
             method: "DELETE",
         });
         window.onAccountDeleted?.(userUuid);

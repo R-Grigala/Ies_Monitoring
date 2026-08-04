@@ -1,0 +1,77 @@
+<div class="modal fade" id="registerServiceModal" tabindex="-1" aria-labelledby="registerServiceModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-semibold" id="registerServiceModalLabel" data-i18n="services.register.title">
+                    Register Service
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body pt-2">
+                <p class="text-muted mb-4" data-i18n="services.register.subtitle">
+                    Create a service account. The API key is shown only once.
+                </p>
+
+                <form id="registerServiceForm" novalidate>
+                    <div class="mb-3">
+                        <label class="form-label" for="registerServiceName" data-i18n="services.register.name">Name</label>
+                        <input
+                            type="text"
+                            class="form-control form-control-lg"
+                            id="registerServiceName"
+                            placeholder="recip-export-worker"
+                            data-i18n-placeholder="services.register.name_placeholder"
+                            autocomplete="off"
+                            required
+                        >
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label" for="registerServiceDescription" data-i18n="services.register.description">
+                            Description
+                        </label>
+                        <textarea
+                            class="form-control form-control-lg"
+                            id="registerServiceDescription"
+                            rows="3"
+                            placeholder="Optional description"
+                            data-i18n-placeholder="services.register.description_placeholder"
+                        ></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <div class="form-label" data-i18n="services.register.permissions">Permissions</div>
+                        <div id="registerServicePermissions" class="d-flex flex-column gap-2">
+                            <div class="form-check">
+                                <input class="form-check-input service-permission-check" type="checkbox" value="can_recips_read" id="perm_can_recips_read">
+                                <label class="form-check-label" for="perm_can_recips_read">can_recips_read</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input service-permission-check" type="checkbox" value="can_recips" id="perm_can_recips">
+                                <label class="form-check-label" for="perm_can_recips">can_recips</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input service-permission-check" type="checkbox" value="can_users" id="perm_can_users">
+                                <label class="form-check-label" for="perm_can_users">can_users</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input service-permission-check" type="checkbox" value="can_permissions" id="perm_can_permissions">
+                                <label class="form-check-label" for="perm_can_permissions">can_permissions</label>
+                            </div>
+                        </div>
+                        <div class="form-text" data-i18n="services.register.permissions_hint">
+                            Select at least one permission for this service.
+                        </div>
+                    </div>
+
+                    <div class="d-grid d-md-flex justify-content-md-end gap-2 mt-4">
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal" data-i18n="services.register.cancel">
+                            Cancel
+                        </button>
+                        <button type="submit" class="btn btn-primary" id="registerServiceSubmit" data-i18n="services.register.submit">
+                            Register
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>

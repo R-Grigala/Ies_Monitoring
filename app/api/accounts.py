@@ -72,7 +72,7 @@ def _user_delete_blockers(user):
     return blockers
 
 
-@accounts_ns.route("/user")
+@accounts_ns.route("/ourself")
 class CurrentUserApi(Resource):
     @jwt_required()
     @accounts_ns.doc(security="JsonWebToken")
@@ -122,7 +122,7 @@ class CurrentUserApi(Resource):
         return {"message": "Profile updated successfully.", "user": user.to_dict()}, 200
 
 
-@accounts_ns.route("/accounts")
+@accounts_ns.route("/")
 class AccountsApi(Resource):
     @accounts_ns.doc(security=JWT_OR_API_KEY)
     @accounts_ns.response(200, "Success", account_list_response_model)
@@ -141,7 +141,7 @@ class AccountsApi(Resource):
         ), 200
 
 
-@accounts_ns.route("/accounts/<string:user_uuid>")
+@accounts_ns.route("/<string:user_uuid>")
 class AccountDetailApi(Resource):
     @accounts_ns.doc(security=JWT_OR_API_KEY)
     @accounts_ns.response(200, "Success", account_model)

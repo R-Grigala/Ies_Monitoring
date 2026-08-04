@@ -201,7 +201,7 @@ async function deleteAccount(userUuid) {
     }
 
     try {
-        const data = await window.makeApiRequest(`/api/accounts/accounts/${userUuid}`, {
+        const data = await window.makeApiRequest(`/api/accounts/${userUuid}`, {
             method: "DELETE",
         });
         onAccountDeleted(userUuid);
@@ -235,7 +235,7 @@ async function loadAccounts() {
     setVisibleState("loading");
 
     try {
-        const data = await window.makeApiRequest("/api/accounts/accounts", { method: "GET" });
+        const data = await window.makeApiRequest("/api/accounts/", { method: "GET" });
         accountsData = Array.isArray(data.items) ? data.items : [];
         filterAccounts(currentSearchQuery);
     } catch (error) {
