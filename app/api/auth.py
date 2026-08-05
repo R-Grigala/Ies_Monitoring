@@ -138,6 +138,11 @@ class RegistrationApi(Resource):
             or json_body.get("permissions")
         )
 
+        if permission_codes:
+            denied_perms = require_permissions("can_permissions")
+            if denied_perms:
+                return denied_perms
+
         permission_objects = []
         missing = []
         inactive = []

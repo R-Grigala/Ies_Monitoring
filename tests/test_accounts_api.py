@@ -120,10 +120,32 @@ def test_cannot_revoke_own_can_users(client, admin_auth_headers, admin_user):
     assert response.status_code == 409
 
 
-def test_grant_permission_forbidden_without_can_users(client, user_auth_headers, plain_user):
+def test_grant_permission_forbidden_without_can_permissions(client, user_auth_headers, plain_user):
     response = client.post(
         f"/api/accounts/{plain_user.uuid}/permissions",
         headers=user_auth_headers,
+        json={"permission_codes": ["can_recips"]},
+    )
+    assert response.status_code == 403
+
+
+def test_grant_permission_forbidden_with_only_can_users(client, plain_user, permissions):
+    from tests.helpers import VALID_PASSWORD, auth_headers, create_user, login
+
+    create_user(
+        email="users.only.grant@example.com",
+        first_name="Users",
+        last_name="Only",
+        password=VALID_PASSWORD,
+        permission_codes=["can_users"],
+    )
+    login_response = login(client, "users.only.grant@example.com", VALID_PASSWORD)
+    assert login_response.status_code == 200
+    headers = auth_headers(login_response.get_json()["access_token"])
+
+    response = client.post(
+        f"/api/accounts/{plain_user.uuid}/permissions",
+        headers=headers,
         json={"permission_codes": ["can_recips"]},
     )
     assert response.status_code == 403

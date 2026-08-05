@@ -1,6 +1,7 @@
 let editAccountModal = null;
 let editAccountAvailablePermissions = [];
 let currentUserPermissionCodes = new Set();
+let canManagePermissions = false;
 
 function t(key, fallback) {
     const i18n = window.I18n;
@@ -14,6 +15,10 @@ function escapeHtml(value) {
         .replaceAll(">", "&gt;")
         .replaceAll('"', "&quot;")
         .replaceAll("'", "&#39;");
+}
+
+function setPermissionsSectionVisible(visible) {
+    document.getElementById("editAccountPermissionsSection")?.classList.toggle("d-none", !visible);
 }
 
 function applySelfAccountRestrictions(userUuid) {
@@ -98,7 +103,21 @@ async function loadAvailablePermissions() {
     return editAccountAvailablePermissions;
 }
 
+async function resolveCanManagePermissions() {
+    try {
+        const profile = await window.makeApiRequest("/api/accounts/ourself", { method: "GET" });
+        canManagePermissions = Boolean(profile?.can_permissions);
+    } catch (_error) {
+        canManagePermissions = false;
+    }
+    return canManagePermissions;
+}
+
 async function syncUserPermissions(userUuid) {
+    if (!canManagePermissions) {
+        return { granted: [], revoked: [] };
+    }
+
     const desired = new Set(getSelectedPermissionCodes());
     const current = new Set(currentUserPermissionCodes);
     const toGrant = [...desired].filter((code) => !current.has(code));
@@ -123,20 +142,19 @@ async function syncUserPermissions(userUuid) {
 
 async function openEditAccountModal(userUuid) {
     try {
+        await resolveCanManagePermissions();
+        setPermissionsSectionVisible(canManagePermissions);
+
+        const loadCatalog = canManagePermissions
+            ? loadAvailablePermissions()
+            : Promise.resolve([]);
+
         const [user] = await Promise.all([
             window.makeApiRequest(`/api/accounts/${userUuid}`, { method: "GET" }),
-            loadAvailablePermissions(),
+            loadCatalog,
         ]);
 
         let permissionCodes = Array.isArray(user.permissions) ? user.permissions : [];
-        if (!permissionCodes.length) {
-            const assigned = await window.makeApiRequest(
-                `/api/accounts/${userUuid}/permissions`,
-                { method: "GET" }
-            );
-            permissionCodes = (assigned.items || []).map((item) => item.code);
-        }
-
         currentUserPermissionCodes = new Set(permissionCodes);
 
         document.getElementById("editAccountUuid").value = user.uuid;
@@ -145,7 +163,9 @@ async function openEditAccountModal(userUuid) {
         document.getElementById("editAccountEmail").value = user.email || "";
         document.getElementById("editAccountIsActive").checked = Boolean(user.is_active);
 
-        renderPermissionCheckboxes(permissionCodes);
+        if (canManagePermissions) {
+            renderPermissionCheckboxes(permissionCodes);
+        }
         applySelfAccountRestrictions(user.uuid);
 
         editAccountModal?.show();
@@ -195,7 +215,9 @@ async function submitEditAccountForm(event) {
         await syncUserPermissions(userUuid);
 
         const updatedUser = data.user || data;
-        updatedUser.permissions = getSelectedPermissionCodes();
+        if (canManagePermissions) {
+            updatedUser.permissions = getSelectedPermissionCodes();
+        }
         window.onAccountUpdated?.(updatedUser);
         editAccountModal?.hide();
         window.showAlert(

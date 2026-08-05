@@ -26,8 +26,13 @@ logger = logging.getLogger("app.permissions")
 CODE_RE = re.compile(r"^[a-z][a-z0-9_]{1,99}$")
 
 
-def _require_can_permissions():
-    """Permission catalog view and manage require can_permissions only."""
+def _require_read_catalog():
+    """List/read catalog for assignment (can_users) and management UIs."""
+    return require_permissions("can_permissions", "can_users")
+
+
+def _require_manage_catalog():
+    """Create/delete permission catalog entries require can_permissions only."""
     return require_permissions("can_permissions")
 
 
@@ -62,7 +67,7 @@ class PermissionsApi(Resource):
     @permissions_ns.response(403, "Forbidden", error_model)
     def get(self):
         """List all permissions (active and inactive)."""
-        denied = _require_can_permissions()
+        denied = _require_read_catalog()
         if denied:
             return denied
 
@@ -78,7 +83,7 @@ class PermissionsApi(Resource):
     @permissions_ns.response(409, "Conflict", error_model)
     def post(self):
         """Create a new permission in the catalog."""
-        denied = _require_can_permissions()
+        denied = _require_manage_catalog()
         if denied:
             return denied
 
@@ -158,7 +163,7 @@ class PermissionDetailApi(Resource):
     @permissions_ns.response(404, "Not Found", error_model)
     def get(self, code_or_id):
         """Get a single permission by id or code."""
-        denied = _require_can_permissions()
+        denied = _require_read_catalog()
         if denied:
             return denied
 
@@ -180,7 +185,7 @@ class PermissionDetailApi(Resource):
         Hard-deletes when no assignments reference it.
         Otherwise soft-deactivates (is_active=false) so history is preserved.
         """
-        denied = _require_can_permissions()
+        denied = _require_manage_catalog()
         if denied:
             return denied
 
