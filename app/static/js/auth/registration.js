@@ -173,7 +173,7 @@ async function ensureCanRegisterUsers() {
     const accessToken = localStorage.getItem("access_token");
     if (!accessToken || window.isTokenExpired?.(accessToken)) {
         window.location.href = loginPath();
-        return false;
+        return null;
     }
 
     try {
@@ -188,13 +188,19 @@ async function ensureCanRegisterUsers() {
                 )
             );
             window.location.href = accountsPath();
-            return false;
+            return null;
         }
-        return true;
+        return user;
     } catch (_error) {
         window.location.href = loginPath();
-        return false;
+        return null;
     }
+}
+
+function setRegistrationPermissionsVisible(visible) {
+    document
+        .getElementById("registrationPermissionsSection")
+        ?.classList.toggle("d-none", !visible);
 }
 
 async function submitRegistrationForm(event) {
@@ -205,7 +211,12 @@ async function submitRegistrationForm(event) {
     const email = document.getElementById("registrationEmail").value.trim();
     const password = document.getElementById("registrationPassword").value;
     const passwordRepeat = document.getElementById("registrationPasswordRepeat").value;
-    const permissionCodes = getSelectedRegistrationPermissionCodes();
+    const canAssignPermissions = !document
+        .getElementById("registrationPermissionsSection")
+        ?.classList.contains("d-none");
+    const permissionCodes = canAssignPermissions
+        ? getSelectedRegistrationPermissionCodes()
+        : [];
     const submitButton = document.getElementById("registrationSubmit");
 
     if (!firstName || !lastName || !email || !password || !passwordRepeat) {
@@ -265,13 +276,18 @@ document.addEventListener("DOMContentLoaded", async () => {
         return;
     }
 
-    const allowed = await ensureCanRegisterUsers();
-    if (!allowed) {
+    const profile = await ensureCanRegisterUsers();
+    if (!profile) {
         return;
     }
 
+    const canAssignPermissions = Boolean(profile.can_permissions);
+    setRegistrationPermissionsVisible(canAssignPermissions);
+
     form.addEventListener("submit", submitRegistrationForm);
-    void loadRegistrationPermissions();
+    if (canAssignPermissions) {
+        void loadRegistrationPermissions();
+    }
 
     window.initPasswordToggle?.({
         fieldId: "registrationPassword",

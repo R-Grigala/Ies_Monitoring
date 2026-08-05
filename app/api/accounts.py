@@ -34,8 +34,8 @@ def _require_can_users():
 
 
 def _require_manage_permissions():
-    """Grant/revoke permissions: can_permissions or can_users."""
-    return require_permissions("can_permissions", "can_users")
+    """Grant/revoke user permissions requires can_permissions only."""
+    return require_permissions("can_permissions")
 
 
 def _normalize_codes(raw_values):
