@@ -16,6 +16,13 @@
                 <div class="d-flex flex-wrap align-items-center gap-2">
                     <a
                         class="btn btn-outline-primary d-none"
+                        id="accountsPermissionsButton"
+                        href="{{ url_for('permissions.permissions', lang=current_lang) }}"
+                    >
+                        <span data-i18n="accounts.permissions">Permissions</span>
+                    </a>
+                    <a
+                        class="btn btn-outline-primary d-none"
                         id="accountsServicesButton"
                         href="{{ url_for('services.services', lang=current_lang) }}"
                     >

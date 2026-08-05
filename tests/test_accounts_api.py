@@ -7,6 +7,7 @@ def test_get_current_user(client, admin_auth_headers, admin_user):
     data = response.get_json()
     assert data["email"] == admin_user.email
     assert data["can_users"] is True
+    assert data["can_permissions"] is True
     assert data["can_recips"] is True
 
 

@@ -1,7 +1,5 @@
 let servicesData = [];
 let currentSearchQuery = "";
-let registerServiceModal = null;
-let apiKeyRevealModal = null;
 
 function t(key, fallback) {
     const i18n = window.I18n;
@@ -127,118 +125,12 @@ function filterServices(query) {
     renderServicesTable(filtered);
 }
 
-function resetRegisterServiceForm() {
-    const form = document.getElementById("registerServiceForm");
-    form?.reset();
-}
-
-function openRegisterServiceModal() {
-    resetRegisterServiceForm();
-    registerServiceModal?.show();
-}
-
-function showApiKeyReveal(apiKey) {
-    const input = document.getElementById("apiKeyRevealValue");
-    if (input) {
-        input.value = apiKey || "";
-    }
-    apiKeyRevealModal?.show();
-}
-
-async function copyApiKey() {
-    const value = document.getElementById("apiKeyRevealValue")?.value || "";
-    if (!value) {
+function onServiceCreated(service) {
+    if (!service?.uuid) {
         return;
     }
-
-    try {
-        await navigator.clipboard.writeText(value);
-        window.showAlert(
-            "alertPlaceholder",
-            "success",
-            t("services.apikey.copied", "API key copied to clipboard.")
-        );
-    } catch (error) {
-        window.showAlert(
-            "alertPlaceholder",
-            "danger",
-            t("services.apikey.copy_failed", "Could not copy API key.")
-        );
-    }
-}
-
-async function submitRegisterServiceForm(event) {
-    event.preventDefault();
-
-    const name = document.getElementById("registerServiceName")?.value.trim() || "";
-    const description = document.getElementById("registerServiceDescription")?.value.trim() || "";
-    const permissions = Array.from(document.querySelectorAll(".service-permission-check:checked")).map(
-        (input) => input.value
-    );
-    const submitButton = document.getElementById("registerServiceSubmit");
-
-    if (!name) {
-        window.showAlert(
-            "alertPlaceholder",
-            "danger",
-            t("services.error.validation", "Please fill in all required fields.")
-        );
-        return;
-    }
-
-    if (!permissions.length) {
-        window.showAlert(
-            "alertPlaceholder",
-            "danger",
-            t("services.error.permissions", "Select at least one permission.")
-        );
-        return;
-    }
-
-    if (submitButton) {
-        submitButton.disabled = true;
-    }
-
-    try {
-        const data = await window.makeApiRequest("/api/services/", {
-            method: "POST",
-            body: JSON.stringify({
-                name,
-                description: description || null,
-                permissions,
-            }),
-        });
-
-        if (data.service?.uuid) {
-            servicesData = [data.service, ...servicesData];
-            filterServices(currentSearchQuery);
-        } else {
-            await loadServices();
-        }
-
-        registerServiceModal?.hide();
-        resetRegisterServiceForm();
-
-        if (data.api_key) {
-            showApiKeyReveal(data.api_key);
-        }
-
-        window.showAlert(
-            "alertPlaceholder",
-            "success",
-            data.message || t("services.register.success", "Service registered successfully.")
-        );
-    } catch (error) {
-        window.showAlert(
-            "alertPlaceholder",
-            "danger",
-            error.message || t("services.error.register", "Failed to register service.")
-        );
-    } finally {
-        if (submitButton) {
-            submitButton.disabled = false;
-        }
-    }
+    servicesData = [service, ...servicesData.filter((item) => item.uuid !== service.uuid)];
+    filterServices(currentSearchQuery);
 }
 
 async function deleteService(serviceUuid) {
@@ -297,22 +189,10 @@ async function loadServices() {
     }
 }
 
-window.openRegisterServiceModal = openRegisterServiceModal;
+window.onServiceCreated = onServiceCreated;
+window.reloadServicesList = loadServices;
 
 document.addEventListener("DOMContentLoaded", () => {
-    const registerModalElement = document.getElementById("registerServiceModal");
-    if (registerModalElement && window.bootstrap?.Modal) {
-        registerServiceModal = bootstrap.Modal.getOrCreateInstance(registerModalElement);
-    }
-
-    const apiKeyModalElement = document.getElementById("apiKeyRevealModal");
-    if (apiKeyModalElement && window.bootstrap?.Modal) {
-        apiKeyRevealModal = bootstrap.Modal.getOrCreateInstance(apiKeyModalElement);
-    }
-
-    document.getElementById("registerServiceForm")?.addEventListener("submit", submitRegisterServiceForm);
-    document.getElementById("apiKeyCopyButton")?.addEventListener("click", copyApiKey);
-
     document.getElementById("servicesSearch")?.addEventListener("input", (event) => {
         filterServices(event.target.value);
     });

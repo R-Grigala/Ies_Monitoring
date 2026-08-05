@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+
+{% block title %}
+    IES Monitoring - Permissions
+{% endblock %}
+
+{% block body %}
+<div class="py-4 py-lg-5">
+    <div class="card border-0 shadow-sm">
+        <div class="card-body p-4 p-lg-5">
+            <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-start gap-3 mb-4">
+                <div>
+                    <h2 class="h3 mb-2" data-i18n="permissions.title">Permissions</h2>
+                    <p class="text-muted mb-0" data-i18n="permissions.subtitle">
+                        Browse and manage permission catalog codes.
+                    </p>
+                </div>
+                <div class="d-flex flex-wrap align-items-center gap-2">
+                    <button
+                        type="button"
+                        class="btn btn-primary"
+                        id="addPermissionButton"
+                    >
+                        <span data-i18n="permissions.add">Add permission</span>
+                    </button>
+                    <span class="badge rounded-pill text-bg-primary fs-6 px-3 py-2" id="permissionsTotal">0</span>
+                </div>
+            </div>
+
+            <div class="row g-3 mb-4">
+                <div class="col-12 col-lg-6">
+                    <input
+                        type="search"
+                        id="permissionsSearch"
+                        class="form-control form-control-lg"
+                        placeholder="Search by code or name"
+                        data-i18n-placeholder="permissions.search.placeholder"
+                        autocomplete="off"
+                    >
+                </div>
+            </div>
+
+            <div id="permissionsLoading" class="text-center py-5">
+                <div class="spinner-border text-primary" role="status" aria-hidden="true"></div>
+                <p class="text-muted mt-3 mb-0" data-i18n="permissions.loading">Loading permissions...</p>
+            </div>
+
+            <div id="permissionsEmpty" class="d-none text-center py-5">
+                <p class="text-muted mb-0" data-i18n="permissions.empty">No permissions found.</p>
+            </div>
+
+            <div id="permissionsTableWrap" class="d-none table-responsive">
+                <table class="table table-hover align-middle mb-0 permissions-table">
+                    <thead class="table-light">
+                        <tr>
+                            <th scope="col" data-i18n="permissions.table.code">Code</th>
+                            <th scope="col" data-i18n="permissions.table.name">Name</th>
+                            <th scope="col" data-i18n="permissions.table.description">Description</th>
+                            <th scope="col" data-i18n="permissions.table.status">Status</th>
+                            <th scope="col" data-i18n="permissions.table.updated">Updated</th>
+                            <th scope="col" class="text-end" data-i18n="permissions.table.actions">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="permissionsTableBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% include "permissions/createPermissions.html" %}
+{% endblock %}
+
+{% block scripts %}
+<script type="text/javascript" src="{{ url_for('static', filename='js/permissions/permissions.js') }}" defer></script>
+<script type="text/javascript" src="{{ url_for('static', filename='js/permissions/createPermissions.js') }}" defer></script>
+{% endblock %}

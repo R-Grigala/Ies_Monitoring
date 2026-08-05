@@ -169,6 +169,7 @@ class CurrentUserApi(Resource):
             return {"error": "not_found", "message": "User not found."}, 404
         user_data = user.to_dict()
         user_data["can_users"] = user.check_permission("can_users")
+        user_data["can_permissions"] = user.check_permission("can_permissions")
         user_data["can_recips"] = user.check_permission("can_recips")
         return user_data
 
