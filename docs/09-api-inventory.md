@@ -78,11 +78,11 @@ GET `/api/accounts/<uuid>` also returns `permissions: ["can_recips", ...]` for a
 
 ## Permissions catalog — `/api/permissions`
 
-Catalog management is separate from user assignment. Create/list/delete requires `can_permissions` **or** `can_users`.
+Catalog management is separate from user assignment. **View and mutate** require `can_permissions` only (not `can_users`).
 
 | Method | Path | Auth | Notes |
 |--------|------|------|--------|
-| GET | `/api/permissions/` | JWT/API key + `can_permissions` or `can_users` | All permissions (active + inactive). `{ items, total }` |
+| GET | `/api/permissions/` | JWT/API key + `can_permissions` | All permissions (active + inactive). `{ items, total }` |
 | POST | `/api/permissions/` | same | Create. Body: `code`, `name`, optional `description`. Re-activates soft-deleted same `code` (200). Conflict if active duplicate (409) |
 | GET | `/api/permissions/<code_or_id>` | same | Single permission by code or numeric id |
 | DELETE | `/api/permissions/<code_or_id>` | same | Hard delete if unassigned; otherwise soft-deactivate (`is_active=false`) while referenced |
@@ -126,7 +126,7 @@ Raw API key is shown only once at registration (`api_key_hash` is stored).
 | Code | Usage |
 |------|--------|
 | `can_users` | Register users, accounts admin, services admin UI/API |
-| `can_permissions` | Permission catalog CRUD; also grant/revoke on accounts (or with `can_users`) |
+| `can_permissions` | Permission catalog view/CRUD; grant/revoke on accounts (or with `can_users`) |
 | `can_recips` | Full recipients write + Notify UI |
 | `can_recips_read` | Read-only recipients (typical for service API keys) |
 
@@ -162,7 +162,7 @@ Admin seed (`flask populate_db`):
 | `/<lang>/accounts` | Accounts admin (+ links to Services / Permissions) | `can_users` |
 | `/<lang>/registration` | Register new user (full page) | `can_users` (client-checked; API enforces) |
 | `/<lang>/services` | Service registration / delete (from Accounts) | `can_users` |
-| `/<lang>/permissions` | Permission catalog list/create/delete (from Accounts) | `can_permissions` or `can_users` |
+| `/<lang>/permissions` | Permission catalog list/create/delete (from Accounts) | `can_permissions` only |
 | `/<lang>/notify` | Recipients admin | `can_recips` |
 | `/<lang>/change_password` | Change password page | Logged-in (API pending) |
 | `/<lang>/reset_password/<token>` | Reset password | Public |

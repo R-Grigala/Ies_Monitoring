@@ -8,7 +8,7 @@
 | Accounts list/detail/update/delete | Implemented (`can_users`) |
 | Permission flags on profile (`can_users`, `can_recips`) | Implemented |
 | Service accounts (`services` + `service_permissions`) | Implemented (`/api/services`, `/services` UI) |
-| Permissions catalog REST (list/create/delete `/api/permissions`) | Implemented (`can_permissions` or `can_users`) |
+| Permissions catalog REST (list/create/delete `/api/permissions`) | Implemented (`can_permissions` only) |
 | Assign/revoke user permissions (`/api/accounts/<uuid>/permissions`) | Implemented |
 | Register with optional permission codes | Implemented |
 | Permission codes seeded | `can_users`, `can_permissions`, `can_recips`, `can_recips_read` |
@@ -300,7 +300,7 @@ DELETE /api/accounts/{uuid}
 - მომხმარებელზე მინიჭება: `GET/POST/DELETE /api/accounts/<uuid>/permissions`
 - რეგისტრაციაზე მინიჭება: `POST /api/auth/register` + optional `permission_codes`
 
-Required Permission (catalog): `can_permissions` ან `can_users`.
+Required Permission (catalog): `can_permissions` only.
 
 ### უფლებების სიის მიღება
 
