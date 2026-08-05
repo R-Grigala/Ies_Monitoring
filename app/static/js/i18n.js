@@ -7,7 +7,7 @@
             "nav.home": "Home",
             "nav.accounts": "Accounts",
             "nav.services": "Services",
-            "nav.notify": "Notify",
+            "nav.notify": "Notifications",
             "nav.login": "Login",
             "nav.logout": "Logout",
             "nav.brand": "IES Monitoring",
@@ -54,7 +54,7 @@
 
             "user.title": "Update Profile",
             "user.accounts": "Accounts",
-            "user.notify": "Notify",
+            "user.notify": "Notifications",
             "user.first_name": "First name:",
             "user.last_name": "Last name:",
             "user.change_password": "Change password",
