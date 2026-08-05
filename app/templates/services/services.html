@@ -20,7 +20,6 @@
                         type="button"
                         class="btn btn-primary"
                         id="addServiceButton"
-                        onclick="openRegisterServiceModal()"
                     >
                         <span data-i18n="services.add">Register service</span>
                     </button>
@@ -76,4 +75,5 @@
 
 {% block scripts %}
 <script type="text/javascript" src="{{ url_for('static', filename='js/services/services.js') }}" defer></script>
+<script type="text/javascript" src="{{ url_for('static', filename='js/services/registerService.js') }}" defer></script>
 {% endblock %}

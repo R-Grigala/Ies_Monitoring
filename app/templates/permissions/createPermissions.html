@@ -1,0 +1,79 @@
+<div class="modal fade" id="createPermissionModal" tabindex="-1" aria-labelledby="createPermissionModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-semibold" id="createPermissionModalLabel" data-i18n="permissions.create.title">
+                    Add permission
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body pt-2">
+                <div id="createPermissionAlertPlaceholder" class="mb-3"></div>
+                <p class="text-muted mb-4" data-i18n="permissions.create.subtitle">
+                    Create a new permission code for the catalog.
+                </p>
+
+                <form id="createPermissionForm" novalidate>
+                    <div class="mb-3">
+                        <label class="form-label" for="createPermissionCode" data-i18n="permissions.create.code">Code</label>
+                        <input
+                            type="text"
+                            class="form-control form-control-lg font-monospace"
+                            id="createPermissionCode"
+                            placeholder="can_events"
+                            data-i18n-placeholder="permissions.create.code_placeholder"
+                            autocomplete="off"
+                            required
+                        >
+                        <div class="form-text" data-i18n="permissions.create.code_hint">
+                            Lowercase letters, digits, underscores. Must start with a letter.
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label" for="createPermissionName" data-i18n="permissions.create.name">Name</label>
+                        <input
+                            type="text"
+                            class="form-control form-control-lg"
+                            id="createPermissionName"
+                            placeholder="Events Management"
+                            data-i18n-placeholder="permissions.create.name_placeholder"
+                            autocomplete="off"
+                            required
+                        >
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label" for="createPermissionDescription" data-i18n="permissions.create.description">
+                            Description
+                        </label>
+                        <textarea
+                            class="form-control form-control-lg"
+                            id="createPermissionDescription"
+                            rows="3"
+                            placeholder="Optional description"
+                            data-i18n-placeholder="permissions.create.description_placeholder"
+                        ></textarea>
+                    </div>
+
+                    <div class="d-grid d-md-flex justify-content-md-end gap-2 mt-4">
+                        <button
+                            type="button"
+                            class="btn btn-outline-secondary"
+                            data-bs-dismiss="modal"
+                            data-i18n="permissions.create.cancel"
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            type="submit"
+                            class="btn btn-primary"
+                            id="createPermissionSubmit"
+                            data-i18n="permissions.create.submit"
+                        >
+                            Create
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>

@@ -31,6 +31,10 @@ current_user_model = accounts_ns.inherit(
             required=False,
             example=True,
         ),
+        "can_permissions": fields.Boolean(
+            required=False,
+            example=True,
+        ),
         "can_recips": fields.Boolean(
             required=False,
             example=True,
