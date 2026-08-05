@@ -57,7 +57,7 @@ Password policy: min 12 chars, upper + lower + digit + special. Hashing: Werkzeu
 
 | Method | Path | Auth | Notes |
 |--------|------|------|--------|
-| GET | `/api/accounts/ourself` | JWT | Profile + flags `can_users`, `can_recips` |
+| GET | `/api/accounts/ourself` | JWT | Profile + flags `can_users`, `can_permissions`, `can_recips` |
 | PUT | `/api/accounts/ourself` | JWT | Own `first_name`, `last_name` |
 | GET | `/api/accounts/` | JWT/API key + `can_users` | `{ items, total }` |
 | GET | `/api/accounts/<uuid>` | JWT/API key + `can_users` | Single user |
@@ -159,9 +159,10 @@ Admin seed (`flask populate_db`):
 | Path | Purpose | Permission (navbar) |
 |------|---------|---------------------|
 | `/<lang>/login` | Login | Public |
-| `/<lang>/accounts` | Accounts admin (+ link to Services) | `can_users` |
+| `/<lang>/accounts` | Accounts admin (+ links to Services / Permissions) | `can_users` |
 | `/<lang>/registration` | Register new user (full page) | `can_users` (client-checked; API enforces) |
 | `/<lang>/services` | Service registration / delete (from Accounts) | `can_users` |
+| `/<lang>/permissions` | Permission catalog list/create/delete (from Accounts) | `can_permissions` or `can_users` |
 | `/<lang>/notify` | Recipients admin | `can_recips` |
 | `/<lang>/change_password` | Change password page | Logged-in (API pending) |
 | `/<lang>/reset_password/<token>` | Reset password | Public |

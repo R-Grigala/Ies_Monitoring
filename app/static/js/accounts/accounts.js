@@ -233,17 +233,22 @@ async function loadAccounts() {
 
     currentUserUuid = getCurrentUserUuidFromToken();
     setVisibleState("loading");
-    updateServicesAccessButton(false);
+    updateAccountsNavButtons({ canUsers: false, canPermissions: false });
 
     try {
-        const data = await window.makeApiRequest("/api/accounts/", { method: "GET" });
-        // Accounts list requires can_users — same gate as Services.
-        updateServicesAccessButton(true);
+        const [profile, data] = await Promise.all([
+            window.makeApiRequest("/api/accounts/ourself", { method: "GET" }),
+            window.makeApiRequest("/api/accounts/", { method: "GET" }),
+        ]);
+        updateAccountsNavButtons({
+            canUsers: Boolean(profile?.can_users),
+            canPermissions: Boolean(profile?.can_permissions || profile?.can_users),
+        });
         accountsData = Array.isArray(data.items) ? data.items : [];
         filterAccounts(currentSearchQuery);
     } catch (error) {
         setVisibleState("empty");
-        updateServicesAccessButton(false);
+        updateAccountsNavButtons({ canUsers: false, canPermissions: false });
         window.showAlert(
             "alertPlaceholder",
             "danger",
@@ -252,8 +257,11 @@ async function loadAccounts() {
     }
 }
 
-function updateServicesAccessButton(canAccess) {
-    document.getElementById("accountsServicesButton")?.classList.toggle("d-none", !canAccess);
+function updateAccountsNavButtons({ canUsers, canPermissions }) {
+    document.getElementById("accountsServicesButton")?.classList.toggle("d-none", !canUsers);
+    document
+        .getElementById("accountsPermissionsButton")
+        ?.classList.toggle("d-none", !canPermissions);
 }
 
 window.onAccountUpdated = onAccountUpdated;
