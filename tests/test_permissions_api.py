@@ -12,7 +12,7 @@ def test_list_permissions_forbidden_without_manage(client, user_auth_headers, pe
     assert response.status_code == 403
 
 
-def test_list_permissions_forbidden_with_only_can_users(client, permissions):
+def test_list_permissions_allowed_but_manage_forbidden_with_only_can_users(client, permissions):
     create_user(
         email="users.only@example.com",
         first_name="Users",
@@ -24,8 +24,10 @@ def test_list_permissions_forbidden_with_only_can_users(client, permissions):
     assert login_response.status_code == 200
     headers = auth_headers(login_response.get_json()["access_token"])
 
-    response = client.get("/api/permissions/", headers=headers)
-    assert response.status_code == 403
+    listed = client.get("/api/permissions/", headers=headers)
+    assert listed.status_code == 200
+    codes = {item["code"] for item in listed.get_json()["items"]}
+    assert "can_recips" in codes
 
     create = client.post(
         "/api/permissions/",
@@ -33,6 +35,9 @@ def test_list_permissions_forbidden_with_only_can_users(client, permissions):
         json={"code": "can_events", "name": "Events"},
     )
     assert create.status_code == 403
+
+    delete = client.delete("/api/permissions/can_recips", headers=headers)
+    assert delete.status_code == 403
 
 
 def test_list_permissions_success(client, admin_auth_headers, permissions):

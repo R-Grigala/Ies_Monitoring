@@ -41,7 +41,7 @@ Swagger UI: `http://localhost:5000/api/docs`
 
 | Method | Path | Auth | Notes |
 |--------|------|------|--------|
-| POST | `/api/auth/register` | JWT/API key + `can_users` | Admin creates users. Body: `first_name`, `last_name`, `email`, `password`, `passwordRepeat`, optional `permission_codes` / `permissions` (array of codes). Grants listed active permissions on create. Error `email_already_registered` if email exists |
+| POST | `/api/auth/register` | JWT/API key + `can_users` | Admin creates users. Body: `first_name`, `last_name`, `email`, `password`, `passwordRepeat`, optional `permission_codes` / `permissions`. Granting codes on create also requires **`can_permissions`**. Error `email_already_registered` if email exists |
 | POST | `/api/auth/login` | Public | `access_token`, `token_type`, `expires_in`. Refresh in HttpOnly cookie |
 | POST | `/api/auth/refresh` | Refresh cookie | Rotation + family revoke on reuse |
 | POST | `/api/auth/logout` | Optional | Revokes current session; clears cookies |
@@ -68,24 +68,26 @@ Password policy: min 12 chars, upper + lower + digit + special. Hashing: Werkzeu
 
 | Method | Path | Auth | Notes |
 |--------|------|------|--------|
-| GET | `/api/accounts/<uuid>/permissions` | same | User's active permissions |
-| POST | `/api/accounts/<uuid>/permissions` | same | Grant. Body: `permission_codes` and/or `permission_ids` (or `permissions` codes array). Soft history: re-grant creates new row |
-| DELETE | `/api/accounts/<uuid>/permissions/<code>` | same | Soft revoke (`degranted_at`). Cannot revoke own `can_users` / `can_permissions` |
+| GET | `/api/accounts/<uuid>/permissions` | JWT/API key + **`can_permissions`** | User's active permissions |
+| POST | `/api/accounts/<uuid>/permissions` | **`can_permissions`** | Grant. Body: `permission_codes` and/or `permission_ids` (or `permissions` codes array). Soft history: re-grant creates new row |
+| DELETE | `/api/accounts/<uuid>/permissions/<code>` | **`can_permissions`** | Soft revoke (`degranted_at`). Cannot revoke own `can_users` / `can_permissions` |
 
-GET `/api/accounts/<uuid>` also returns `permissions: ["can_recips", ...]` for active codes.
+GET `/api/accounts/<uuid>` also returns `permissions: ["can_recips", ...]` for active codes when the caller has `can_users`.
 
 ---
 
 ## Permissions catalog — `/api/permissions`
 
-Catalog management is separate from user assignment. **View and mutate** require `can_permissions` only (not `can_users`).
+Catalog management is separate from user assignment.
 
 | Method | Path | Auth | Notes |
 |--------|------|------|--------|
-| GET | `/api/permissions/` | JWT/API key + `can_permissions` | All permissions (active + inactive). `{ items, total }` |
-| POST | `/api/permissions/` | same | Create. Body: `code`, `name`, optional `description`. Re-activates soft-deleted same `code` (200). Conflict if active duplicate (409) |
-| GET | `/api/permissions/<code_or_id>` | same | Single permission by code or numeric id |
-| DELETE | `/api/permissions/<code_or_id>` | same | Hard delete if unassigned; otherwise soft-deactivate (`is_active=false`) while referenced |
+| GET | `/api/permissions/` | JWT/API key + `can_permissions` **or** `can_users` | Catalog list (assignment UI needs `can_permissions` to grant; list readable by `can_users` if needed). `{ items, total }` |
+| POST | `/api/permissions/` | JWT/API key + `can_permissions` | Create. Body: `code`, `name`, optional `description`. Re-activates soft-deleted same `code` (200). Conflict if active duplicate (409) |
+| GET | `/api/permissions/<code_or_id>` | `can_permissions` or `can_users` | Single permission by code or numeric id |
+| DELETE | `/api/permissions/<code_or_id>` | `can_permissions` | Hard delete if unassigned; otherwise soft-deactivate (`is_active=false`) while referenced |
+
+UI: `/permissions` page, catalog create/delete, and **user permission assignment** all require `can_permissions`. `can_users` alone can edit accounts but cannot grant/revoke codes.
 
 ---
 
@@ -125,8 +127,8 @@ Raw API key is shown only once at registration (`api_key_hash` is stored).
 
 | Code | Usage |
 |------|--------|
-| `can_users` | Register users, accounts admin, services admin UI/API |
-| `can_permissions` | Permission catalog view/CRUD; grant/revoke on accounts (or with `can_users`) |
+| `can_users` | Register users, accounts admin, services; read catalog list |
+| `can_permissions` | Permissions page, catalog create/delete, grant/revoke on users (and on register) |
 | `can_recips` | Full recipients write + Notify UI |
 | `can_recips_read` | Read-only recipients (typical for service API keys) |
 

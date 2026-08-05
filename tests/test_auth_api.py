@@ -93,6 +93,36 @@ def test_register_with_permission_codes(client, admin_auth_headers, permissions)
     assert codes == {"can_recips", "can_recips_read"}
 
 
+def test_register_permission_codes_require_can_permissions(client, permissions):
+    from tests.helpers import create_user
+
+    create_user(
+        email="users.only.reg@example.com",
+        first_name="Users",
+        last_name="Only",
+        password=VALID_PASSWORD,
+        permission_codes=["can_users"],
+    )
+    login_response = login(client, "users.only.reg@example.com", VALID_PASSWORD)
+    assert login_response.status_code == 200
+    headers = auth_headers(login_response.get_json()["access_token"])
+
+    response = client.post(
+        "/api/auth/register",
+        headers=headers,
+        json={
+            "first_name": "No",
+            "last_name": "Grant",
+            "email": "no.grant@example.com",
+            "password": VALID_PASSWORD,
+            "passwordRepeat": VALID_PASSWORD,
+            "permission_codes": ["can_recips"],
+        },
+    )
+    assert response.status_code == 403
+    assert response.get_json()["error"] == "forbidden"
+
+
 def test_register_unknown_permission_rejected(client, admin_auth_headers, permissions):
     response = client.post(
         "/api/auth/register",
