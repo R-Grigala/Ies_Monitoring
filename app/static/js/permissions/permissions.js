@@ -171,6 +171,19 @@ async function loadPermissions() {
         filterPermissions(currentSearchQuery);
     } catch (error) {
         setVisibleState("empty");
+        if (error?.status === 403 || error?.code === "forbidden") {
+            window.showAlert(
+                "alertPlaceholder",
+                "danger",
+                t(
+                    "permissions.error.forbidden",
+                    "You do not have permission to manage the catalog."
+                )
+            );
+            const i18n = window.I18n;
+            window.location.href = i18n ? i18n.localizePath("/accounts") : "/accounts";
+            return;
+        }
         window.showAlert(
             "alertPlaceholder",
             "danger",
@@ -179,10 +192,53 @@ async function loadPermissions() {
     }
 }
 
+function accountsPath() {
+    const i18n = window.I18n;
+    return i18n ? i18n.localizePath("/accounts") : "/accounts";
+}
+
+function loginPath() {
+    const i18n = window.I18n;
+    return i18n ? i18n.localizePath("/login") : "/login";
+}
+
+async function ensureCanPermissions() {
+    const token = localStorage.getItem("access_token");
+    if (!token || window.isTokenExpired?.(token)) {
+        window.location.href = loginPath();
+        return false;
+    }
+
+    try {
+        const user = await window.makeApiRequest("/api/accounts/ourself", { method: "GET" });
+        if (!user?.can_permissions) {
+            window.showAlert(
+                "alertPlaceholder",
+                "danger",
+                t(
+                    "permissions.error.forbidden",
+                    "You do not have permission to manage the catalog."
+                )
+            );
+            window.location.href = accountsPath();
+            return false;
+        }
+        return true;
+    } catch (_error) {
+        window.location.href = loginPath();
+        return false;
+    }
+}
+
 window.onPermissionCreated = onPermissionCreated;
 window.reloadPermissionsList = loadPermissions;
 
-document.addEventListener("DOMContentLoaded", () => {
+document.addEventListener("DOMContentLoaded", async () => {
+    const allowed = await ensureCanPermissions();
+    if (!allowed) {
+        return;
+    }
+
     document.getElementById("permissionsSearch")?.addEventListener("input", (event) => {
         filterPermissions(event.target.value);
     });

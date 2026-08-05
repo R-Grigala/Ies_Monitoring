@@ -242,7 +242,7 @@ async function loadAccounts() {
         ]);
         updateAccountsNavButtons({
             canUsers: Boolean(profile?.can_users),
-            canPermissions: Boolean(profile?.can_permissions || profile?.can_users),
+            canPermissions: Boolean(profile?.can_permissions),
         });
         accountsData = Array.isArray(data.items) ? data.items : [];
         filterAccounts(currentSearchQuery);

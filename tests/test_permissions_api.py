@@ -1,4 +1,5 @@
 from app.models import Permission
+from tests.helpers import VALID_PASSWORD, auth_headers, create_user, login
 
 
 def test_list_permissions_requires_auth(client, permissions):
@@ -9,6 +10,29 @@ def test_list_permissions_requires_auth(client, permissions):
 def test_list_permissions_forbidden_without_manage(client, user_auth_headers, permissions):
     response = client.get("/api/permissions/", headers=user_auth_headers)
     assert response.status_code == 403
+
+
+def test_list_permissions_forbidden_with_only_can_users(client, permissions):
+    create_user(
+        email="users.only@example.com",
+        first_name="Users",
+        last_name="Only",
+        password=VALID_PASSWORD,
+        permission_codes=["can_users"],
+    )
+    login_response = login(client, "users.only@example.com", VALID_PASSWORD)
+    assert login_response.status_code == 200
+    headers = auth_headers(login_response.get_json()["access_token"])
+
+    response = client.get("/api/permissions/", headers=headers)
+    assert response.status_code == 403
+
+    create = client.post(
+        "/api/permissions/",
+        headers=headers,
+        json={"code": "can_events", "name": "Events"},
+    )
+    assert create.status_code == 403
 
 
 def test_list_permissions_success(client, admin_auth_headers, permissions):
