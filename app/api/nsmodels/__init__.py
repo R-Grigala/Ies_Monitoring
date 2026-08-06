@@ -58,3 +58,22 @@ from app.api.nsmodels.services import (
     error_model as service_error_model,
     JWT_OR_API_KEY,
 )
+from app.api.nsmodels.seismic_events import (
+    seismic_events_ns,
+    seismic_event_model,
+    seismic_event_list_response_model,
+    seismic_event_response_model,
+    event_magnitude_model,
+    event_magnitude_response_model,
+    event_beachball_model,
+    event_beachball_response_model,
+    magnitude_catalog_list_response_model,
+    message_response_model as seismic_message_response_model,
+    error_model as seismic_error_model,
+    seismic_event_create_parser,
+    seismic_event_update_parser,
+    event_magnitude_create_parser,
+    event_magnitude_update_parser,
+    event_beachball_parser,
+    JWT_OR_API_KEY as SEISMIC_JWT_OR_API_KEY,
+)

@@ -23,3 +23,11 @@ from app.api.recips import (
     RecipNumbersApi,
     RecipNumberDetailApi,
 )
+from app.api.seismic_events import (
+    MagnitudeCatalogApi,
+    SeismicEventsApi,
+    SeismicEventDetailApi,
+    EventMagnitudesApi,
+    EventMagnitudeDetailApi,
+    EventBeachballApi,
+)

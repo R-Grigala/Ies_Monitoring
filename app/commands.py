@@ -3,7 +3,7 @@ from flask import current_app
 import click
 
 from app.extensions import db
-from app.models import User, Permission, UserPermission
+from app.models import User, Permission, UserPermission, Magnitude
 
 # --- Core logic (გამოსაყენებელი როგორც CLI-დან, ისე ტესტებიდან) ---
 
@@ -47,6 +47,24 @@ def _ensure_permission(code, name, description):
         click.echo(f"Permission already exists: {code}")
     return permission
 
+
+def _ensure_magnitude(code, description):
+    """Create or update a magnitude catalog entry by code."""
+    magnitude = Magnitude.query.filter_by(code=code).first()
+    if not magnitude:
+        magnitude = Magnitude(code=code, description=description)
+        magnitude.create()
+        click.echo(f"Created magnitude: {code}")
+        return magnitude
+
+    if magnitude.description != description:
+        magnitude.description = description
+        magnitude.save()
+        click.echo(f"Updated magnitude description: {code}")
+    else:
+        click.echo(f"Magnitude already exists: {code}")
+    return magnitude
+
 def populate_db_core():
     click.echo("Ensuring permissions exist...")
     seed_permissions = [
@@ -70,11 +88,66 @@ def populate_db_core():
             "Recips Read-Only",
             "Read recipients list and details (for service API keys).",
         ),
+        (
+            "can_events",
+            "Seismic Events Management",
+            "Create, update, and delete seismic events, magnitudes, and beachballs.",
+        ),
     ]
     permissions = [
         _ensure_permission(code, name, description)
         for code, name, description in seed_permissions
     ]
+
+    click.echo("Ensuring magnitude catalog exists...")
+    seed_magnitudes = [
+        (
+            "ML",
+            "Local Magnitude – Used for nearby earthquakes; the traditional Richter-scale magnitude.",
+        ),
+        (
+            "MB",
+            "Body-wave Magnitude – Calculated from the amplitude of body (P) waves.",
+        ),
+        (
+            "MS",
+            "Surface-wave Magnitude – Calculated from the amplitude of long-period surface waves.",
+        ),
+        (
+            "MD",
+            "Duration Magnitude – Estimated from the duration of the recorded seismic signal.",
+        ),
+        (
+            "MW",
+            "Moment Magnitude – Calculated from the seismic moment; the modern standard for measuring earthquake size.",
+        ),
+        (
+            "K",
+            "Energy Class – Logarithmic measure of earthquake energy, used mainly in former Soviet and Eastern European seismic networks.",
+        ),
+        (
+            "MPV",
+            "Peak Velocity Magnitude – Magnitude estimated from peak ground velocity measurements.",
+        ),
+        (
+            "MLH",
+            "Horizontal Local Magnitude – Local magnitude calculated using the horizontal components of seismic recordings.",
+        ),
+        (
+            "MC",
+            "Coda Magnitude – Magnitude calculated from the duration of the seismic coda (the tail of the seismic signal).",
+        ),
+        (
+            "MLV",
+            "Vertical Local Magnitude – Local magnitude calculated using the vertical component of seismic recordings.",
+        ),
+        (
+            "M",
+            "Generic Magnitude – Generic magnitude designation used when the specific magnitude scale is unknown or unspecified.",
+        ),
+    ]
+    for code, description in seed_magnitudes:
+        _ensure_magnitude(code, description)
 
     click.echo("Ensuring admin user exists...")
     admin_email = "roma.grigalashvili@iliauni.edu.ge"
