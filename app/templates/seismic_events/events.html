@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+
+{% block title %}
+    IES Monitoring | Events
+{% endblock %}
+
+{% block head %}
+<link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+    crossorigin=""
+/>
+{% endblock %}
+
+{% block main_container_class %}container-fluid container-lg h-100 px-2 px-md-3{% endblock %}
+
+{% block body %}
+<div class="py-2">
+    <div class="row g-2 align-items-stretch">
+        <div class="col-12 col-xl-4 d-flex">
+            {% include "seismic_events/filterEvent.html" %}
+        </div>
+        <div class="col-12 col-xl-8 d-flex">
+            <div id="mapDiv" class="card h-100 w-100 events-map-card border-0 shadow-sm">
+                <div id="map"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="d-flex justify-content-end bg-white border rounded-3 shadow-sm p-2 mb-2">
+    <button
+        type="button"
+        id="btnCreateEvent"
+        class="btn btn-sm btn-primary d-none"
+        data-i18n="events.add"
+    >
+        Add Earthquake
+    </button>
+</div>
+
+<div class="card border-0 shadow-sm mb-3">
+    <div class="card-header bg-white fw-semibold" data-i18n="events.list.title">Earthquake List</div>
+    <div class="card-body">
+        <div id="eventsStatus" class="text-muted mb-3" data-i18n="events.loading">Loading...</div>
+        <div class="table-responsive events-table-scroll">
+            <table class="table table-sm table-hover align-middle mb-0 text-nowrap text-center events-table">
+                <thead class="table-light">
+                    <tr>
+                        <th id="eventsActionHeader" data-i18n="events.table.actions">Action</th>
+                        <th data-i18n="events.table.id">Event ID</th>
+                        <th data-i18n="events.table.seiscomp_oid">SeisComP OID</th>
+                        <th data-i18n="events.table.time">Earthquake Time</th>
+                        <th data-i18n="events.table.ml">Magnitude (ML)</th>
+                        <th data-i18n="events.table.depth_km">Depth (km)</th>
+                        <th data-i18n="events.table.latitude">Latitude</th>
+                        <th data-i18n="events.table.longitude">Longitude</th>
+                        <th data-i18n="events.table.location">Location</th>
+                    </tr>
+                </thead>
+                <tbody id="eventsTableBody"></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+{% include "seismic_events/createEvent.html" %}
+{% include "seismic_events/editEvent.html" %}
+{% endblock %}
+
+{% block scripts %}
+<script
+    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+    crossorigin=""
+></script>
+<script src="{{ url_for('static', filename='js/seismic_events/map.js') }}"></script>
+<script src="{{ url_for('static', filename='js/seismic_events/eventDetail.js') }}" defer></script>
+<script src="{{ url_for('static', filename='js/seismic_events/events.js') }}" defer></script>
+<script src="{{ url_for('static', filename='js/seismic_events/filterEvent.js') }}" defer></script>
+<script src="{{ url_for('static', filename='js/seismic_events/createEvent.js') }}" defer></script>
+<script src="{{ url_for('static', filename='js/seismic_events/editEvent.js') }}" defer></script>
+<script src="{{ url_for('static', filename='js/seismic_events/deleteEvent.js') }}" defer></script>
+{% endblock %}

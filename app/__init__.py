@@ -8,6 +8,7 @@ from app.views import (
     notify_blueprint,
     services_blueprint,
     permissions_blueprint,
+    seismic_events_blueprint,
 )
 from app.extensions import db, migrate, jwt, api as restx_api
 from app.logger import configure_logging
@@ -20,6 +21,7 @@ BLUEPRINTS = [
     notify_blueprint,
     services_blueprint,
     permissions_blueprint,
+    seismic_events_blueprint,
 ]
 COMMANDS = [init_db, populate_db]
 SUPPORTED_LANGS = {"en", "ka"}
