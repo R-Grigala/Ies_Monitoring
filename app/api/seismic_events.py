@@ -1,6 +1,7 @@
 import logging
 
 from flask_restx import Resource, marshal
+from sqlalchemy import or_
 from sqlalchemy.exc import IntegrityError
 
 from app.extensions import db
@@ -19,6 +20,7 @@ from app.api.nsmodels.seismic_events import (
     error_model,
     seismic_event_create_parser,
     seismic_event_update_parser,
+    seismic_event_filter_parser,
     event_magnitude_create_parser,
     event_magnitude_update_parser,
     event_beachball_parser,
@@ -110,6 +112,132 @@ def _apply_event_fields(event, payload, *, creating=False):
                 event.__setattr__(field, None)
 
     return None
+
+
+def _build_filtered_events_query(payload):
+    """Build a SeismicEvent query from optional filter args. Returns (query, error_tuple)."""
+    event_id = payload.get("event_id")
+    iesdata_id = _optional_str(payload.get("iesdata_id"))
+    seiscomp_oid = _optional_str(payload.get("seiscomp_oid"))
+    location = _optional_str(payload.get("location"))
+    area = _optional_str(payload.get("area"))
+    magnitude_code = _optional_str(payload.get("magnitude"))
+    magnitude_min = payload.get("magnitude_min")
+    magnitude_max = payload.get("magnitude_max")
+    depth_min = payload.get("depth_min")
+    depth_max = payload.get("depth_max")
+    date_from = payload.get("date_from")
+    date_to = payload.get("date_to")
+
+    if magnitude_min is not None and magnitude_max is not None and magnitude_min > magnitude_max:
+        return None, (
+            {
+                "error": "validation_error",
+                "message": "magnitude_min cannot be greater than magnitude_max.",
+            },
+            400,
+        )
+    if depth_min is not None and depth_max is not None and depth_min > depth_max:
+        return None, (
+            {
+                "error": "validation_error",
+                "message": "depth_min cannot be greater than depth_max.",
+            },
+            400,
+        )
+    if date_from is not None and date_to is not None and date_from > date_to:
+        return None, (
+            {
+                "error": "validation_error",
+                "message": "date_from cannot be after date_to.",
+            },
+            400,
+        )
+
+    query = SeismicEvent.query
+
+    if event_id is not None:
+        query = query.filter(SeismicEvent.id == event_id)
+
+    if iesdata_id is not None:
+        query = query.filter(SeismicEvent.iesdata_id.ilike(f"%{iesdata_id}%"))
+
+    if seiscomp_oid is not None:
+        query = query.filter(SeismicEvent.seiscomp_oid.ilike(f"%{seiscomp_oid}%"))
+
+    if location is not None:
+        pattern = f"%{location}%"
+        query = query.filter(
+            or_(
+                SeismicEvent.location_en.ilike(pattern),
+                SeismicEvent.location_ge.ilike(pattern),
+            )
+        )
+
+    if area is not None:
+        query = query.filter(SeismicEvent.area.ilike(f"%{area}%"))
+
+    if depth_min is not None:
+        query = query.filter(SeismicEvent.depth >= depth_min)
+    if depth_max is not None:
+        query = query.filter(SeismicEvent.depth <= depth_max)
+
+    if date_from is not None:
+        query = query.filter(SeismicEvent.origin_time >= date_from)
+    if date_to is not None:
+        query = query.filter(SeismicEvent.origin_time <= date_to)
+
+    needs_magnitude_join = (
+        magnitude_code is not None
+        or magnitude_min is not None
+        or magnitude_max is not None
+    )
+    if needs_magnitude_join:
+        query = query.join(EventMagnitude, EventMagnitude.event_id == SeismicEvent.id)
+        if magnitude_code is not None:
+            code = magnitude_code.upper()
+            magnitude = Magnitude.query.filter_by(code=code).first()
+            if not magnitude:
+                return None, (
+                    {
+                        "error": "not_found",
+                        "message": f"Magnitude catalog entry not found for code: {code}",
+                    },
+                    404,
+                )
+            query = query.filter(EventMagnitude.magnitude_id == magnitude.id)
+        if magnitude_min is not None:
+            query = query.filter(EventMagnitude.value >= magnitude_min)
+        if magnitude_max is not None:
+            query = query.filter(EventMagnitude.value <= magnitude_max)
+        query = query.distinct()
+
+    return query.order_by(SeismicEvent.origin_time.desc()), None
+
+
+@seismic_events_ns.route("/filter")
+class SeismicEventsFilterApi(Resource):
+    @seismic_events_ns.doc(security=JWT_OR_API_KEY)
+    @seismic_events_ns.expect(seismic_event_filter_parser)
+    @seismic_events_ns.response(200, "Success", seismic_event_list_response_model)
+    @seismic_events_ns.response(400, "Validation Error", error_model)
+    @seismic_events_ns.response(401, "Unauthorized", error_model)
+    @seismic_events_ns.response(403, "Forbidden", error_model)
+    @seismic_events_ns.response(404, "Not Found", error_model)
+    def get(self):
+        """Filter seismic events (requires can_events). All query params are optional."""
+        denied = _require_can_events()
+        if denied:
+            return denied
+
+        payload = seismic_event_filter_parser.parse_args()
+        query, error = _build_filtered_events_query(payload)
+        if error:
+            return error
+
+        items = query.all()
+        response = {"items": [item.to_dict() for item in items], "total": len(items)}
+        return marshal(response, seismic_event_list_response_model), 200
 
 
 @seismic_events_ns.route("/magnitude_types")
