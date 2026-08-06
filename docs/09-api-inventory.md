@@ -15,13 +15,14 @@ Swagger UI: `http://localhost:5000/api/docs`
 | Accounts (profile + user admin) | Implemented |
 | Service accounts + API keys (`/api/services`) | Implemented |
 | Recipients (`/api/recips`) | Implemented |
+| Seismic Events (`/api/seismic_events`) | Implemented |
 | Permissions models + seed + runtime checks | Implemented |
 | Permissions REST catalog (list/create/delete) | Implemented |
 | User permission grant/revoke on accounts | Implemented |
 | Register with optional permissions | Implemented |
 | `PUT /api/auth/change_password` | Planned (UI page exists) |
 | `GET /api/health` | Planned |
-| Earthquakes table / SeisComP / Push / Redis / Celery | Planned |
+| SeisComP ingest / Push / Redis / Celery | Planned |
 
 ---
 
@@ -57,7 +58,7 @@ Password policy: min 12 chars, upper + lower + digit + special. Hashing: Werkzeu
 
 | Method | Path | Auth | Notes |
 |--------|------|------|--------|
-| GET | `/api/accounts/ourself` | JWT | Profile + flags `can_users`, `can_permissions`, `can_recips` |
+| GET | `/api/accounts/ourself` | JWT | Profile + flags `can_users`, `can_permissions`, `can_recips`, `can_events` |
 | PUT | `/api/accounts/ourself` | JWT | Own `first_name`, `last_name` |
 | GET | `/api/accounts/` | JWT/API key + `can_users` | `{ items, total }` |
 | GET | `/api/accounts/<uuid>` | JWT/API key + `can_users` | Single user |
@@ -123,6 +124,28 @@ Raw API key is shown only once at registration (`api_key_hash` is stored).
 
 ---
 
+## Seismic Events — `/api/seismic_events`
+
+Requires JWT or API key with **`can_events`**.
+
+| Method | Path | Auth | Notes |
+|--------|------|------|--------|
+| GET | `/api/seismic_events/` | `can_events` | List events with nested magnitudes + beachball |
+| POST | `/api/seismic_events/` | `can_events` | Create. Required: `origin_time`, `latitude`, `longitude`. Optional: `depth`, `iesdata_id`, `seiscomp_oid`, `location_ge`, `location_en`, `area` |
+| GET | `/api/seismic_events/<id>` | `can_events` | Detail |
+| PUT | `/api/seismic_events/<id>` | `can_events` | Update fields |
+| DELETE | `/api/seismic_events/<id>` | `can_events` | Delete event + cascade magnitudes/beachball |
+| GET | `/api/seismic_events/magnitude_types` | `can_events` | Magnitude catalog (ML, MW, …) |
+| POST | `/api/seismic_events/<id>/magnitudes` | `can_events` | Add magnitude. Required: `value` + (`magnitude_id` or `magnitude_code`) |
+| PUT | `/api/seismic_events/magnitudes/<em_id>` | `can_events` | Update value and/or magnitude type |
+| DELETE | `/api/seismic_events/magnitudes/<em_id>` | `can_events` | Remove magnitude from event |
+| GET | `/api/seismic_events/<id>/beachball` | `can_events` | Get beachball (404 if none) |
+| POST | `/api/seismic_events/<id>/beachball` | `can_events` | Create beachball (one per event; 409 if exists) |
+| PUT | `/api/seismic_events/<id>/beachball` | `can_events` | Update `rake` / `dip` / `strike` / `beachball_path` |
+| DELETE | `/api/seismic_events/<id>/beachball` | `can_events` | Remove beachball |
+
+---
+
 ## Seeded permissions
 
 | Code | Usage |
@@ -131,12 +154,14 @@ Raw API key is shown only once at registration (`api_key_hash` is stored).
 | `can_permissions` | Permissions page, catalog create/delete, grant/revoke on users (and on register) |
 | `can_recips` | Full recipients write + Notify UI |
 | `can_recips_read` | Read-only recipients (typical for service API keys) |
+| `can_events` | Seismic events, event magnitudes, beachballs |
 
 Admin seed (`flask populate_db`):
 
 - email: `roma.grigalashvili@iliauni.edu.ge`
 - password: `PASSWORD` (change before production)
-- all four permissions assigned
+- all seeded permissions assigned (including `can_events`)
+- magnitude catalog: ML, MB, MS, MD, MW, K, MPV, MLH, MC, MLV, M
 
 ---
 
@@ -153,6 +178,10 @@ Admin seed (`flask populate_db`):
 | `recips` | Notification recipients |
 | `recip_emails` | Recipient emails |
 | `recip_numbers` | Recipient phones |
+| `seismic_events` | Earthquake events |
+| `magnitudes` | Magnitude type catalog |
+| `event_magnitudes` | Event ↔ magnitude values |
+| `event_beachball` | Focal mechanism / beachball (0..1 per event) |
 
 ---
 
@@ -165,6 +194,7 @@ Admin seed (`flask populate_db`):
 | `/<lang>/registration` | Register new user (full page) | `can_users` (client-checked; API enforces) |
 | `/<lang>/services` | Service registration / delete (from Accounts) | `can_users` |
 | `/<lang>/permissions` | Permission catalog list/create/delete (from Accounts) | `can_permissions` only |
+| `/<lang>/seismic_events` | Seismic events list + edit/delete detail | `can_events` |
 | `/<lang>/notify` | Recipients admin | `can_recips` |
 | `/<lang>/change_password` | Change password page | Logged-in (API pending) |
 | `/<lang>/reset_password/<token>` | Reset password | Public |
@@ -185,3 +215,4 @@ UI strings: EN/KA via `app/static/js/i18n.js`.
 | Accounts | `app/api/accounts.py`, `app/api/nsmodels/accounts.py` |
 | Services | `app/api/services.py`, `app/api/nsmodels/services.py` |
 | Recips | `app/api/recips.py`, `app/api/nsmodels/recips.py` |
+| Seismic Events | `app/api/seismic_events.py`, `app/api/nsmodels/seismic_events.py` |

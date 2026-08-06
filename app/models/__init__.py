@@ -7,6 +7,10 @@ from app.models.recip_emails import RecipEmail
 from app.models.recip_numbers import RecipNumber
 from app.models.services import Service
 from app.models.service_permissions import ServicePermission
+from app.models.seismic_events import SeismicEvent
+from app.models.magnitudes import Magnitude
+from app.models.event_magnitudes import EventMagnitude
+from app.models.event_beachball import EventBeachball
 
 __all__ = [
     "User",
@@ -18,4 +22,8 @@ __all__ = [
     "RecipNumber",
     "Service",
     "ServicePermission",
+    "SeismicEvent",
+    "Magnitude",
+    "EventMagnitude",
+    "EventBeachball",
 ]

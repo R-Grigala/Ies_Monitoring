@@ -11,6 +11,7 @@ PERMISSIONS = (
     ("can_permissions", "Permissions Management", "Manage and assign permissions."),
     ("can_recips", "Recips Management", "Manage notification recipients."),
     ("can_recips_read", "Recips Read-Only", "Read recipients list and details."),
+    ("can_events", "Seismic Events Management", "Manage seismic events, magnitudes, and beachballs."),
 )
 
 

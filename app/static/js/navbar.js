@@ -65,6 +65,14 @@ document.addEventListener("DOMContentLoaded", async function () {
                     i18n ? i18n.t("nav.notify", "Notify") : "Notify"
                 );
             }
+
+            if (user?.can_events) {
+                appendNavLink(
+                    navLinksStart,
+                    i18n ? i18n.localizePath("/seismic_events") : "/seismic_events",
+                    i18n ? i18n.t("nav.events", "Events") : "Events"
+                );
+            }
         } catch (error) {
             console.error("Failed to load navbar permissions:", error);
         }

@@ -171,6 +171,7 @@ class CurrentUserApi(Resource):
         user_data["can_users"] = user.check_permission("can_users")
         user_data["can_permissions"] = user.check_permission("can_permissions")
         user_data["can_recips"] = user.check_permission("can_recips")
+        user_data["can_events"] = user.check_permission("can_events")
         return user_data
 
     @jwt_required()

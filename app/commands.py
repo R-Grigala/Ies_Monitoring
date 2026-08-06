@@ -2,8 +2,17 @@ from flask.cli import with_appcontext
 from flask import current_app
 import click
 
+from datetime import datetime, timezone
+
 from app.extensions import db
-from app.models import User, Permission, UserPermission
+from app.models import (
+    User,
+    Permission,
+    UserPermission,
+    Magnitude,
+    SeismicEvent,
+    EventMagnitude,
+)
 
 # --- Core logic (გამოსაყენებელი როგორც CLI-დან, ისე ტესტებიდან) ---
 
@@ -47,6 +56,24 @@ def _ensure_permission(code, name, description):
         click.echo(f"Permission already exists: {code}")
     return permission
 
+
+def _ensure_magnitude(code, description):
+    """Create or update a magnitude catalog entry by code."""
+    magnitude = Magnitude.query.filter_by(code=code).first()
+    if not magnitude:
+        magnitude = Magnitude(code=code, description=description)
+        magnitude.create()
+        click.echo(f"Created magnitude: {code}")
+        return magnitude
+
+    if magnitude.description != description:
+        magnitude.description = description
+        magnitude.save()
+        click.echo(f"Updated magnitude description: {code}")
+    else:
+        click.echo(f"Magnitude already exists: {code}")
+    return magnitude
+
 def populate_db_core():
     click.echo("Ensuring permissions exist...")
     seed_permissions = [
@@ -70,11 +97,66 @@ def populate_db_core():
             "Recips Read-Only",
             "Read recipients list and details (for service API keys).",
         ),
+        (
+            "can_events",
+            "Seismic Events Management",
+            "Create, update, and delete seismic events, magnitudes, and beachballs.",
+        ),
     ]
     permissions = [
         _ensure_permission(code, name, description)
         for code, name, description in seed_permissions
     ]
+
+    click.echo("Ensuring magnitude catalog exists...")
+    seed_magnitudes = [
+        (
+            "ML",
+            "Local Magnitude – Used for nearby earthquakes; the traditional Richter-scale magnitude.",
+        ),
+        (
+            "MB",
+            "Body-wave Magnitude – Calculated from the amplitude of body (P) waves.",
+        ),
+        (
+            "MS",
+            "Surface-wave Magnitude – Calculated from the amplitude of long-period surface waves.",
+        ),
+        (
+            "MD",
+            "Duration Magnitude – Estimated from the duration of the recorded seismic signal.",
+        ),
+        (
+            "MW",
+            "Moment Magnitude – Calculated from the seismic moment; the modern standard for measuring earthquake size.",
+        ),
+        (
+            "K",
+            "Energy Class – Logarithmic measure of earthquake energy, used mainly in former Soviet and Eastern European seismic networks.",
+        ),
+        (
+            "MPV",
+            "Peak Velocity Magnitude – Magnitude estimated from peak ground velocity measurements.",
+        ),
+        (
+            "MLH",
+            "Horizontal Local Magnitude – Local magnitude calculated using the horizontal components of seismic recordings.",
+        ),
+        (
+            "MC",
+            "Coda Magnitude – Magnitude calculated from the duration of the seismic coda (the tail of the seismic signal).",
+        ),
+        (
+            "MLV",
+            "Vertical Local Magnitude – Local magnitude calculated using the vertical component of seismic recordings.",
+        ),
+        (
+            "M",
+            "Generic Magnitude – Generic magnitude designation used when the specific magnitude scale is unknown or unspecified.",
+        ),
+    ]
+    for code, description in seed_magnitudes:
+        _ensure_magnitude(code, description)
 
     click.echo("Ensuring admin user exists...")
     admin_email = "roma.grigalashvili@iliauni.edu.ge"
@@ -110,6 +192,42 @@ def populate_db_core():
             click.echo(f"Assigned {permission.code} to admin user.")
         else:
             click.echo(f"Permission already assigned to admin user: {permission.code}")
+
+    click.echo("Ensuring sample seismic event exists...")
+    sample_oid = "Origin/TEST.20260806.120000.01"
+    sample_event = SeismicEvent.query.filter_by(seiscomp_oid=sample_oid).first()
+    if not sample_event:
+        sample_event = SeismicEvent(
+            iesdata_id="IES-TEST-0001",
+            seiscomp_oid=sample_oid,
+            origin_time=datetime(2026, 8, 6, 12, 0, 0, tzinfo=timezone.utc),
+            latitude=41.7151,
+            longitude=44.8271,
+            depth=10.5,
+            location_ge="თბილისის მახლობლად",
+            location_en="Near Tbilisi",
+            area="Georgia",
+        )
+        sample_event.create()
+        click.echo(f"Created sample seismic event: {sample_oid}")
+    else:
+        click.echo(f"Sample seismic event already exists: {sample_oid}")
+
+    ml_magnitude = Magnitude.query.filter_by(code="ML").first()
+    if ml_magnitude and sample_event:
+        existing_ml = EventMagnitude.query.filter_by(
+            event_id=sample_event.id,
+            magnitude_id=ml_magnitude.id,
+        ).first()
+        if not existing_ml:
+            EventMagnitude(
+                event_id=sample_event.id,
+                magnitude_id=ml_magnitude.id,
+                value=3.4,
+            ).create()
+            click.echo("Assigned sample ML magnitude 3.4 to test event.")
+        else:
+            click.echo("Sample ML magnitude already assigned to test event.")
 
     User.save()
 
