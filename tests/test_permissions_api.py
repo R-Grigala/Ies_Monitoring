@@ -32,7 +32,7 @@ def test_list_permissions_allowed_but_manage_forbidden_with_only_can_users(clien
     create = client.post(
         "/api/permissions/",
         headers=headers,
-        json={"code": "can_events", "name": "Events"},
+        json={"code": "can_reports", "name": "Reports"},
     )
     assert create.status_code == 403
 
@@ -55,14 +55,14 @@ def test_create_permission_success(client, admin_auth_headers, permissions):
         "/api/permissions/",
         headers=admin_auth_headers,
         json={
-            "code": "can_events",
-            "name": "Events Management",
-            "description": "Manage event catalog.",
+            "code": "can_reports",
+            "name": "Reports Management",
+            "description": "Manage reports.",
         },
     )
     assert response.status_code == 201
     data = response.get_json()
-    assert data["permission"]["code"] == "can_events"
+    assert data["permission"]["code"] == "can_reports"
     assert data["permission"]["is_active"] is True
 
 

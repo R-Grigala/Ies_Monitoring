@@ -88,6 +88,11 @@ def populate_db_core():
             "Recips Read-Only",
             "Read recipients list and details (for service API keys).",
         ),
+        (
+            "can_events",
+            "Seismic Events Management",
+            "Create, update, and delete seismic events, magnitudes, and beachballs.",
+        ),
     ]
     permissions = [
         _ensure_permission(code, name, description)
