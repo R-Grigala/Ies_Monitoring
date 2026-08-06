@@ -1,0 +1,117 @@
+<div class="modal fade" id="editEventModal" tabindex="-1" aria-labelledby="editEventModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-lg">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-semibold" id="editEventModalLabel" data-i18n="events.edit.title">
+                    Event details
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body pt-2">
+                <div id="editEventAlertPlaceholder" class="mb-3"></div>
+
+                <form id="editEventForm" novalidate>
+                    <input type="hidden" id="editEventId">
+
+                    <div class="row g-3">
+                        <div class="col-12 col-md-6">
+                            <label class="form-label" for="editEventOriginTime" data-i18n="events.edit.origin_time">
+                                Origin time
+                            </label>
+                            <input
+                                type="datetime-local"
+                                class="form-control form-control-lg"
+                                id="editEventOriginTime"
+                                step="1"
+                                required
+                            >
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <label class="form-label" for="editEventDepth" data-i18n="events.edit.depth">
+                                Depth (km)
+                            </label>
+                            <input type="number" class="form-control form-control-lg" id="editEventDepth" step="any">
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <label class="form-label" for="editEventLatitude" data-i18n="events.edit.latitude">
+                                Latitude
+                            </label>
+                            <input type="number" class="form-control form-control-lg" id="editEventLatitude" step="any" required>
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <label class="form-label" for="editEventLongitude" data-i18n="events.edit.longitude">
+                                Longitude
+                            </label>
+                            <input type="number" class="form-control form-control-lg" id="editEventLongitude" step="any" required>
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <label class="form-label" for="editEventLocationGe" data-i18n="events.edit.location_ge">
+                                Location (GE)
+                            </label>
+                            <input type="text" class="form-control form-control-lg" id="editEventLocationGe">
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <label class="form-label" for="editEventLocationEn" data-i18n="events.edit.location_en">
+                                Location (EN)
+                            </label>
+                            <input type="text" class="form-control form-control-lg" id="editEventLocationEn">
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label" for="editEventArea" data-i18n="events.edit.area">Area</label>
+                            <input type="text" class="form-control form-control-lg" id="editEventArea">
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <label class="form-label" for="editEventIesdataId" data-i18n="events.edit.iesdata_id">
+                                IES data ID
+                            </label>
+                            <input type="text" class="form-control form-control-lg font-monospace" id="editEventIesdataId">
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <label class="form-label" for="editEventSeiscompOid" data-i18n="events.edit.seiscomp_oid">
+                                SeisComP OID
+                            </label>
+                            <input type="text" class="form-control form-control-lg font-monospace" id="editEventSeiscompOid">
+                        </div>
+                        <div class="col-12">
+                            <div class="form-label fw-semibold" data-i18n="events.edit.magnitudes">Magnitudes</div>
+                            <div id="editEventMagnitudes" class="d-flex flex-wrap gap-2"></div>
+                        </div>
+                        <div class="col-12">
+                            <div class="form-label fw-semibold" data-i18n="events.edit.beachball">Beachball</div>
+                            <div id="editEventBeachball" class="small text-muted"></div>
+                        </div>
+                    </div>
+
+                    <div class="d-flex flex-column flex-md-row justify-content-between gap-2 mt-4">
+                        <button
+                            type="button"
+                            class="btn btn-outline-danger"
+                            id="editEventDelete"
+                            data-i18n="events.edit.delete"
+                        >
+                            Delete
+                        </button>
+                        <div class="d-grid d-md-flex gap-2">
+                            <button
+                                type="button"
+                                class="btn btn-outline-secondary"
+                                data-bs-dismiss="modal"
+                                data-i18n="events.edit.cancel"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                type="submit"
+                                class="btn btn-primary"
+                                id="editEventSubmit"
+                                data-i18n="events.edit.save"
+                            >
+                                Save changes
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>

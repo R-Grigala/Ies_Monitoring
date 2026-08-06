@@ -2,8 +2,17 @@ from flask.cli import with_appcontext
 from flask import current_app
 import click
 
+from datetime import datetime, timezone
+
 from app.extensions import db
-from app.models import User, Permission, UserPermission, Magnitude
+from app.models import (
+    User,
+    Permission,
+    UserPermission,
+    Magnitude,
+    SeismicEvent,
+    EventMagnitude,
+)
 
 # --- Core logic (გამოსაყენებელი როგორც CLI-დან, ისე ტესტებიდან) ---
 
@@ -183,6 +192,42 @@ def populate_db_core():
             click.echo(f"Assigned {permission.code} to admin user.")
         else:
             click.echo(f"Permission already assigned to admin user: {permission.code}")
+
+    click.echo("Ensuring sample seismic event exists...")
+    sample_oid = "Origin/TEST.20260806.120000.01"
+    sample_event = SeismicEvent.query.filter_by(seiscomp_oid=sample_oid).first()
+    if not sample_event:
+        sample_event = SeismicEvent(
+            iesdata_id="IES-TEST-0001",
+            seiscomp_oid=sample_oid,
+            origin_time=datetime(2026, 8, 6, 12, 0, 0, tzinfo=timezone.utc),
+            latitude=41.7151,
+            longitude=44.8271,
+            depth=10.5,
+            location_ge="თბილისის მახლობლად",
+            location_en="Near Tbilisi",
+            area="Georgia",
+        )
+        sample_event.create()
+        click.echo(f"Created sample seismic event: {sample_oid}")
+    else:
+        click.echo(f"Sample seismic event already exists: {sample_oid}")
+
+    ml_magnitude = Magnitude.query.filter_by(code="ML").first()
+    if ml_magnitude and sample_event:
+        existing_ml = EventMagnitude.query.filter_by(
+            event_id=sample_event.id,
+            magnitude_id=ml_magnitude.id,
+        ).first()
+        if not existing_ml:
+            EventMagnitude(
+                event_id=sample_event.id,
+                magnitude_id=ml_magnitude.id,
+                value=3.4,
+            ).create()
+            click.echo("Assigned sample ML magnitude 3.4 to test event.")
+        else:
+            click.echo("Sample ML magnitude already assigned to test event.")
 
     User.save()
 

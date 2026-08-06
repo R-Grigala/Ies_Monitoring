@@ -1,0 +1,101 @@
+<div class="modal fade" id="createEventModal" tabindex="-1" aria-labelledby="createEventModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-lg">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-semibold" id="createEventModalLabel" data-i18n="events.create.title">
+                    Add Earthquake
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body pt-2">
+                <div id="createEventAlertPlaceholder" class="mb-3"></div>
+                <form id="createEventForm" novalidate>
+                    <div class="row g-3">
+                        <div class="col-12 col-md-6">
+                            <label class="form-label" for="createEventOriginTime" data-i18n="events.edit.origin_time">
+                                Origin time
+                            </label>
+                            <input
+                                type="datetime-local"
+                                class="form-control form-control-lg"
+                                id="createEventOriginTime"
+                                step="1"
+                                required
+                            >
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <label class="form-label" for="createEventMl" data-i18n="events.create.ml">
+                                Magnitude (ML)
+                            </label>
+                            <input type="number" class="form-control form-control-lg" id="createEventMl" step="0.1">
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <label class="form-label" for="createEventDepth" data-i18n="events.edit.depth">
+                                Depth (km)
+                            </label>
+                            <input type="number" class="form-control form-control-lg" id="createEventDepth" step="any">
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <label class="form-label" for="createEventSeiscompOid" data-i18n="events.edit.seiscomp_oid">
+                                SeisComP OID
+                            </label>
+                            <input type="text" class="form-control form-control-lg font-monospace" id="createEventSeiscompOid">
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <label class="form-label" for="createEventLatitude" data-i18n="events.edit.latitude">
+                                Latitude
+                            </label>
+                            <input type="number" class="form-control form-control-lg" id="createEventLatitude" step="any" required>
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <label class="form-label" for="createEventLongitude" data-i18n="events.edit.longitude">
+                                Longitude
+                            </label>
+                            <input type="number" class="form-control form-control-lg" id="createEventLongitude" step="any" required>
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <label class="form-label" for="createEventLocationGe" data-i18n="events.edit.location_ge">
+                                Location (GE)
+                            </label>
+                            <input type="text" class="form-control form-control-lg" id="createEventLocationGe">
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <label class="form-label" for="createEventLocationEn" data-i18n="events.edit.location_en">
+                                Location (EN)
+                            </label>
+                            <input type="text" class="form-control form-control-lg" id="createEventLocationEn">
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <label class="form-label" for="createEventArea" data-i18n="events.edit.area">Area</label>
+                            <input type="text" class="form-control form-control-lg" id="createEventArea">
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <label class="form-label" for="createEventIesdataId" data-i18n="events.edit.iesdata_id">
+                                IES data ID
+                            </label>
+                            <input type="text" class="form-control form-control-lg font-monospace" id="createEventIesdataId">
+                        </div>
+                    </div>
+                    <div class="d-grid d-md-flex justify-content-md-end gap-2 mt-4">
+                        <button
+                            type="button"
+                            class="btn btn-outline-secondary"
+                            data-bs-dismiss="modal"
+                            data-i18n="events.edit.cancel"
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            type="submit"
+                            class="btn btn-primary"
+                            id="createEventSubmit"
+                            data-i18n="events.create.submit"
+                        >
+                            Create
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
