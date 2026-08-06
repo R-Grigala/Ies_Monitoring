@@ -9,3 +9,4 @@ from app.views.accounts.routes import accounts_blueprint
 from app.views.notify.routes import notify_blueprint
 from app.views.services.routes import services_blueprint
 from app.views.permissions.routes import permissions_blueprint
+from app.views.seismic_events.routes import seismic_events_blueprint

@@ -1,0 +1,64 @@
+<div class="card border-0 shadow-sm h-100 w-100 events-filter-card">
+    <div class="card-header bg-white fw-semibold" data-i18n="events.filter.title">Filters</div>
+    <div class="card-body">
+        <form id="filterEventForm" class="row g-2" novalidate>
+            <div class="col-12 col-sm-6">
+                <label class="form-label small mb-1" for="filterDateFrom" data-i18n="events.filter.date_from">
+                    From
+                </label>
+                <input type="date" class="form-control form-control-sm" id="filterDateFrom">
+            </div>
+            <div class="col-12 col-sm-6">
+                <label class="form-label small mb-1" for="filterDateTo" data-i18n="events.filter.date_to">
+                    To
+                </label>
+                <input type="date" class="form-control form-control-sm" id="filterDateTo">
+            </div>
+            <div class="col-12 col-sm-6">
+                <label class="form-label small mb-1" for="filterMagMin" data-i18n="events.filter.mag_min">
+                    Min ML
+                </label>
+                <input type="number" class="form-control form-control-sm" id="filterMagMin" step="0.1">
+            </div>
+            <div class="col-12 col-sm-6">
+                <label class="form-label small mb-1" for="filterMagMax" data-i18n="events.filter.mag_max">
+                    Max ML
+                </label>
+                <input type="number" class="form-control form-control-sm" id="filterMagMax" step="0.1">
+            </div>
+            <div class="col-12 col-sm-6">
+                <label class="form-label small mb-1" for="filterDepthMin" data-i18n="events.filter.depth_min">
+                    Min depth (km)
+                </label>
+                <input type="number" class="form-control form-control-sm" id="filterDepthMin" step="any">
+            </div>
+            <div class="col-12 col-sm-6">
+                <label class="form-label small mb-1" for="filterDepthMax" data-i18n="events.filter.depth_max">
+                    Max depth (km)
+                </label>
+                <input type="number" class="form-control form-control-sm" id="filterDepthMax" step="any">
+            </div>
+            <div class="col-12">
+                <label class="form-label small mb-1" for="filterLocation" data-i18n="events.filter.location">
+                    Location / OID / ID
+                </label>
+                <input
+                    type="search"
+                    class="form-control form-control-sm"
+                    id="filterLocation"
+                    autocomplete="off"
+                    data-i18n-placeholder="events.filter.location_placeholder"
+                    placeholder="Search location, OID or id"
+                >
+            </div>
+            <div class="col-12 d-flex flex-wrap gap-2 mt-2">
+                <button type="submit" class="btn btn-sm btn-primary" data-i18n="events.filter.apply">
+                    Apply
+                </button>
+                <button type="button" id="filterEventReset" class="btn btn-sm btn-outline-secondary" data-i18n="events.filter.reset">
+                    Reset
+                </button>
+            </div>
+        </form>
+    </div>
+</div>

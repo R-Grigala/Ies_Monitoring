@@ -58,7 +58,7 @@ Password policy: min 12 chars, upper + lower + digit + special. Hashing: Werkzeu
 
 | Method | Path | Auth | Notes |
 |--------|------|------|--------|
-| GET | `/api/accounts/ourself` | JWT | Profile + flags `can_users`, `can_permissions`, `can_recips` |
+| GET | `/api/accounts/ourself` | JWT | Profile + flags `can_users`, `can_permissions`, `can_recips`, `can_events` |
 | PUT | `/api/accounts/ourself` | JWT | Own `first_name`, `last_name` |
 | GET | `/api/accounts/` | JWT/API key + `can_users` | `{ items, total }` |
 | GET | `/api/accounts/<uuid>` | JWT/API key + `can_users` | Single user |
@@ -195,6 +195,7 @@ Admin seed (`flask populate_db`):
 | `/<lang>/registration` | Register new user (full page) | `can_users` (client-checked; API enforces) |
 | `/<lang>/services` | Service registration / delete (from Accounts) | `can_users` |
 | `/<lang>/permissions` | Permission catalog list/create/delete (from Accounts) | `can_permissions` only |
+| `/<lang>/seismic_events` | Seismic events list + edit/delete detail | `can_events` |
 | `/<lang>/notify` | Recipients admin | `can_recips` |
 | `/<lang>/change_password` | Change password page | Logged-in (API pending) |
 | `/<lang>/reset_password/<token>` | Reset password | Public |
