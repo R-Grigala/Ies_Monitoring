@@ -146,3 +146,125 @@ def test_event_magnitude_and_beachball_crud(client, admin_auth_headers, app):
     catalog = client.get("/api/seismic_events/magnitude_types", headers=admin_auth_headers)
     assert catalog.status_code == 200
     assert catalog.get_json()["total"] >= 1
+
+
+def test_filter_seismic_events(client, admin_auth_headers, app):
+    with app.app_context():
+        _seed_magnitude("MW")
+        _seed_magnitude("ML", "Local Magnitude")
+
+    first = client.post(
+        "/api/seismic_events/",
+        headers=admin_auth_headers,
+        json={
+            "origin_time": "2026-08-01T10:00:00",
+            "latitude": 41.7,
+            "longitude": 44.8,
+            "depth": 5.0,
+            "seiscomp_oid": "Origin/filter-test-1",
+            "iesdata_id": "IES-2026-0001",
+            "location_en": "Near Tbilisi",
+            "area": "Georgia",
+        },
+    )
+    assert first.status_code == 201
+    first_id = first.get_json()["event"]["id"]
+
+    second = client.post(
+        "/api/seismic_events/",
+        headers=admin_auth_headers,
+        json={
+            "origin_time": "2026-08-10T18:00:00",
+            "latitude": 42.1,
+            "longitude": 43.2,
+            "depth": 25.0,
+            "seiscomp_oid": "Origin/filter-test-2",
+            "iesdata_id": "IES-2026-0099",
+            "location_en": "Near Kutaisi",
+            "area": "Imereti",
+        },
+    )
+    assert second.status_code == 201
+    second_id = second.get_json()["event"]["id"]
+
+    client.post(
+        f"/api/seismic_events/{first_id}/magnitudes",
+        headers=admin_auth_headers,
+        json={"magnitude_code": "MW", "value": 3.1},
+    )
+    client.post(
+        f"/api/seismic_events/{second_id}/magnitudes",
+        headers=admin_auth_headers,
+        json={"magnitude_code": "MW", "value": 5.4},
+    )
+
+    by_id = client.get(
+        f"/api/seismic_events/filter?event_id={first_id}",
+        headers=admin_auth_headers,
+    )
+    assert by_id.status_code == 200
+    assert by_id.get_json()["total"] == 1
+    assert by_id.get_json()["items"][0]["id"] == first_id
+
+    by_ies = client.get(
+        "/api/seismic_events/filter?iesdata_id=2026-0001",
+        headers=admin_auth_headers,
+    )
+    assert by_ies.status_code == 200
+    assert by_ies.get_json()["total"] == 1
+    assert by_ies.get_json()["items"][0]["id"] == first_id
+
+    by_oid = client.get(
+        "/api/seismic_events/filter?seiscomp_oid=filter-test-2",
+        headers=admin_auth_headers,
+    )
+    assert by_oid.status_code == 200
+    assert by_oid.get_json()["total"] == 1
+    assert by_oid.get_json()["items"][0]["id"] == second_id
+
+    by_location = client.get(
+        "/api/seismic_events/filter?location=tbilisi",
+        headers=admin_auth_headers,
+    )
+    assert by_location.status_code == 200
+    assert by_location.get_json()["total"] == 1
+    assert by_location.get_json()["items"][0]["id"] == first_id
+
+    by_area = client.get(
+        "/api/seismic_events/filter?area=Imereti",
+        headers=admin_auth_headers,
+    )
+    assert by_area.status_code == 200
+    assert by_area.get_json()["total"] == 1
+
+    by_depth = client.get(
+        "/api/seismic_events/filter?depth_min=20&depth_max=30",
+        headers=admin_auth_headers,
+    )
+    assert by_depth.status_code == 200
+    ids = {item["id"] for item in by_depth.get_json()["items"]}
+    assert second_id in ids
+    assert first_id not in ids
+
+    by_date = client.get(
+        "/api/seismic_events/filter?date_from=2026-08-05T00:00:00&date_to=2026-08-15T00:00:00",
+        headers=admin_auth_headers,
+    )
+    assert by_date.status_code == 200
+    ids = {item["id"] for item in by_date.get_json()["items"]}
+    assert second_id in ids
+    assert first_id not in ids
+
+    by_mag = client.get(
+        "/api/seismic_events/filter?magnitude=MW&magnitude_min=5&magnitude_max=6",
+        headers=admin_auth_headers,
+    )
+    assert by_mag.status_code == 200
+    assert by_mag.get_json()["total"] == 1
+    assert by_mag.get_json()["items"][0]["id"] == second_id
+
+    invalid_range = client.get(
+        "/api/seismic_events/filter?magnitude_min=6&magnitude_max=3",
+        headers=admin_auth_headers,
+    )
+    assert invalid_range.status_code == 400

@@ -26,6 +26,7 @@ from app.api.recips import (
 from app.api.seismic_events import (
     MagnitudeCatalogApi,
     SeismicEventsApi,
+    SeismicEventsFilterApi,
     SeismicEventDetailApi,
     EventMagnitudesApi,
     EventMagnitudeDetailApi,
