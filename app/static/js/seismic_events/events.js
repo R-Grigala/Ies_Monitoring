@@ -5,6 +5,7 @@ const eventsById = new Map();
 const getEventKey = (event) => String(event?.id ?? "");
 
 let allEvents = [];
+let canViewEvents = false;
 let canManageEvents = false;
 
 function t(key, fallback) {
@@ -21,19 +22,26 @@ function escapeHtml(value) {
         .replaceAll("'", "&#39;");
 }
 
+function getEventMagnitude(event) {
+    const list = (Array.isArray(event?.magnitudes) ? event.magnitudes : []).filter(
+        (item) => item.value !== null && item.value !== undefined
+    );
+    if (!list.length) {
+        return null;
+    }
+
+    // ML always wins; otherwise fall back to the first recorded magnitude.
+    const preferred =
+        list.find((item) => (item.magnitude?.code || "").toUpperCase() === "ML") || list[0];
+
+    return {
+        value: Number(preferred.value),
+        code: preferred.magnitude?.code || "",
+    };
+}
+
 function getEventMl(event) {
-    const list = Array.isArray(event?.magnitudes) ? event.magnitudes : [];
-    const ml = list.find((item) => {
-        const code = (item.magnitude?.code || "").toUpperCase();
-        return code === "ML";
-    });
-    if (ml && ml.value !== null && ml.value !== undefined) {
-        return Number(ml.value);
-    }
-    if (list.length && list[0].value !== null && list[0].value !== undefined) {
-        return Number(list[0].value);
-    }
-    return null;
+    return getEventMagnitude(event)?.value ?? null;
 }
 
 function preferredLocation(event) {
@@ -162,8 +170,13 @@ function renderEvents(events) {
     eventsTableBody.innerHTML = sortedEvents
         .map((event) => {
             const id = escapeHtml(event.id);
-            const ml = getEventMl(event);
-            const mlText = ml === null || Number.isNaN(ml) ? "-" : ml.toFixed(1);
+            const magnitude = getEventMagnitude(event);
+            const magnitudeText =
+                magnitude === null || Number.isNaN(magnitude.value)
+                    ? "-"
+                    : `${magnitude.value.toFixed(1)}${
+                          magnitude.code ? ` ${magnitude.code}` : ""
+                      }`;
             const depth =
                 event.depth === null || event.depth === undefined
                     ? "-"
@@ -217,7 +230,7 @@ function renderEvents(events) {
         </td>
         <td class="font-monospace">${escapeHtml(event.seiscomp_oid || "-")}</td>
         <td>${escapeHtml(formatOriginTime(event.origin_time))}</td>
-        <td>${escapeHtml(mlText)}</td>
+        <td>${escapeHtml(magnitudeText)}</td>
         <td>${escapeHtml(depth)}</td>
         <td class="font-monospace">${escapeHtml(lat)}</td>
         <td class="font-monospace">${escapeHtml(lon)}</td>
@@ -292,10 +305,12 @@ async function loadEvents() {
         const profile = await window.makeApiRequest("/api/accounts/ourself", {
             method: "GET",
         });
-        canManageEvents = Boolean(profile?.can_events);
+        canManageEvents = Boolean(profile?.can_event_edit);
+        canViewEvents = canManageEvents || Boolean(profile?.can_event_view);
         window.canManageEvents = canManageEvents;
+        window.canViewEvents = canViewEvents;
 
-        if (!canManageEvents) {
+        if (!canViewEvents) {
             if (eventsTableBody) {
                 eventsTableBody.innerHTML = "";
             }
@@ -325,6 +340,7 @@ async function loadEvents() {
             method: "GET",
         });
         allEvents = Array.isArray(data.items) ? data.items : [];
+        window.updateAreaFilterOptions?.(allEvents);
         const currentFilter = window.getActiveEventsFilter?.() || null;
         applyEventsFilter(currentFilter);
     } catch (error) {
@@ -345,9 +361,17 @@ async function loadEvents() {
 
 window.escapeHtml = escapeHtml;
 window.getEventMl = getEventMl;
+window.getEventMagnitude = getEventMagnitude;
 window.requireEventsAuth = requireEventsAuth;
-window.hasPermission = (code) =>
-    code === "can_events" ? hasEventsPermission() : false;
+window.hasPermission = (code) => {
+    if (code === "can_event_edit") {
+        return canManageEvents;
+    }
+    if (code === "can_event_view") {
+        return canViewEvents;
+    }
+    return false;
+};
 window.renderEvents = renderEvents;
 window.renderEventsAndMap = renderEventsAndMap;
 window.applyEventsFilter = applyEventsFilter;

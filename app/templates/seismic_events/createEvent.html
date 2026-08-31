@@ -24,12 +24,6 @@
                             >
                         </div>
                         <div class="col-12 col-md-6">
-                            <label class="form-label" for="createEventMl" data-i18n="events.create.ml">
-                                Magnitude (ML)
-                            </label>
-                            <input type="number" class="form-control form-control-lg" id="createEventMl" step="0.1">
-                        </div>
-                        <div class="col-12 col-md-6">
                             <label class="form-label" for="createEventDepth" data-i18n="events.edit.depth">
                                 Depth (km)
                             </label>
@@ -67,13 +61,31 @@
                         </div>
                         <div class="col-12 col-md-6">
                             <label class="form-label" for="createEventArea" data-i18n="events.edit.area">Area</label>
-                            <input type="text" class="form-control form-control-lg" id="createEventArea">
+                            <select class="form-select form-select-lg" id="createEventArea">
+                                <option value="" data-i18n="events.area.unset">Not specified</option>
+                                <option value="local" data-i18n="events.area.local">Local</option>
+                                <option value="regional" data-i18n="events.area.regional">Regional</option>
+                                <option value="teleseismic" data-i18n="events.area.teleseismic">Teleseismic</option>
+                            </select>
                         </div>
                         <div class="col-12 col-md-6">
                             <label class="form-label" for="createEventIesdataId" data-i18n="events.edit.iesdata_id">
                                 IES data ID
                             </label>
                             <input type="text" class="form-control form-control-lg font-monospace" id="createEventIesdataId">
+                        </div>
+
+                        <div class="col-12">
+                            <div class="form-label fw-semibold" data-i18n="events.edit.magnitudes">Magnitudes</div>
+                            <div id="createEventMagnitudes" class="vstack gap-2 mb-2"></div>
+                            <button
+                                type="button"
+                                class="btn btn-outline-primary"
+                                id="createEventMagnitudeAdd"
+                                data-i18n="events.edit.magnitude_add"
+                            >
+                                Add magnitude
+                            </button>
                         </div>
                     </div>
                     <div class="d-grid d-md-flex justify-content-md-end gap-2 mt-4">

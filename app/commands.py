@@ -199,11 +199,11 @@ def populate_db_core():
             click.echo(f"Permission already assigned to admin user: {permission.code}")
 
     click.echo("Ensuring sample seismic event exists...")
-    sample_oid = "Origin/TEST.20260806.120000.01"
+    sample_oid = "ies2024oeem"
     sample_event = SeismicEvent.query.filter_by(seiscomp_oid=sample_oid).first()
     if not sample_event:
         sample_event = SeismicEvent(
-            iesdata_id="IES-TEST-0001",
+            iesdata_id="539870",
             seiscomp_oid=sample_oid,
             origin_time=datetime(2026, 8, 6, 12, 0, 0, tzinfo=timezone.utc),
             latitude=41.7151,
@@ -211,7 +211,7 @@ def populate_db_core():
             depth=10.5,
             location_ge="თბილისის მახლობლად",
             location_en="Near Tbilisi",
-            area="Georgia",
+            area="local",
             is_automatic=False,
         )
         sample_event.create()
@@ -229,9 +229,9 @@ def populate_db_core():
             EventMagnitude(
                 event_id=sample_event.id,
                 magnitude_id=ml_magnitude.id,
-                value=3.4,
+                value=5.33,
             ).create()
-            click.echo("Assigned sample ML magnitude 3.4 to test event.")
+            click.echo("Assigned sample ML magnitude 5.33 to test event.")
         else:
             click.echo("Sample ML magnitude already assigned to test event.")
 

@@ -58,7 +58,12 @@
                         </div>
                         <div class="col-12">
                             <label class="form-label" for="editEventArea" data-i18n="events.edit.area">Area</label>
-                            <input type="text" class="form-control form-control-lg" id="editEventArea">
+                            <select class="form-select form-select-lg" id="editEventArea">
+                                <option value="" data-i18n="events.area.unset">Not specified</option>
+                                <option value="local" data-i18n="events.area.local">Local</option>
+                                <option value="regional" data-i18n="events.area.regional">Regional</option>
+                                <option value="teleseismic" data-i18n="events.area.teleseismic">Teleseismic</option>
+                            </select>
                         </div>
                         <div class="col-12 col-md-6">
                             <label class="form-label" for="editEventIesdataId" data-i18n="events.edit.iesdata_id">
@@ -74,7 +79,34 @@
                         </div>
                         <div class="col-12">
                             <div class="form-label fw-semibold" data-i18n="events.edit.magnitudes">Magnitudes</div>
-                            <div id="editEventMagnitudes" class="d-flex flex-wrap gap-2"></div>
+                            <div id="editEventMagnitudes" class="vstack gap-2 mb-3"></div>
+
+                            <div class="row g-2 align-items-end">
+                                <div class="col-12 col-md-5">
+                                    <label class="form-label small mb-1" for="editEventMagnitudeCode" data-i18n="events.create.magnitude_type">
+                                        Magnitude type
+                                    </label>
+                                    <select class="form-select" id="editEventMagnitudeCode">
+                                        <option value="" data-i18n="events.create.magnitude_none">None</option>
+                                    </select>
+                                </div>
+                                <div class="col-12 col-md-4">
+                                    <label class="form-label small mb-1" for="editEventMagnitudeValue" data-i18n="events.create.magnitude_value">
+                                        Magnitude value
+                                    </label>
+                                    <input type="number" class="form-control" id="editEventMagnitudeValue" step="0.1">
+                                </div>
+                                <div class="col-12 col-md-3 d-grid">
+                                    <button
+                                        type="button"
+                                        class="btn btn-outline-primary"
+                                        id="editEventMagnitudeAdd"
+                                        data-i18n="events.edit.magnitude_add"
+                                    >
+                                        Add magnitude
+                                    </button>
+                                </div>
+                            </div>
                         </div>
                         <div class="col-12">
                             <div class="form-label fw-semibold" data-i18n="events.edit.beachball">Beachball</div>
