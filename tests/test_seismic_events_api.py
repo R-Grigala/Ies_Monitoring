@@ -15,6 +15,35 @@ def test_list_seismic_events_requires_permission(client, user_auth_headers):
     assert response.status_code == 403
 
 
+def test_view_permission_can_list_but_not_create(client, permissions, app):
+    from tests.helpers import VALID_PASSWORD, auth_headers, create_user, login
+
+    create_user(
+        email="events.viewer@example.com",
+        first_name="Events",
+        last_name="Viewer",
+        password=VALID_PASSWORD,
+        permission_codes=["can_event_view"],
+    )
+    login_response = login(client, "events.viewer@example.com", VALID_PASSWORD)
+    assert login_response.status_code == 200
+    headers = auth_headers(login_response.get_json()["access_token"])
+
+    listed = client.get("/api/seismic_events/", headers=headers)
+    assert listed.status_code == 200
+
+    created = client.post(
+        "/api/seismic_events/",
+        headers=headers,
+        json={
+            "origin_time": "2026-08-05T12:30:00",
+            "latitude": 41.7151,
+            "longitude": 44.8271,
+        },
+    )
+    assert created.status_code == 403
+
+
 def test_create_list_update_delete_seismic_event(client, admin_auth_headers, app):
     create_response = client.post(
         "/api/seismic_events/",
@@ -34,6 +63,7 @@ def test_create_list_update_delete_seismic_event(client, admin_auth_headers, app
     assert event["latitude"] == 41.7151
     assert event["magnitudes"] == []
     assert event["beachball"] is None
+    assert event["is_automatic"] is False
 
     list_response = client.get("/api/seismic_events/", headers=admin_auth_headers)
     assert list_response.status_code == 200
@@ -42,12 +72,13 @@ def test_create_list_update_delete_seismic_event(client, admin_auth_headers, app
     update_response = client.put(
         f"/api/seismic_events/{event_id}",
         headers=admin_auth_headers,
-        json={"location_en": "Tbilisi region", "depth": 12.0},
+        json={"location_en": "Tbilisi region", "depth": 12.0, "is_automatic": True},
     )
     assert update_response.status_code == 200
     updated = update_response.get_json()["event"]
     assert updated["location_en"] == "Tbilisi region"
     assert updated["depth"] == 12.0
+    assert updated["is_automatic"] is True
 
     delete_response = client.delete(
         f"/api/seismic_events/{event_id}",
@@ -198,73 +229,85 @@ def test_filter_seismic_events(client, admin_auth_headers, app):
         json={"magnitude_code": "MW", "value": 5.4},
     )
 
-    by_id = client.get(
-        f"/api/seismic_events/filter?event_id={first_id}",
+    by_id = client.post(
+        "/api/seismic_events/filter",
         headers=admin_auth_headers,
+        json={"event_id": first_id},
     )
     assert by_id.status_code == 200
     assert by_id.get_json()["total"] == 1
     assert by_id.get_json()["items"][0]["id"] == first_id
 
-    by_ies = client.get(
-        "/api/seismic_events/filter?iesdata_id=2026-0001",
+    by_ies = client.post(
+        "/api/seismic_events/filter",
         headers=admin_auth_headers,
+        json={"iesdata_id": "2026-0001"},
     )
     assert by_ies.status_code == 200
     assert by_ies.get_json()["total"] == 1
     assert by_ies.get_json()["items"][0]["id"] == first_id
 
-    by_oid = client.get(
-        "/api/seismic_events/filter?seiscomp_oid=filter-test-2",
+    by_oid = client.post(
+        "/api/seismic_events/filter",
         headers=admin_auth_headers,
+        json={"seiscomp_oid": "filter-test-2"},
     )
     assert by_oid.status_code == 200
     assert by_oid.get_json()["total"] == 1
     assert by_oid.get_json()["items"][0]["id"] == second_id
 
-    by_location = client.get(
-        "/api/seismic_events/filter?location=tbilisi",
+    by_location = client.post(
+        "/api/seismic_events/filter",
         headers=admin_auth_headers,
+        json={"location": "tbilisi"},
     )
     assert by_location.status_code == 200
     assert by_location.get_json()["total"] == 1
     assert by_location.get_json()["items"][0]["id"] == first_id
 
-    by_area = client.get(
-        "/api/seismic_events/filter?area=Imereti",
+    by_area = client.post(
+        "/api/seismic_events/filter",
         headers=admin_auth_headers,
+        json={"area": "Imereti"},
     )
     assert by_area.status_code == 200
     assert by_area.get_json()["total"] == 1
 
-    by_depth = client.get(
-        "/api/seismic_events/filter?depth_min=20&depth_max=30",
+    by_depth = client.post(
+        "/api/seismic_events/filter",
         headers=admin_auth_headers,
+        json={"depth_min": 20, "depth_max": 30},
     )
     assert by_depth.status_code == 200
     ids = {item["id"] for item in by_depth.get_json()["items"]}
     assert second_id in ids
     assert first_id not in ids
 
-    by_date = client.get(
-        "/api/seismic_events/filter?date_from=2026-08-05T00:00:00&date_to=2026-08-15T00:00:00",
+    by_date = client.post(
+        "/api/seismic_events/filter",
         headers=admin_auth_headers,
+        json={
+            "date_from": "2026-08-05T00:00:00",
+            "date_to": "2026-08-15T00:00:00",
+        },
     )
     assert by_date.status_code == 200
     ids = {item["id"] for item in by_date.get_json()["items"]}
     assert second_id in ids
     assert first_id not in ids
 
-    by_mag = client.get(
-        "/api/seismic_events/filter?magnitude=MW&magnitude_min=5&magnitude_max=6",
+    by_mag = client.post(
+        "/api/seismic_events/filter",
         headers=admin_auth_headers,
+        json={"magnitude": "MW", "magnitude_min": 5, "magnitude_max": 6},
     )
     assert by_mag.status_code == 200
     assert by_mag.get_json()["total"] == 1
     assert by_mag.get_json()["items"][0]["id"] == second_id
 
-    invalid_range = client.get(
-        "/api/seismic_events/filter?magnitude_min=6&magnitude_max=3",
+    invalid_range = client.post(
+        "/api/seismic_events/filter",
         headers=admin_auth_headers,
+        json={"magnitude_min": 6, "magnitude_max": 3},
     )
     assert invalid_range.status_code == 400

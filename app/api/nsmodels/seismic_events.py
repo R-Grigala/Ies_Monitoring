@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from flask_restx import fields, reqparse
+from flask_restx import fields, inputs, reqparse
 
 from app.extensions import api
 
@@ -81,6 +81,7 @@ seismic_event_model = seismic_events_ns.model(
         "location_ge": fields.String(required=False, example="თბილისის მახლობლად"),
         "location_en": fields.String(required=False, example="Near Tbilisi"),
         "area": fields.String(required=False, example="Georgia"),
+        "is_automatic": fields.Boolean(required=True, example=False),
         "created_at": fields.String(required=False, example="2026-08-05T12:31:00"),
         "magnitudes": fields.List(fields.Nested(event_magnitude_model), required=True),
         "beachball": fields.Nested(event_beachball_model, required=False, allow_null=True),
@@ -140,7 +141,7 @@ error_model = seismic_events_ns.model(
         "error": fields.String(required=True, example="forbidden"),
         "message": fields.String(
             required=True,
-            example="Missing required permission: can_events",
+            example="Missing required permission: can_event_edit",
         ),
     },
 )
@@ -165,6 +166,13 @@ seismic_event_create_parser.add_argument(
 seismic_event_create_parser.add_argument("location_ge", type=str, required=False, help="Location in Georgian")
 seismic_event_create_parser.add_argument("location_en", type=str, required=False, help="Location in English")
 seismic_event_create_parser.add_argument("area", type=str, required=False, help="Area / region")
+seismic_event_create_parser.add_argument(
+    "is_automatic",
+    type=inputs.boolean,
+    required=False,
+    default=False,
+    help="Whether the event was created automatically (default: false)",
+)
 
 seismic_event_update_parser = reqparse.RequestParser()
 seismic_event_update_parser.add_argument(
@@ -186,6 +194,12 @@ seismic_event_update_parser.add_argument(
 seismic_event_update_parser.add_argument("location_ge", type=str, required=False, help="Location in Georgian")
 seismic_event_update_parser.add_argument("location_en", type=str, required=False, help="Location in English")
 seismic_event_update_parser.add_argument("area", type=str, required=False, help="Area / region")
+seismic_event_update_parser.add_argument(
+    "is_automatic",
+    type=inputs.boolean,
+    required=False,
+    help="Whether the event was created automatically",
+)
 
 event_magnitude_create_parser = reqparse.RequestParser()
 event_magnitude_create_parser.add_argument(
@@ -243,83 +257,71 @@ seismic_event_filter_parser.add_argument(
     "event_id",
     type=int,
     required=False,
-    location="args",
     help="Exact seismic event id",
 )
 seismic_event_filter_parser.add_argument(
     "iesdata_id",
     type=str,
     required=False,
-    location="args",
     help="Substring match against IES data id",
 )
 seismic_event_filter_parser.add_argument(
     "seiscomp_oid",
     type=str,
     required=False,
-    location="args",
     help="Substring match against SeisComP object id",
 )
 seismic_event_filter_parser.add_argument(
     "location",
     type=str,
     required=False,
-    location="args",
     help="Substring match against location_en or location_ge",
 )
 seismic_event_filter_parser.add_argument(
     "area",
     type=str,
     required=False,
-    location="args",
     help="Substring match against area",
 )
 seismic_event_filter_parser.add_argument(
     "magnitude",
     type=str,
     required=False,
-    location="args",
     help="Magnitude catalog code, e.g. MW / ML (filters by that type)",
 )
 seismic_event_filter_parser.add_argument(
     "magnitude_min",
     type=float,
     required=False,
-    location="args",
     help="Minimum magnitude value (inclusive)",
 )
 seismic_event_filter_parser.add_argument(
     "magnitude_max",
     type=float,
     required=False,
-    location="args",
     help="Maximum magnitude value (inclusive)",
 )
 seismic_event_filter_parser.add_argument(
     "depth_min",
     type=float,
     required=False,
-    location="args",
     help="Minimum depth in km (inclusive)",
 )
 seismic_event_filter_parser.add_argument(
     "depth_max",
     type=float,
     required=False,
-    location="args",
     help="Maximum depth in km (inclusive)",
 )
 seismic_event_filter_parser.add_argument(
     "date_from",
     type=parse_datetime,
     required=False,
-    location="args",
     help="Origin time from (ISO 8601, inclusive)",
 )
 seismic_event_filter_parser.add_argument(
     "date_to",
     type=parse_datetime,
     required=False,
-    location="args",
     help="Origin time to (ISO 8601, inclusive)",
 )
