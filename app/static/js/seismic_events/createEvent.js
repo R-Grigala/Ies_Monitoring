@@ -24,10 +24,114 @@ function ensureCreateEventModal() {
     return createEventModal;
 }
 
-function openCreateEventModal() {
+let magnitudeTypes = [];
+
+async function loadMagnitudeTypes() {
+    if (magnitudeTypes.length) {
+        return magnitudeTypes;
+    }
+
+    try {
+        const data = await window.makeApiRequest("/api/seismic_events/magnitude_types", {
+            method: "GET",
+        });
+        magnitudeTypes = Array.isArray(data.items) ? data.items : [];
+    } catch (error) {
+        window.showAlert(
+            CREATE_EVENT_ALERT_ID,
+            "warning",
+            error.message ||
+                t("events.create.magnitude_types_error", "Failed to load magnitude types.")
+        );
+    }
+    return magnitudeTypes;
+}
+
+function addMagnitudeRow() {
+    const container = document.getElementById("createEventMagnitudes");
+    if (!container) {
+        return;
+    }
+
+    const row = document.createElement("div");
+    row.className = "row g-2 align-items-center magnitude-row";
+
+    const noneLabel = t("events.create.magnitude_none", "None");
+    const options = [`<option value="">${noneLabel}</option>`]
+        .concat(
+            magnitudeTypes.map((item) => {
+                const code = window.escapeHtml ? window.escapeHtml(item.code) : item.code;
+                const title = item.description
+                    ? ` title="${window.escapeHtml ? window.escapeHtml(item.description) : item.description}"`
+                    : "";
+                return `<option value="${code}"${title}>${code}</option>`;
+            })
+        )
+        .join("");
+
+    row.innerHTML = `
+        <div class="col-5 col-md-5">
+            <select class="form-select" data-magnitude-code>${options}</select>
+        </div>
+        <div class="col-5 col-md-5">
+            <input
+                type="number"
+                class="form-control"
+                step="0.1"
+                data-magnitude-value
+                data-i18n-placeholder="events.create.magnitude_value"
+                placeholder="Magnitude value"
+            >
+        </div>
+        <div class="col-2 col-md-2 d-grid">
+            <button
+                type="button"
+                class="btn btn-outline-danger"
+                data-magnitude-remove
+                aria-label="${t("events.edit.magnitude_delete", "Delete")}"
+            >
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+    `;
+
+    container.appendChild(row);
+    window.I18n?.applyTranslations?.();
+}
+
+function readMagnitudeRows() {
+    const rows = [...document.querySelectorAll("#createEventMagnitudes .magnitude-row")];
+    const entries = [];
+
+    for (const row of rows) {
+        const code = row.querySelector("[data-magnitude-code]")?.value || "";
+        const rawValue = row.querySelector("[data-magnitude-value]")?.value ?? "";
+
+        if (!code && rawValue === "") {
+            continue;
+        }
+        if (!code || rawValue === "") {
+            return { error: "incomplete" };
+        }
+        if (entries.some((entry) => entry.magnitude_code === code)) {
+            return { error: "duplicate" };
+        }
+        entries.push({ magnitude_code: code, value: Number(rawValue) });
+    }
+
+    return { entries };
+}
+
+async function openCreateEventModal() {
     document.getElementById("createEventForm")?.reset();
+    const container = document.getElementById("createEventMagnitudes");
+    if (container) {
+        container.innerHTML = "";
+    }
     clearCreateEventAlert();
     ensureCreateEventModal()?.show();
+    await loadMagnitudeTypes();
+    addMagnitudeRow();
 }
 
 function fromDatetimeLocalValue(localValue) {
@@ -41,21 +145,13 @@ function fromDatetimeLocalValue(localValue) {
     return date.toISOString();
 }
 
-async function maybeAttachMl(eventId, mlValue) {
-    if (mlValue === "" || mlValue === null || mlValue === undefined) {
-        return;
+async function attachMagnitudes(eventId, entries) {
+    for (const entry of entries) {
+        await window.makeApiRequest(`/api/seismic_events/${eventId}/magnitudes`, {
+            method: "POST",
+            body: JSON.stringify(entry),
+        });
     }
-    const value = Number(mlValue);
-    if (Number.isNaN(value)) {
-        return;
-    }
-    await window.makeApiRequest(`/api/seismic_events/${eventId}/magnitudes`, {
-        method: "POST",
-        body: JSON.stringify({
-            value,
-            magnitude_code: "ML",
-        }),
-    });
 }
 
 async function submitCreateEventForm(formEvent) {
@@ -67,7 +163,6 @@ async function submitCreateEventForm(formEvent) {
     const latitude = document.getElementById("createEventLatitude")?.value;
     const longitude = document.getElementById("createEventLongitude")?.value;
     const depth = document.getElementById("createEventDepth")?.value;
-    const ml = document.getElementById("createEventMl")?.value;
     const submitButton = document.getElementById("createEventSubmit");
 
     if (!origin_time || latitude === "" || longitude === "") {
@@ -75,6 +170,30 @@ async function submitCreateEventForm(formEvent) {
             CREATE_EVENT_ALERT_ID,
             "danger",
             t("events.error.validation", "Please fill in all required fields.")
+        );
+        return;
+    }
+
+    const { entries: magnitudeEntries, error: magnitudeError } = readMagnitudeRows();
+    if (magnitudeError === "incomplete") {
+        window.showAlert(
+            CREATE_EVENT_ALERT_ID,
+            "danger",
+            t(
+                "events.create.magnitude_incomplete",
+                "Select both a magnitude type and its value, or leave both empty."
+            )
+        );
+        return;
+    }
+    if (magnitudeError === "duplicate") {
+        window.showAlert(
+            CREATE_EVENT_ALERT_ID,
+            "danger",
+            t(
+                "events.create.magnitude_duplicate",
+                "Each magnitude type can only be added once."
+            )
         );
         return;
     }
@@ -109,21 +228,22 @@ async function submitCreateEventForm(formEvent) {
         let created = data.event || data;
         if (created?.id) {
             try {
-                await maybeAttachMl(created.id, ml);
-                created = await window.makeApiRequest(`/api/seismic_events/${created.id}`, {
-                    method: "GET",
-                });
+                await attachMagnitudes(created.id, magnitudeEntries);
             } catch (attachError) {
                 window.showAlert(
                     "alertPlaceholder",
                     "warning",
                     attachError.message ||
                         t(
-                            "events.create.ml_warning",
-                            "Event created, but ML magnitude could not be saved."
+                            "events.create.magnitude_warning",
+                            "Event created, but the magnitude could not be saved."
                         )
                 );
             }
+
+            created = await window.makeApiRequest(`/api/seismic_events/${created.id}`, {
+                method: "GET",
+            });
         }
 
         window.onEventCreated?.(created);
@@ -151,4 +271,14 @@ document.addEventListener("DOMContentLoaded", () => {
     document
         .getElementById("createEventForm")
         ?.addEventListener("submit", submitCreateEventForm);
+    document
+        .getElementById("createEventMagnitudeAdd")
+        ?.addEventListener("click", addMagnitudeRow);
+
+    document.getElementById("createEventMagnitudes")?.addEventListener("click", (event) => {
+        const removeButton = event.target.closest("[data-magnitude-remove]");
+        if (removeButton) {
+            removeButton.closest(".magnitude-row")?.remove();
+        }
+    });
 });

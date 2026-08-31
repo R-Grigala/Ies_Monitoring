@@ -85,12 +85,187 @@ function renderMagnitudesSummary(magnitudes) {
         .map((item) => {
             const code = item.magnitude?.code || "?";
             const value =
-                item.value === null || item.value === undefined ? "—" : Number(item.value).toFixed(2);
-            return `<span class="badge text-bg-light border">${escapeHtml(code)}: ${escapeHtml(
-                value
-            )}</span>`;
+                item.value === null || item.value === undefined ? "" : Number(item.value);
+            return `
+        <div class="d-flex align-items-center gap-2" data-magnitude-id="${escapeHtml(item.id)}">
+            <span class="badge text-bg-light border font-monospace">${escapeHtml(code)}</span>
+            <input
+                type="number"
+                class="form-control form-control-sm"
+                step="0.1"
+                value="${escapeHtml(value)}"
+                data-magnitude-value-for="${escapeHtml(item.id)}"
+            >
+            <button
+                type="button"
+                class="btn btn-sm btn-outline-secondary"
+                data-magnitude-save="${escapeHtml(item.id)}"
+                data-i18n="events.edit.magnitude_save"
+            >
+                Save
+            </button>
+            <button
+                type="button"
+                class="btn btn-sm btn-outline-danger"
+                data-magnitude-delete="${escapeHtml(item.id)}"
+                data-i18n="events.edit.magnitude_delete"
+            >
+                Delete
+            </button>
+        </div>
+    `;
         })
         .join("");
+
+    window.I18n?.applyTranslations?.();
+}
+
+let editMagnitudeTypesLoaded = false;
+
+async function loadEditMagnitudeTypes() {
+    const select = document.getElementById("editEventMagnitudeCode");
+    if (!select || editMagnitudeTypesLoaded) {
+        return;
+    }
+
+    try {
+        const data = await window.makeApiRequest("/api/seismic_events/magnitude_types", {
+            method: "GET",
+        });
+        (Array.isArray(data.items) ? data.items : []).forEach((item) => {
+            const option = document.createElement("option");
+            option.value = item.code;
+            option.textContent = item.code;
+            if (item.description) {
+                option.title = item.description;
+            }
+            select.appendChild(option);
+        });
+        editMagnitudeTypesLoaded = true;
+    } catch (error) {
+        window.showAlert(
+            EDIT_EVENT_ALERT_ID,
+            "warning",
+            error.message ||
+                t("events.create.magnitude_types_error", "Failed to load magnitude types.")
+        );
+    }
+}
+
+async function refreshEventMagnitudes(eventId) {
+    const event = await window.makeApiRequest(`/api/seismic_events/${eventId}`, {
+        method: "GET",
+    });
+    renderMagnitudesSummary(event.magnitudes);
+    window.onEventUpdated?.(event);
+}
+
+async function addEventMagnitude() {
+    const eventId = document.getElementById("editEventId")?.value;
+    const code = document.getElementById("editEventMagnitudeCode")?.value || "";
+    const rawValue = document.getElementById("editEventMagnitudeValue")?.value ?? "";
+
+    if (!eventId) {
+        return;
+    }
+
+    if (!code || rawValue === "") {
+        window.showAlert(
+            EDIT_EVENT_ALERT_ID,
+            "danger",
+            t(
+                "events.create.magnitude_incomplete",
+                "Select both a magnitude type and its value, or leave both empty."
+            )
+        );
+        return;
+    }
+
+    const addButton = document.getElementById("editEventMagnitudeAdd");
+    addButton.disabled = true;
+    clearEditEventAlert();
+
+    try {
+        await window.makeApiRequest(`/api/seismic_events/${eventId}/magnitudes`, {
+            method: "POST",
+            body: JSON.stringify({ value: Number(rawValue), magnitude_code: code }),
+        });
+        document.getElementById("editEventMagnitudeCode").value = "";
+        document.getElementById("editEventMagnitudeValue").value = "";
+        await refreshEventMagnitudes(eventId);
+    } catch (error) {
+        window.showAlert(
+            EDIT_EVENT_ALERT_ID,
+            "danger",
+            error.message || t("events.edit.magnitude_add_error", "Failed to add magnitude.")
+        );
+    } finally {
+        addButton.disabled = false;
+    }
+}
+
+async function saveEventMagnitude(eventMagnitudeId) {
+    const eventId = document.getElementById("editEventId")?.value;
+    const input = document.querySelector(
+        `[data-magnitude-value-for="${eventMagnitudeId}"]`
+    );
+    const rawValue = input?.value ?? "";
+
+    if (rawValue === "") {
+        window.showAlert(
+            EDIT_EVENT_ALERT_ID,
+            "danger",
+            t("events.error.validation", "Please fill in all required fields.")
+        );
+        return;
+    }
+
+    clearEditEventAlert();
+
+    try {
+        await window.makeApiRequest(`/api/seismic_events/magnitudes/${eventMagnitudeId}`, {
+            method: "PUT",
+            body: JSON.stringify({ value: Number(rawValue) }),
+        });
+        await refreshEventMagnitudes(eventId);
+    } catch (error) {
+        window.showAlert(
+            EDIT_EVENT_ALERT_ID,
+            "danger",
+            error.message ||
+                t("events.edit.magnitude_update_error", "Failed to update magnitude.")
+        );
+    }
+}
+
+async function deleteEventMagnitude(eventMagnitudeId) {
+    const eventId = document.getElementById("editEventId")?.value;
+
+    const confirmed = await window.confirmDelete({
+        message: t(
+            "events.edit.magnitude_delete_confirm",
+            "Are you sure you want to delete this magnitude?"
+        ),
+    });
+    if (!confirmed) {
+        return;
+    }
+
+    clearEditEventAlert();
+
+    try {
+        await window.makeApiRequest(`/api/seismic_events/magnitudes/${eventMagnitudeId}`, {
+            method: "DELETE",
+        });
+        await refreshEventMagnitudes(eventId);
+    } catch (error) {
+        window.showAlert(
+            EDIT_EVENT_ALERT_ID,
+            "danger",
+            error.message ||
+                t("events.edit.magnitude_delete_error", "Failed to delete magnitude.")
+        );
+    }
 }
 
 function renderBeachballSummary(beachball) {
@@ -115,6 +290,24 @@ function renderBeachballSummary(beachball) {
         : t("events.edit.beachball_empty", "No beachball data.");
 }
 
+function setAreaValue(area) {
+    const select = document.getElementById("editEventArea");
+    if (!select) {
+        return;
+    }
+
+    const isKnown = [...select.options].some((option) => option.value === area);
+    if (!isKnown && area) {
+        // Keep legacy free-text areas selectable so editing does not silently drop them.
+        const option = document.createElement("option");
+        option.value = area;
+        option.textContent = area;
+        select.appendChild(option);
+    }
+
+    select.value = area;
+}
+
 function fillEventForm(event) {
     document.getElementById("editEventId").value = event.id || "";
     document.getElementById("editEventOriginTime").value = toDatetimeLocalValue(
@@ -128,7 +321,7 @@ function fillEventForm(event) {
         event.longitude === null || event.longitude === undefined ? "" : event.longitude;
     document.getElementById("editEventLocationGe").value = event.location_ge || "";
     document.getElementById("editEventLocationEn").value = event.location_en || "";
-    document.getElementById("editEventArea").value = event.area || "";
+    setAreaValue(event.area || "");
     document.getElementById("editEventIesdataId").value = event.iesdata_id || "";
     document.getElementById("editEventSeiscompOid").value = event.seiscomp_oid || "";
     renderMagnitudesSummary(event.magnitudes);
@@ -154,6 +347,7 @@ async function openEditEventModal(eventId) {
         });
         fillEventForm(event);
         modal.show();
+        await loadEditMagnitudeTypes();
     } catch (error) {
         window.showAlert(
             "alertPlaceholder",
@@ -276,4 +470,20 @@ document.addEventListener("DOMContentLoaded", () => {
     document
         .getElementById("editEventDelete")
         ?.addEventListener("click", deleteEventFromModal);
+    document
+        .getElementById("editEventMagnitudeAdd")
+        ?.addEventListener("click", addEventMagnitude);
+
+    document.getElementById("editEventMagnitudes")?.addEventListener("click", (event) => {
+        const saveButton = event.target.closest("[data-magnitude-save]");
+        if (saveButton) {
+            saveEventMagnitude(saveButton.dataset.magnitudeSave);
+            return;
+        }
+
+        const deleteButton = event.target.closest("[data-magnitude-delete]");
+        if (deleteButton) {
+            deleteEventMagnitude(deleteButton.dataset.magnitudeDelete);
+        }
+    });
 });
