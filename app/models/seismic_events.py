@@ -16,12 +16,7 @@ class SeismicEvent(db.Model, BaseModel):
 
     location_ge = db.Column(db.String(500), nullable=True)
     location_en = db.Column(db.String(500), nullable=True)
-<<<<<<< HEAD
     area = db.Column(db.String(20), nullable=True)
-=======
-    area = db.Column(db.String(255), nullable=True)
-    is_automatic = db.Column(db.Boolean, nullable=False, default=False)
->>>>>>> 84170628605cdf0092c2b38b1294dd1e85192781
 
     created_at = db.Column(db.DateTime, nullable=False, default=db.func.now())
 

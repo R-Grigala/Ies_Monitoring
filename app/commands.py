@@ -205,15 +205,6 @@ def populate_db_core():
         sample_event = SeismicEvent(
             iesdata_id="539870",
             seiscomp_oid=sample_oid,
-<<<<<<< HEAD
-            origin_time=datetime(2024, 6, 3, 22, 3, 40),
-            latitude=42.5095,
-            longitude=43.5328,
-            depth=8,
-            location_ge="ქალაქი ონი - სამხრეთ-აღმოსავლეთი - 8კმ. სოფელი ირი.",
-            location_en="City Oni - South-East - 8km. Village Iri.",
-            area="local",
-=======
             origin_time=datetime(2026, 8, 6, 12, 0, 0, tzinfo=timezone.utc),
             latitude=41.7151,
             longitude=44.8271,
@@ -222,7 +213,6 @@ def populate_db_core():
             location_en="Near Tbilisi",
             area="Georgia",
             is_automatic=False,
->>>>>>> 84170628605cdf0092c2b38b1294dd1e85192781
         )
         sample_event.create()
         click.echo(f"Created sample seismic event: {sample_oid}")
