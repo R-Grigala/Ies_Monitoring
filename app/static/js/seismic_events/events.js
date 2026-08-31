@@ -5,6 +5,7 @@ const eventsById = new Map();
 const getEventKey = (event) => String(event?.id ?? "");
 
 let allEvents = [];
+let canViewEvents = false;
 let canManageEvents = false;
 
 function t(key, fallback) {
@@ -304,10 +305,12 @@ async function loadEvents() {
         const profile = await window.makeApiRequest("/api/accounts/ourself", {
             method: "GET",
         });
-        canManageEvents = Boolean(profile?.can_events);
+        canManageEvents = Boolean(profile?.can_event_edit);
+        canViewEvents = canManageEvents || Boolean(profile?.can_event_view);
         window.canManageEvents = canManageEvents;
+        window.canViewEvents = canViewEvents;
 
-        if (!canManageEvents) {
+        if (!canViewEvents) {
             if (eventsTableBody) {
                 eventsTableBody.innerHTML = "";
             }
@@ -360,8 +363,15 @@ window.escapeHtml = escapeHtml;
 window.getEventMl = getEventMl;
 window.getEventMagnitude = getEventMagnitude;
 window.requireEventsAuth = requireEventsAuth;
-window.hasPermission = (code) =>
-    code === "can_events" ? hasEventsPermission() : false;
+window.hasPermission = (code) => {
+    if (code === "can_event_edit") {
+        return canManageEvents;
+    }
+    if (code === "can_event_view") {
+        return canViewEvents;
+    }
+    return false;
+};
 window.renderEvents = renderEvents;
 window.renderEventsAndMap = renderEventsAndMap;
 window.applyEventsFilter = applyEventsFilter;

@@ -211,7 +211,7 @@ def populate_db_core():
             depth=10.5,
             location_ge="თბილისის მახლობლად",
             location_en="Near Tbilisi",
-            area="Georgia",
+            area="local",
             is_automatic=False,
         )
         sample_event.create()

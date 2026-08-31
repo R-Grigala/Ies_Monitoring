@@ -66,7 +66,7 @@ document.addEventListener("DOMContentLoaded", async function () {
                 );
             }
 
-            if (user?.can_events) {
+            if (user?.can_event_view || user?.can_event_edit) {
                 appendNavLink(
                     navLinksStart,
                     i18n ? i18n.localizePath("/seismic_events") : "/seismic_events",
