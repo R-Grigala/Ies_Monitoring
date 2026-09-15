@@ -110,7 +110,53 @@
                         </div>
                         <div class="col-12">
                             <div class="form-label fw-semibold" data-i18n="events.edit.beachball">Beachball</div>
-                            <div id="editEventBeachball" class="small text-muted"></div>
+                            <div class="row g-2 align-items-end">
+                                <div class="col-12 col-md-3">
+                                    <label class="form-label small mb-1" for="editEventBeachballStrike" data-i18n="events.edit.beachball_strike">
+                                        Strike
+                                    </label>
+                                    <input
+                                        type="number"
+                                        class="form-control"
+                                        id="editEventBeachballStrike"
+                                        step="any"
+                                    >
+                                </div>
+                                <div class="col-12 col-md-3">
+                                    <label class="form-label small mb-1" for="editEventBeachballDip" data-i18n="events.edit.beachball_dip">
+                                        Dip
+                                    </label>
+                                    <input
+                                        type="number"
+                                        class="form-control"
+                                        id="editEventBeachballDip"
+                                        step="any"
+                                    >
+                                </div>
+                                <div class="col-12 col-md-3">
+                                    <label class="form-label small mb-1" for="editEventBeachballRake" data-i18n="events.edit.beachball_rake">
+                                        Rake
+                                    </label>
+                                    <input
+                                        type="number"
+                                        class="form-control"
+                                        id="editEventBeachballRake"
+                                        step="any"
+                                    >
+                                </div>
+                                <div class="col-12 col-md-3 d-grid">
+                                    <button
+                                        type="button"
+                                        class="btn btn-outline-danger"
+                                        id="editEventBeachballDelete"
+                                        data-i18n="events.edit.beachball_delete"
+                                        disabled
+                                    >
+                                        Delete beachball
+                                    </button>
+                                </div>
+                            </div>
+                            <div id="editEventBeachballPath" class="small text-muted mt-2"></div>
                         </div>
                     </div>
 

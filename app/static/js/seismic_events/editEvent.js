@@ -268,26 +268,125 @@ async function deleteEventMagnitude(eventMagnitudeId) {
     }
 }
 
-function renderBeachballSummary(beachball) {
-    const container = document.getElementById("editEventBeachball");
-    if (!container) {
+let editEventHasBeachball = false;
+
+function readOptionalNumber(id) {
+    const raw = document.getElementById(id)?.value;
+    if (raw === null || raw === undefined || raw === "") {
+        return null;
+    }
+    const value = Number(raw);
+    return Number.isNaN(value) ? null : value;
+}
+
+function setBeachballDeleteEnabled(enabled) {
+    const deleteButton = document.getElementById("editEventBeachballDelete");
+    if (deleteButton) {
+        deleteButton.disabled = !enabled;
+    }
+}
+
+function fillBeachballForm(beachball) {
+    editEventHasBeachball = Boolean(beachball);
+    document.getElementById("editEventBeachballStrike").value =
+        beachball?.strike === null || beachball?.strike === undefined ? "" : beachball.strike;
+    document.getElementById("editEventBeachballDip").value =
+        beachball?.dip === null || beachball?.dip === undefined ? "" : beachball.dip;
+    document.getElementById("editEventBeachballRake").value =
+        beachball?.rake === null || beachball?.rake === undefined ? "" : beachball.rake;
+
+    const pathEl = document.getElementById("editEventBeachballPath");
+    if (pathEl) {
+        pathEl.textContent = beachball?.beachball_path || "";
+    }
+    setBeachballDeleteEnabled(editEventHasBeachball);
+}
+
+function readBeachballPayload() {
+    const payload = {};
+    const strike = readOptionalNumber("editEventBeachballStrike");
+    const dip = readOptionalNumber("editEventBeachballDip");
+    const rake = readOptionalNumber("editEventBeachballRake");
+
+    if (strike !== null) {
+        payload.strike = strike;
+    }
+    if (dip !== null) {
+        payload.dip = dip;
+    }
+    if (rake !== null) {
+        payload.rake = rake;
+    }
+    return payload;
+}
+
+function isBeachballPayloadEmpty(payload) {
+    return Object.keys(payload).length === 0;
+}
+
+async function syncEventBeachball(eventId) {
+    const payload = readBeachballPayload();
+    if (isBeachballPayloadEmpty(payload)) {
         return;
     }
-    if (!beachball) {
-        container.textContent = t("events.edit.beachball_empty", "No beachball data.");
+
+    if (editEventHasBeachball) {
+        await window.makeApiRequest(`/api/seismic_events/${eventId}/beachball`, {
+            method: "PUT",
+            body: JSON.stringify(payload),
+        });
+    } else {
+        await window.makeApiRequest(`/api/seismic_events/${eventId}/beachball`, {
+            method: "POST",
+            body: JSON.stringify(payload),
+        });
+        editEventHasBeachball = true;
+    }
+}
+
+async function deleteEventBeachball() {
+    const eventId = document.getElementById("editEventId")?.value;
+    if (!eventId || !editEventHasBeachball) {
         return;
     }
-    const parts = [
-        beachball.strike !== null && beachball.strike !== undefined
-            ? `strike ${beachball.strike}`
-            : null,
-        beachball.dip !== null && beachball.dip !== undefined ? `dip ${beachball.dip}` : null,
-        beachball.rake !== null && beachball.rake !== undefined ? `rake ${beachball.rake}` : null,
-        beachball.beachball_path || null,
-    ].filter(Boolean);
-    container.textContent = parts.length
-        ? parts.join(" · ")
-        : t("events.edit.beachball_empty", "No beachball data.");
+
+    const confirmed = await window.confirmDelete({
+        message: t(
+            "events.edit.beachball_delete_confirm",
+            "Are you sure you want to delete this beachball?"
+        ),
+    });
+    if (!confirmed) {
+        return;
+    }
+
+    const deleteButton = document.getElementById("editEventBeachballDelete");
+    deleteButton.disabled = true;
+    clearEditEventAlert();
+
+    try {
+        await window.makeApiRequest(`/api/seismic_events/${eventId}/beachball`, {
+            method: "DELETE",
+        });
+        fillBeachballForm(null);
+        const event = await window.makeApiRequest(`/api/seismic_events/${eventId}`, {
+            method: "GET",
+        });
+        window.onEventUpdated?.(event);
+        window.showAlert(
+            EDIT_EVENT_ALERT_ID,
+            "success",
+            t("events.edit.beachball_delete_success", "Beachball deleted successfully.")
+        );
+    } catch (error) {
+        window.showAlert(
+            EDIT_EVENT_ALERT_ID,
+            "danger",
+            error.message ||
+                t("events.edit.beachball_delete_error", "Failed to delete beachball.")
+        );
+        setBeachballDeleteEnabled(true);
+    }
 }
 
 function setAreaValue(area) {
@@ -325,7 +424,7 @@ function fillEventForm(event) {
     document.getElementById("editEventIesdataId").value = event.iesdata_id || "";
     document.getElementById("editEventSeiscompOid").value = event.seiscomp_oid || "";
     renderMagnitudesSummary(event.magnitudes);
-    renderBeachballSummary(event.beachball);
+    fillBeachballForm(event.beachball);
 }
 
 async function openEditEventModal(eventId) {
@@ -400,14 +499,33 @@ async function submitEditEventForm(formEvent) {
             body: JSON.stringify(payload),
         });
 
-        const updated = data.event || data;
-        window.onEventUpdated?.(updated);
+        let beachballWarning = null;
+        try {
+            await syncEventBeachball(eventId);
+        } catch (beachballError) {
+            beachballWarning =
+                beachballError.message ||
+                t(
+                    "events.edit.beachball_warning",
+                    "Event updated, but the beachball could not be saved."
+                );
+        }
+
+        const refreshed = await window.makeApiRequest(`/api/seismic_events/${eventId}`, {
+            method: "GET",
+        });
+        window.onEventUpdated?.(refreshed);
         ensureEditEventModal()?.hide();
-        window.showAlert(
-            "alertPlaceholder",
-            "success",
-            data.message || t("events.edit.success", "Earthquake updated successfully.")
-        );
+
+        if (beachballWarning) {
+            window.showAlert("alertPlaceholder", "warning", beachballWarning);
+        } else {
+            window.showAlert(
+                "alertPlaceholder",
+                "success",
+                data.message || t("events.edit.success", "Earthquake updated successfully.")
+            );
+        }
     } catch (error) {
         window.showAlert(
             EDIT_EVENT_ALERT_ID,
@@ -473,6 +591,9 @@ document.addEventListener("DOMContentLoaded", () => {
     document
         .getElementById("editEventMagnitudeAdd")
         ?.addEventListener("click", addEventMagnitude);
+    document
+        .getElementById("editEventBeachballDelete")
+        ?.addEventListener("click", deleteEventBeachball);
 
     document.getElementById("editEventMagnitudes")?.addEventListener("click", (event) => {
         const saveButton = event.target.closest("[data-magnitude-save]");

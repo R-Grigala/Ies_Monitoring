@@ -252,12 +252,27 @@ event_beachball_parser.add_argument(
     help="Path or URL to beachball image",
 )
 
+def parse_magnitude_filters(value):
+    """Accept a list of magnitude filter objects from JSON."""
+    if value is None or value == "":
+        return None
+    if not isinstance(value, list):
+        raise ValueError("magnitudes must be a list of filter objects")
+    return value
+
+
 seismic_event_filter_parser = reqparse.RequestParser()
 seismic_event_filter_parser.add_argument(
     "event_id",
     type=int,
     required=False,
     help="Exact seismic event id",
+)
+seismic_event_filter_parser.add_argument(
+    "event_query",
+    type=str,
+    required=False,
+    help="Substring match against event id or iesdata_id",
 )
 seismic_event_filter_parser.add_argument(
     "iesdata_id",
@@ -300,6 +315,13 @@ seismic_event_filter_parser.add_argument(
     type=float,
     required=False,
     help="Maximum magnitude value (inclusive)",
+)
+seismic_event_filter_parser.add_argument(
+    "magnitudes",
+    type=parse_magnitude_filters,
+    location="json",
+    required=False,
+    help="List of magnitude filters: [{magnitude, magnitude_min, magnitude_max}, ...]",
 )
 seismic_event_filter_parser.add_argument(
     "depth_min",
