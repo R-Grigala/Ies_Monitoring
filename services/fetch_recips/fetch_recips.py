@@ -10,7 +10,7 @@ from pathlib import Path
 
 
 BASE_URL = "http://127.0.0.1:5000"
-API_KEY = "ies_iiAb6mCtrOcOMU3_w1pNUwJ5NaSjnKJFDrZWlm-TOb0"
+API_KEY = "ies_iiAb6mCtrOcOMU3_w1pNUfwJ5NaSjnKJFDrZWlm-TOb0"
 
 # Where list files are written. See README.md → "OUTPUT_DIR".
 # Examples:
@@ -38,7 +38,7 @@ def get_output_dir() -> Path:
     return Path(OUTPUT_DIR).expanduser().resolve()
 
 
-def fetch_recips() -> dict:
+def fetch_recips() -> dict | None:
     request = urllib.request.Request(
         f"{BASE_URL.rstrip('/')}/api/recips/",
         headers={
@@ -52,6 +52,14 @@ def fetch_recips() -> dict:
             return json.loads(response.read().decode("utf-8"))
     except urllib.error.HTTPError as err:
         detail = err.read().decode("utf-8", errors="replace")
+        if err.code == 401:
+            print(
+                "API key is incorrect or unauthorized (HTTP 401). "
+                "Check API_KEY in fetch_recips.py and try again."
+            )
+            if detail.strip():
+                print(f"Details: {detail.strip()}")
+            return None
         raise RuntimeError(f"GET /api/recips/ failed with HTTP {err.code}: {detail}") from err
     except urllib.error.URLError as err:
         raise RuntimeError(f"Could not reach API: {err.reason}") from err
@@ -111,6 +119,8 @@ def write_lists(lists: dict[str, list[str]], output_dir: Path) -> None:
 def main() -> None:
     output_dir = get_output_dir()
     payload = fetch_recips()
+    if payload is None:
+        return
     write_lists(build_lists(payload), output_dir)
 
 
