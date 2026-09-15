@@ -42,7 +42,9 @@
         const magText = magnitude
             ? `${magnitude.value.toFixed(1)}${magnitude.code ? ` ${magnitude.code}` : ""}`
             : "—";
-        const time = event.origin_time || "—";
+        const time = window.formatOriginTime
+            ? window.formatOriginTime(event.origin_time)
+            : event.origin_time || "—";
         return `
             <div class="small">
                 <div><strong>#${event.id ?? ""}</strong></div>
