@@ -86,13 +86,29 @@
                 <label class="form-label small mb-1" for="filterDateFrom" data-i18n="events.filter.date_from">
                     Date (from)
                 </label>
-                <input type="date" class="form-control form-control-sm" id="filterDateFrom">
+                <input
+                    type="text"
+                    class="form-control form-control-sm"
+                    id="filterDateFrom"
+                    inputmode="numeric"
+                    autocomplete="off"
+                    placeholder="dd/mm/yyyy"
+                    data-i18n-placeholder="events.filter.date_placeholder"
+                >
             </div>
             <div class="col-12 col-sm-6">
                 <label class="form-label small mb-1" for="filterDateTo" data-i18n="events.filter.date_to">
                     Date (to)
                 </label>
-                <input type="date" class="form-control form-control-sm" id="filterDateTo">
+                <input
+                    type="text"
+                    class="form-control form-control-sm"
+                    id="filterDateTo"
+                    inputmode="numeric"
+                    autocomplete="off"
+                    placeholder="dd/mm/yyyy"
+                    data-i18n-placeholder="events.filter.date_placeholder"
+                >
             </div>
 
             <div class="col-12 d-flex flex-wrap gap-2 mt-2 justify-content-center">

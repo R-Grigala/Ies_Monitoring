@@ -11,6 +11,10 @@
     integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
     crossorigin=""
 />
+<link
+    rel="stylesheet"
+    href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css"
+/>
 {% endblock %}
 
 {% block main_container_class %}container-fluid container-lg h-100 px-2 px-md-3{% endblock %}
@@ -75,6 +79,7 @@
     integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
     crossorigin=""
 ></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 <script src="{{ url_for('static', filename='js/seismic_events/map.js') }}"></script>
 <script src="{{ url_for('static', filename='js/seismic_events/eventDetail.js') }}" defer></script>
 <script src="{{ url_for('static', filename='js/seismic_events/events.js') }}" defer></script>

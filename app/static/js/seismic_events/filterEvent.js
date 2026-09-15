@@ -13,6 +13,38 @@ function readTextField(id) {
     return (document.getElementById(id)?.value || "").trim().toLowerCase();
 }
 
+function parseFilterDate(value, endOfDay = false) {
+    const raw = (value || "").trim();
+    if (!raw) {
+        return null;
+    }
+
+    const match = raw.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+    if (!match) {
+        return null;
+    }
+
+    const day = Number(match[1]);
+    const month = Number(match[2]);
+    const year = Number(match[3]);
+    const date = new Date(year, month - 1, day);
+
+    if (
+        date.getFullYear() !== year ||
+        date.getMonth() !== month - 1 ||
+        date.getDate() !== day
+    ) {
+        return null;
+    }
+
+    if (endOfDay) {
+        date.setHours(23, 59, 59, 999);
+    } else {
+        date.setHours(0, 0, 0, 0);
+    }
+    return date;
+}
+
 function readFilterState() {
     return {
         eventId: readTextField("filterEventId"),
@@ -22,8 +54,8 @@ function readFilterState() {
         magnitudes: readMagnitudeFilterRows(),
         depthMin: readNumberField("filterDepthMin"),
         depthMax: readNumberField("filterDepthMax"),
-        dateFrom: document.getElementById("filterDateFrom")?.value || null,
-        dateTo: document.getElementById("filterDateTo")?.value || null,
+        dateFrom: document.getElementById("filterDateFrom")?.value?.trim() || null,
+        dateTo: document.getElementById("filterDateTo")?.value?.trim() || null,
     };
 }
 
@@ -232,14 +264,14 @@ function filterEventsList(events, filterState) {
 
         const origin = event.origin_time ? new Date(event.origin_time) : null;
         if (filterState.dateFrom) {
-            const from = new Date(`${filterState.dateFrom}T00:00:00`);
-            if (!origin || origin < from) {
+            const from = parseFilterDate(filterState.dateFrom, false);
+            if (!from || !origin || origin < from) {
                 return false;
             }
         }
         if (filterState.dateTo) {
-            const to = new Date(`${filterState.dateTo}T23:59:59.999`);
-            if (!origin || origin > to) {
+            const to = parseFilterDate(filterState.dateTo, true);
+            if (!to || !origin || origin > to) {
                 return false;
             }
         }
@@ -266,8 +298,26 @@ function getActiveEventsFilter() {
     return activeFilter;
 }
 
+function initFilterDatePickers() {
+    if (typeof flatpickr !== "function") {
+        return { from: null, to: null };
+    }
+
+    const options = {
+        dateFormat: "d/m/Y",
+        allowInput: true,
+        disableMobile: true,
+    };
+
+    return {
+        from: flatpickr("#filterDateFrom", options),
+        to: flatpickr("#filterDateTo", options),
+    };
+}
+
 document.addEventListener("DOMContentLoaded", () => {
     loadMagnitudeTypeFilterOptions();
+    const datePickers = initFilterDatePickers();
 
     const form = document.getElementById("filterEventForm");
     form?.addEventListener("submit", (event) => {
@@ -289,6 +339,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
     document.getElementById("filterEventReset")?.addEventListener("click", () => {
         form?.reset();
+        datePickers.from?.clear();
+        datePickers.to?.clear();
         const areaSelect = document.getElementById("filterArea");
         if (areaSelect) {
             areaSelect.value = "";

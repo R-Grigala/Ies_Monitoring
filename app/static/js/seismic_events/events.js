@@ -60,15 +60,11 @@ function formatOriginTime(value) {
     if (Number.isNaN(date.getTime())) {
         return String(value);
     }
-    const lang = window.I18n?.getLanguage?.() || "en";
-    return date.toLocaleString(lang === "ka" ? "ka-GE" : "en-GB", {
-        year: "numeric",
-        month: "2-digit",
-        day: "2-digit",
-        hour: "2-digit",
-        minute: "2-digit",
-        second: "2-digit",
-    });
+    const pad = (n) => String(n).padStart(2, "0");
+    return (
+        `${pad(date.getDate())}/${pad(date.getMonth() + 1)}/${date.getFullYear()}, ` +
+        `${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`
+    );
 }
 
 function hasEventsPermission() {
@@ -360,6 +356,7 @@ async function loadEvents() {
 }
 
 window.escapeHtml = escapeHtml;
+window.formatOriginTime = formatOriginTime;
 window.getEventMl = getEventMl;
 window.getEventMagnitude = getEventMagnitude;
 window.requireEventsAuth = requireEventsAuth;
