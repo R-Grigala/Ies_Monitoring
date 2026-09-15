@@ -131,7 +131,7 @@ Requires JWT or API key with **`can_event_view`** (read) and/or **`can_event_edi
 | Method | Path | Auth | Notes |
 |--------|------|------|--------|
 | GET | `/api/seismic_events/` | `can_event_view` or `can_event_edit` | List events with nested magnitudes + beachball |
-| POST | `/api/seismic_events/filter` | `can_event_view` or `can_event_edit` | Filter by body fields: `event_id` (exact), `iesdata_id`, `seiscomp_oid`, `location`, `area`, `magnitude` (code), `magnitude_min`, `magnitude_max`, `depth_min`, `depth_max`, `date_from`, `date_to`. All optional; AND combined. `iesdata_id`, `seiscomp_oid`, `location`, `area` are substring matches |
+| POST | `/api/seismic_events/filter` | `can_event_view` or `can_event_edit` | Filter by body fields: `event_id` (exact), `event_query` (substring on id or iesdata_id), `iesdata_id`, `seiscomp_oid`, `location`, `area`, `magnitude` (code), `magnitude_min`, `magnitude_max`, `magnitudes` (list of `{magnitude, magnitude_min, magnitude_max}` for AND), `depth_min`, `depth_max`, `date_from`, `date_to`. All optional; AND combined. `iesdata_id`, `seiscomp_oid`, `location`, `area` are substring matches |
 | POST | `/api/seismic_events/` | `can_event_edit` | Create. Required: `origin_time`, `latitude`, `longitude`. Optional: `depth`, `iesdata_id`, `seiscomp_oid`, `location_ge`, `location_en`, `area`, `is_automatic` (default false) |
 | GET | `/api/seismic_events/<id>` | `can_event_view` or `can_event_edit` | Detail |
 | PUT | `/api/seismic_events/<id>` | `can_event_edit` | Update fields |

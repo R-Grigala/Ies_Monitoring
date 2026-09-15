@@ -1,7 +1,7 @@
 import logging
 
 from flask_restx import Resource, marshal
-from sqlalchemy import or_
+from sqlalchemy import String, and_, cast, exists, or_
 from sqlalchemy.exc import IntegrityError
 
 from app.extensions import db
@@ -123,29 +123,98 @@ def _apply_event_fields(event, payload, *, creating=False):
     return None
 
 
+def _normalize_magnitude_criteria(payload):
+    """Build magnitude filter criteria from `magnitudes` list or legacy single fields."""
+    raw_list = payload.get("magnitudes")
+    if isinstance(raw_list, list) and raw_list:
+        criteria = []
+        for item in raw_list:
+            if not isinstance(item, dict):
+                return None, (
+                    {
+                        "error": "validation_error",
+                        "message": "Each magnitudes entry must be an object.",
+                    },
+                    400,
+                )
+            criteria.append(
+                {
+                    "code": _optional_str(
+                        item.get("magnitude") or item.get("magnitude_code") or item.get("code")
+                    ),
+                    "min": item.get("magnitude_min", item.get("min")),
+                    "max": item.get("magnitude_max", item.get("max")),
+                }
+            )
+        return criteria, None
+
+    code = _optional_str(payload.get("magnitude"))
+    magnitude_min = payload.get("magnitude_min")
+    magnitude_max = payload.get("magnitude_max")
+    if code is None and magnitude_min is None and magnitude_max is None:
+        return [], None
+    return [{"code": code, "min": magnitude_min, "max": magnitude_max}], None
+
+
+def _apply_magnitude_criteria(query, criteria):
+    """AND together magnitude constraints using EXISTS subqueries."""
+    for criterion in criteria:
+        code = criterion.get("code")
+        magnitude_min = criterion.get("min")
+        magnitude_max = criterion.get("max")
+
+        if (
+            magnitude_min is not None
+            and magnitude_max is not None
+            and magnitude_min > magnitude_max
+        ):
+            return None, (
+                {
+                    "error": "validation_error",
+                    "message": "magnitude_min cannot be greater than magnitude_max.",
+                },
+                400,
+            )
+
+        conditions = [EventMagnitude.event_id == SeismicEvent.id]
+        if code is not None:
+            magnitude = Magnitude.query.filter_by(code=code.upper()).first()
+            if not magnitude:
+                return None, (
+                    {
+                        "error": "not_found",
+                        "message": f"Magnitude catalog entry not found for code: {code.upper()}",
+                    },
+                    404,
+                )
+            conditions.append(EventMagnitude.magnitude_id == magnitude.id)
+        if magnitude_min is not None:
+            conditions.append(EventMagnitude.value >= magnitude_min)
+        if magnitude_max is not None:
+            conditions.append(EventMagnitude.value <= magnitude_max)
+
+        query = query.filter(exists().where(and_(*conditions)))
+
+    return query, None
+
+
 def _build_filtered_events_query(payload):
     """Build a SeismicEvent query from optional filter args. Returns (query, error_tuple)."""
     event_id = payload.get("event_id")
+    event_query = _optional_str(payload.get("event_query"))
     iesdata_id = _optional_str(payload.get("iesdata_id"))
     seiscomp_oid = _optional_str(payload.get("seiscomp_oid"))
     location = _optional_str(payload.get("location"))
     area = _optional_str(payload.get("area"))
-    magnitude_code = _optional_str(payload.get("magnitude"))
-    magnitude_min = payload.get("magnitude_min")
-    magnitude_max = payload.get("magnitude_max")
     depth_min = payload.get("depth_min")
     depth_max = payload.get("depth_max")
     date_from = payload.get("date_from")
     date_to = payload.get("date_to")
 
-    if magnitude_min is not None and magnitude_max is not None and magnitude_min > magnitude_max:
-        return None, (
-            {
-                "error": "validation_error",
-                "message": "magnitude_min cannot be greater than magnitude_max.",
-            },
-            400,
-        )
+    magnitude_criteria, magnitude_error = _normalize_magnitude_criteria(payload)
+    if magnitude_error:
+        return None, magnitude_error
+
     if depth_min is not None and depth_max is not None and depth_min > depth_max:
         return None, (
             {
@@ -167,6 +236,15 @@ def _build_filtered_events_query(payload):
 
     if event_id is not None:
         query = query.filter(SeismicEvent.id == event_id)
+
+    if event_query is not None:
+        pattern = f"%{event_query}%"
+        query = query.filter(
+            or_(
+                cast(SeismicEvent.id, String).ilike(pattern),
+                SeismicEvent.iesdata_id.ilike(pattern),
+            )
+        )
 
     if iesdata_id is not None:
         query = query.filter(SeismicEvent.iesdata_id.ilike(f"%{iesdata_id}%"))
@@ -196,30 +274,10 @@ def _build_filtered_events_query(payload):
     if date_to is not None:
         query = query.filter(SeismicEvent.origin_time <= date_to)
 
-    needs_magnitude_join = (
-        magnitude_code is not None
-        or magnitude_min is not None
-        or magnitude_max is not None
-    )
-    if needs_magnitude_join:
-        query = query.join(EventMagnitude, EventMagnitude.event_id == SeismicEvent.id)
-        if magnitude_code is not None:
-            code = magnitude_code.upper()
-            magnitude = Magnitude.query.filter_by(code=code).first()
-            if not magnitude:
-                return None, (
-                    {
-                        "error": "not_found",
-                        "message": f"Magnitude catalog entry not found for code: {code}",
-                    },
-                    404,
-                )
-            query = query.filter(EventMagnitude.magnitude_id == magnitude.id)
-        if magnitude_min is not None:
-            query = query.filter(EventMagnitude.value >= magnitude_min)
-        if magnitude_max is not None:
-            query = query.filter(EventMagnitude.value <= magnitude_max)
-        query = query.distinct()
+    if magnitude_criteria:
+        query, magnitude_apply_error = _apply_magnitude_criteria(query, magnitude_criteria)
+        if magnitude_apply_error:
+            return None, magnitude_apply_error
 
     return query.order_by(SeismicEvent.origin_time.desc()), None
 

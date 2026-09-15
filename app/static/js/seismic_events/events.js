@@ -250,25 +250,61 @@ function renderEventsAndMap(events) {
     }
 }
 
-function applyEventsFilter(filterState) {
-    const filtered = window.filterEventsList
-        ? window.filterEventsList(allEvents, filterState)
-        : allEvents;
-    renderEventsAndMap(filtered);
+let filterRequestSeq = 0;
+
+async function applyEventsFilter(filterState) {
+    const requestId = ++filterRequestSeq;
+
+    if (eventsStatus) {
+        eventsStatus.textContent = t("events.loading", "Loading earthquakes...");
+    }
+
+    try {
+        let data;
+        if (!filterState || window.isEmptyEventsFilter?.(filterState)) {
+            data = await window.makeApiRequest("/api/seismic_events/", {
+                method: "GET",
+            });
+        } else {
+            const payload = window.buildEventsFilterPayload(filterState);
+            data = await window.makeApiRequest("/api/seismic_events/filter", {
+                method: "POST",
+                body: JSON.stringify(payload),
+            });
+        }
+
+        if (requestId !== filterRequestSeq) {
+            return;
+        }
+
+        allEvents = Array.isArray(data.items) ? data.items : [];
+        window.updateAreaFilterOptions?.(allEvents);
+        renderEventsAndMap(allEvents);
+    } catch (error) {
+        if (requestId !== filterRequestSeq) {
+            return;
+        }
+        if (eventsTableBody) {
+            eventsTableBody.innerHTML = "";
+        }
+        if (eventsStatus) {
+            eventsStatus.textContent =
+                error.message || t("events.error.load", "Failed to load earthquakes.");
+        }
+        window.showAlert(
+            "alertPlaceholder",
+            "danger",
+            error.message || t("events.error.load", "Failed to load earthquakes.")
+        );
+    }
 }
 
-function onEventUpdated(event) {
-    if (!event?.id) {
-        return;
-    }
-    const without = allEvents.filter((item) => Number(item.id) !== Number(event.id));
-    allEvents = [event, ...without];
+function onEventUpdated() {
     const currentFilter = window.getActiveEventsFilter?.() || null;
     applyEventsFilter(currentFilter);
 }
 
-function onEventDeleted(eventId) {
-    allEvents = allEvents.filter((item) => Number(item.id) !== Number(eventId));
+function onEventDeleted() {
     const currentFilter = window.getActiveEventsFilter?.() || null;
     applyEventsFilter(currentFilter);
 }
@@ -278,7 +314,7 @@ function onEventCreated(event) {
         window.loadEvents?.();
         return;
     }
-    onEventUpdated(event);
+    onEventUpdated();
 }
 
 async function loadEvents() {
@@ -332,13 +368,8 @@ async function loadEvents() {
 
         bindCreateEventAuthGuard();
 
-        const data = await window.makeApiRequest("/api/seismic_events/", {
-            method: "GET",
-        });
-        allEvents = Array.isArray(data.items) ? data.items : [];
-        window.updateAreaFilterOptions?.(allEvents);
         const currentFilter = window.getActiveEventsFilter?.() || null;
-        applyEventsFilter(currentFilter);
+        await applyEventsFilter(currentFilter);
     } catch (error) {
         if (eventsTableBody) {
             eventsTableBody.innerHTML = "";

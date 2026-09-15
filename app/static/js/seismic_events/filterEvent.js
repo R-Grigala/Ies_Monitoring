@@ -10,7 +10,7 @@ function readNumberField(id) {
 }
 
 function readTextField(id) {
-    return (document.getElementById(id)?.value || "").trim().toLowerCase();
+    return (document.getElementById(id)?.value || "").trim();
 }
 
 function parseFilterDate(value, endOfDay = false) {
@@ -45,6 +45,26 @@ function parseFilterDate(value, endOfDay = false) {
     return date;
 }
 
+function toNumberOrNull(value) {
+    if (value === null || value === undefined || value === "") {
+        return null;
+    }
+    const parsed = Number(value);
+    return Number.isNaN(parsed) ? null : parsed;
+}
+
+function readMagnitudeFilterRows() {
+    return [...document.querySelectorAll("#filterMagnitudeRows .magnitude-filter-row")]
+        .map((row) => ({
+            code: (row.querySelector("[data-magnitude-code]")?.value || "").toUpperCase(),
+            min: toNumberOrNull(row.querySelector("[data-magnitude-min]")?.value),
+            max: toNumberOrNull(row.querySelector("[data-magnitude-max]")?.value),
+        }))
+        .filter(
+            (criterion) => criterion.code || criterion.min !== null || criterion.max !== null
+        );
+}
+
 function readFilterState() {
     return {
         eventId: readTextField("filterEventId"),
@@ -71,37 +91,78 @@ function isEmptyFilter(filter) {
     });
 }
 
-function inRange(value, min, max) {
-    if (min !== null) {
-        if (value === null || value === undefined || value < min) {
-            return false;
-        }
+function buildEventsFilterPayload(filterState) {
+    if (!filterState || isEmptyFilter(filterState)) {
+        return {};
     }
-    if (max !== null) {
-        if (value === null || value === undefined || value > max) {
-            return false;
-        }
-    }
-    return true;
-}
 
-function toNumberOrNull(value) {
-    if (value === null || value === undefined || value === "") {
-        return null;
-    }
-    const parsed = Number(value);
-    return Number.isNaN(parsed) ? null : parsed;
-}
+    const payload = {};
 
-function matchesText(haystackParts, needle) {
-    if (!needle) {
-        return true;
+    if (filterState.eventId) {
+        payload.event_query = filterState.eventId;
     }
-    const haystack = haystackParts
-        .filter((part) => part !== null && part !== undefined && part !== "")
-        .join(" ")
-        .toLowerCase();
-    return haystack.includes(needle);
+    if (filterState.seiscompOid) {
+        payload.seiscomp_oid = filterState.seiscompOid;
+    }
+    if (filterState.location) {
+        payload.location = filterState.location;
+    }
+    if (filterState.area) {
+        payload.area = filterState.area;
+    }
+    if (filterState.depthMin !== null) {
+        payload.depth_min = filterState.depthMin;
+    }
+    if (filterState.depthMax !== null) {
+        payload.depth_max = filterState.depthMax;
+    }
+
+    if (filterState.dateFrom) {
+        const from = parseFilterDate(filterState.dateFrom, false);
+        if (!from) {
+            throw new Error(
+                window.I18n?.t?.(
+                    "events.filter.invalid_date",
+                    "Please enter dates as dd/mm/yyyy."
+                ) || "Please enter dates as dd/mm/yyyy."
+            );
+        }
+        payload.date_from = from.toISOString();
+    }
+    if (filterState.dateTo) {
+        const to = parseFilterDate(filterState.dateTo, true);
+        if (!to) {
+            throw new Error(
+                window.I18n?.t?.(
+                    "events.filter.invalid_date",
+                    "Please enter dates as dd/mm/yyyy."
+                ) || "Please enter dates as dd/mm/yyyy."
+            );
+        }
+        payload.date_to = to.toISOString();
+    }
+
+    const magnitudes = (filterState.magnitudes || []).map((criterion) => {
+        const entry = {};
+        if (criterion.code) {
+            entry.magnitude = criterion.code;
+        }
+        if (criterion.min !== null) {
+            entry.magnitude_min = criterion.min;
+        }
+        if (criterion.max !== null) {
+            entry.magnitude_max = criterion.max;
+        }
+        return entry;
+    });
+
+    if (magnitudes.length === 1) {
+        Object.assign(payload, magnitudes[0]);
+    } else if (magnitudes.length > 1) {
+        payload.magnitudes = magnitudes;
+    }
+
+    return payload;
 }
 
 function updateAreaFilterOptions(events) {
@@ -128,47 +189,7 @@ function updateAreaFilterOptions(events) {
     });
 }
 
-function matchesMagnitude(event, filterState) {
-    const criteria = filterState.magnitudes || [];
-    if (!criteria.length) {
-        return true;
-    }
-
-    const magnitudes = (Array.isArray(event.magnitudes) ? event.magnitudes : []).filter(
-        (item) => item.value !== null && item.value !== undefined
-    );
-
-    // Every configured type must be present and inside its own range.
-    return criteria.every((criterion) => {
-        if (!criterion.code) {
-            return inRange(
-                window.getEventMl?.(event) ?? null,
-                criterion.min,
-                criterion.max
-            );
-        }
-
-        return magnitudes.some(
-            (item) =>
-                (item.magnitude?.code || "").toUpperCase() === criterion.code &&
-                inRange(Number(item.value), criterion.min, criterion.max)
-        );
-    });
-}
-
 let magnitudeTypeCatalog = [];
-
-function readMagnitudeFilterRows() {
-    return [...document.querySelectorAll("#filterMagnitudeRows .magnitude-filter-row")]
-        .map((row) => ({
-            code: (row.querySelector("[data-magnitude-code]")?.value || "").toUpperCase(),
-            min: toNumberOrNull(row.querySelector("[data-magnitude-min]")?.value),
-            max: toNumberOrNull(row.querySelector("[data-magnitude-max]")?.value),
-        }))
-        .filter(
-            (criterion) => criterion.code || criterion.min !== null || criterion.max !== null
-        );
-}
 
 function addMagnitudeFilterRow() {
     const container = document.getElementById("filterMagnitudeRows");
@@ -237,63 +258,6 @@ async function loadMagnitudeTypeFilterOptions() {
     addMagnitudeFilterRow();
 }
 
-function filterEventsList(events, filterState) {
-    const list = Array.isArray(events) ? events : [];
-    if (!filterState || isEmptyFilter(filterState)) {
-        return list;
-    }
-
-    return list.filter((event) => {
-        if (!matchesText([event.id, event.iesdata_id], filterState.eventId)) {
-            return false;
-        }
-        if (!matchesText([event.seiscomp_oid], filterState.seiscompOid)) {
-            return false;
-        }
-        if (
-            !matchesText(
-                [event.location_ge, event.location_en, event.area],
-                filterState.location
-            )
-        ) {
-            return false;
-        }
-        if (filterState.area && (event.area || "").trim() !== filterState.area) {
-            return false;
-        }
-
-        const origin = event.origin_time ? new Date(event.origin_time) : null;
-        if (filterState.dateFrom) {
-            const from = parseFilterDate(filterState.dateFrom, false);
-            if (!from || !origin || origin < from) {
-                return false;
-            }
-        }
-        if (filterState.dateTo) {
-            const to = parseFilterDate(filterState.dateTo, true);
-            if (!to || !origin || origin > to) {
-                return false;
-            }
-        }
-
-        if (!matchesMagnitude(event, filterState)) {
-            return false;
-        }
-
-        if (
-            !inRange(
-                toNumberOrNull(event.depth),
-                filterState.depthMin,
-                filterState.depthMax
-            )
-        ) {
-            return false;
-        }
-
-        return true;
-    });
-}
-
 function getActiveEventsFilter() {
     return activeFilter;
 }
@@ -355,6 +319,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 });
 
-window.filterEventsList = filterEventsList;
+window.isEmptyEventsFilter = isEmptyFilter;
+window.buildEventsFilterPayload = buildEventsFilterPayload;
 window.getActiveEventsFilter = getActiveEventsFilter;
 window.updateAreaFilterOptions = updateAreaFilterOptions;
