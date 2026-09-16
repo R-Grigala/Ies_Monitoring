@@ -12,22 +12,10 @@
                 <form id="createEventForm" novalidate>
                     <div class="row g-3">
                         <div class="col-12 col-md-6">
-                            <label class="form-label" for="createEventOriginTime" data-i18n="events.edit.origin_time">
-                                Origin time
+                            <label class="form-label" for="createEventIesdataId" data-i18n="events.edit.iesdata_id">
+                                IES data ID
                             </label>
-                            <input
-                                type="datetime-local"
-                                class="form-control form-control-lg"
-                                id="createEventOriginTime"
-                                step="1"
-                                required
-                            >
-                        </div>
-                        <div class="col-12 col-md-6">
-                            <label class="form-label" for="createEventDepth" data-i18n="events.edit.depth">
-                                Depth (km)
-                            </label>
-                            <input type="number" class="form-control form-control-lg" id="createEventDepth" step="any">
+                            <input type="text" class="form-control form-control-lg font-monospace" id="createEventIesdataId">
                         </div>
                         <div class="col-12 col-md-6">
                             <label class="form-label" for="createEventSeiscompOid" data-i18n="events.edit.seiscomp_oid">
@@ -35,6 +23,29 @@
                             </label>
                             <input type="text" class="form-control form-control-lg font-monospace" id="createEventSeiscompOid">
                         </div>
+
+                        <div class="col-12 col-md-6">
+                            <label class="form-label" for="createEventOriginTime" data-i18n="events.edit.origin_time">
+                                Origin Time (ISO 8601)
+                            </label>
+                            <input
+                                type="text"
+                                class="form-control form-control-lg"
+                                id="createEventOriginTime"
+                                inputmode="numeric"
+                                autocomplete="off"
+                                placeholder="YYYY-MM-DD HH:mm:ss"
+                                data-i18n-placeholder="events.edit.origin_time_placeholder"
+                                required
+                            >
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <label class="form-label" for="createEventDepth" data-i18n="events.edit.depth">
+                                Depth (km)
+                            </label>
+                            <input type="number" class="form-control form-control-lg" id="createEventDepth" step="any" required>
+                        </div>
+
                         <div class="col-12 col-md-6">
                             <label class="form-label" for="createEventLatitude" data-i18n="events.edit.latitude">
                                 Latitude
@@ -47,19 +58,20 @@
                             </label>
                             <input type="number" class="form-control form-control-lg" id="createEventLongitude" step="any" required>
                         </div>
-                        <div class="col-12 col-md-6">
+
+                        <div class="col-12 col-md-4">
                             <label class="form-label" for="createEventLocationGe" data-i18n="events.edit.location_ge">
-                                Location (GE)
+                                Location GE
                             </label>
                             <input type="text" class="form-control form-control-lg" id="createEventLocationGe">
                         </div>
-                        <div class="col-12 col-md-6">
+                        <div class="col-12 col-md-4">
                             <label class="form-label" for="createEventLocationEn" data-i18n="events.edit.location_en">
-                                Location (EN)
+                                Location EN
                             </label>
                             <input type="text" class="form-control form-control-lg" id="createEventLocationEn">
                         </div>
-                        <div class="col-12 col-md-6">
+                        <div class="col-12 col-md-4">
                             <label class="form-label" for="createEventArea" data-i18n="events.edit.area">Area</label>
                             <select class="form-select form-select-lg" id="createEventArea">
                                 <option value="" data-i18n="events.area.unset">Not specified</option>
@@ -67,12 +79,6 @@
                                 <option value="regional" data-i18n="events.area.regional">Regional</option>
                                 <option value="teleseismic" data-i18n="events.area.teleseismic">Teleseismic</option>
                             </select>
-                        </div>
-                        <div class="col-12 col-md-6">
-                            <label class="form-label" for="createEventIesdataId" data-i18n="events.edit.iesdata_id">
-                                IES data ID
-                            </label>
-                            <input type="text" class="form-control form-control-lg font-monospace" id="createEventIesdataId">
                         </div>
 
                         <div class="col-12">
@@ -86,6 +92,45 @@
                             >
                                 Add magnitude
                             </button>
+                        </div>
+
+                        <div class="col-12">
+                            <div class="form-label fw-semibold" data-i18n="events.edit.beachball">Beachball</div>
+                            <div class="row g-2">
+                                <div class="col-12 col-md-4">
+                                    <label class="form-label small mb-1" for="createEventBeachballStrike" data-i18n="events.edit.beachball_strike">
+                                        Strike
+                                    </label>
+                                    <input
+                                        type="number"
+                                        class="form-control form-control-lg"
+                                        id="createEventBeachballStrike"
+                                        step="any"
+                                    >
+                                </div>
+                                <div class="col-12 col-md-4">
+                                    <label class="form-label small mb-1" for="createEventBeachballDip" data-i18n="events.edit.beachball_dip">
+                                        Dip
+                                    </label>
+                                    <input
+                                        type="number"
+                                        class="form-control form-control-lg"
+                                        id="createEventBeachballDip"
+                                        step="any"
+                                    >
+                                </div>
+                                <div class="col-12 col-md-4">
+                                    <label class="form-label small mb-1" for="createEventBeachballRake" data-i18n="events.edit.beachball_rake">
+                                        Rake
+                                    </label>
+                                    <input
+                                        type="number"
+                                        class="form-control form-control-lg"
+                                        id="createEventBeachballRake"
+                                        step="any"
+                                    >
+                                </div>
+                            </div>
                         </div>
                     </div>
                     <div class="d-grid d-md-flex justify-content-md-end gap-2 mt-4">
