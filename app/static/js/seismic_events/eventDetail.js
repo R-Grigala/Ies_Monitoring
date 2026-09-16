@@ -3,23 +3,6 @@ function buildEventDetailsUrl(eventId) {
     return window.I18n?.localizePath?.(path) || path;
 }
 
-function buildViewEventButton(eventId) {
-    if (eventId === null || eventId === undefined || eventId === "") {
-        return "";
-    }
-    return `
-        <button
-            type="button"
-            class="btn btn-sm btn-outline-primary d-inline-flex align-items-center justify-content-center"
-            data-view-id="${window.escapeHtml?.(eventId) ?? eventId}"
-            title="View on map"
-            aria-label="View on map"
-        >
-            <i class="fa-solid fa-location-dot"></i>
-        </button>
-    `;
-}
-
 function buildEventDetailsButton(eventId) {
     if (eventId === null || eventId === undefined || eventId === "") {
         return "";
@@ -28,7 +11,7 @@ function buildEventDetailsButton(eventId) {
     const label = window.I18n?.t?.("events.table.details", "Details") || "Details";
     return `
         <a
-            class="btn btn-sm btn-outline-info d-inline-flex align-items-center justify-content-center"
+            class="btn btn-sm btn-outline-primary events-action-btn"
             href="${window.escapeHtml?.(href) ?? href}"
             title="${label}"
             aria-label="${label}"
@@ -39,7 +22,6 @@ function buildEventDetailsButton(eventId) {
 }
 
 function buildEventIdLink(eventId, label) {
-    const safeId = window.escapeHtml?.(eventId) ?? String(eventId ?? "");
     const safeLabel = window.escapeHtml?.(label) ?? String(label ?? "-");
     const href = buildEventDetailsUrl(eventId);
     return `
@@ -52,26 +34,6 @@ function buildEventIdLink(eventId, label) {
     `;
 }
 
-function focusEventRow(eventId) {
-    const row = document.querySelector(`#eventsTableBody tr[data-event-id="${eventId}"]`);
-    if (!row) {
-        return;
-    }
-    row.classList.add("table-active");
-    row.scrollIntoView({ behavior: "smooth", block: "nearest" });
-    setTimeout(() => row.classList.remove("table-active"), 1600);
-}
-
-function viewEvent(eventId) {
-    if (eventId === null || eventId === undefined || eventId === "") {
-        return;
-    }
-    window.focusEventOnMap?.(eventId);
-    focusEventRow(eventId);
-}
-
-window.buildViewEventButton = buildViewEventButton;
 window.buildEventDetailsButton = buildEventDetailsButton;
 window.buildEventIdLink = buildEventIdLink;
 window.buildEventDetailsUrl = buildEventDetailsUrl;
-window.viewEvent = viewEvent;

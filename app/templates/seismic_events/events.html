@@ -33,34 +33,32 @@
     </div>
 </div>
 
-<div class="d-flex justify-content-end bg-white border rounded-3 shadow-sm p-2 mb-2">
-    <button
-        type="button"
-        id="btnCreateEvent"
-        class="btn btn-sm btn-primary d-none"
-        data-i18n="events.add"
-    >
-        Add Earthquake
-    </button>
-</div>
-
-<div class="card border-0 shadow-sm mb-3">
-    <div class="card-header bg-white fw-semibold" data-i18n="events.list.title">Earthquake List</div>
-    <div class="card-body">
-        <div id="eventsStatus" class="text-muted mb-3" data-i18n="events.loading">Loading...</div>
+<div class="card border-0 shadow-sm mb-3 events-list-card">
+    <div class="card-header bg-white border-0 pt-3 pb-0">
+        <div class="d-flex flex-column flex-sm-row justify-content-between align-items-sm-center gap-2">
+            <div>
+                <h2 class="h5 mb-1 fw-semibold" data-i18n="events.list.title">Earthquake List</h2>
+                <div id="eventsStatus" class="small text-muted mb-0" data-i18n="events.loading">Loading...</div>
+            </div>
+            <button
+                type="button"
+                id="btnCreateEvent"
+                class="btn btn-sm btn-primary d-none align-self-sm-center"
+                data-i18n="events.add"
+            >
+                Add Earthquake
+            </button>
+        </div>
+    </div>
+    <div class="card-body pt-3">
         <div class="table-responsive events-table-scroll">
-            <table class="table table-sm table-hover align-middle mb-0 text-nowrap text-center events-table">
-                <thead class="table-light">
+            <table class="table table-hover align-middle mb-0 events-table">
+                <thead>
                     <tr>
-                        <th id="eventsActionHeader" data-i18n="events.table.actions">Action</th>
-                        <th data-i18n="events.table.id">Event ID</th>
-                        <th data-i18n="events.table.seiscomp_oid">SeisComP OID</th>
-                        <th data-i18n="events.table.time">Earthquake Time</th>
-                        <th data-i18n="events.table.ml">Magnitude</th>
-                        <th data-i18n="events.table.depth_km">Depth (km)</th>
-                        <th data-i18n="events.table.latitude">Latitude</th>
-                        <th data-i18n="events.table.longitude">Longitude</th>
-                        <th data-i18n="events.table.location">Location</th>
+                        <th class="events-col-actions" id="eventsActionHeader" data-i18n="events.table.actions">Action</th>
+                        <th class="events-col-time" data-i18n="events.table.time">Earthquake Time</th>
+                        <th class="events-col-mag" data-i18n="events.table.ml">Magnitude</th>
+                        <th class="events-col-location" data-i18n="events.table.location">Location</th>
                     </tr>
                 </thead>
                 <tbody id="eventsTableBody"></tbody>
