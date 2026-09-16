@@ -319,6 +319,13 @@ function readBeachballPayload() {
     return payload;
 }
 
+function isBeachballMechanismIncomplete(payload) {
+    const filledCount = ["strike", "dip", "rake"].filter(
+        (key) => payload?.[key] !== null && payload?.[key] !== undefined
+    ).length;
+    return filledCount > 0 && filledCount < 3;
+}
+
 function isBeachballPayloadEmpty(payload) {
     return Object.keys(payload).length === 0;
 }
@@ -471,6 +478,19 @@ async function submitEditEventForm(formEvent) {
             EDIT_EVENT_ALERT_ID,
             "danger",
             t("events.error.validation", "Please fill in all required fields.")
+        );
+        return;
+    }
+
+    const beachballPayload = readBeachballPayload();
+    if (isBeachballMechanismIncomplete(beachballPayload)) {
+        window.showAlert(
+            EDIT_EVENT_ALERT_ID,
+            "warning",
+            t(
+                "events.edit.beachball_incomplete",
+                "strike, dip, and rake must all be provided together (or omit all three)."
+            )
         );
         return;
     }

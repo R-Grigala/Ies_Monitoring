@@ -344,6 +344,8 @@
             "events.edit.beachball_strike": "Strike",
             "events.edit.beachball_dip": "Dip",
             "events.edit.beachball_rake": "Rake",
+            "events.edit.beachball_incomplete":
+                "strike, dip, and rake must all be provided together (or omit all three).",
             "events.edit.beachball_delete": "Delete beachball",
             "events.edit.beachball_delete_confirm": "Are you sure you want to delete this beachball?",
             "events.edit.beachball_delete_success": "Beachball deleted successfully.",
@@ -713,6 +715,8 @@
             "events.edit.beachball_strike": "Strike",
             "events.edit.beachball_dip": "Dip",
             "events.edit.beachball_rake": "Rake",
+            "events.edit.beachball_incomplete":
+                "strike, dip და rake ერთად უნდა შეივსოს (ან სამივე ცარიელი დატოვეთ).",
             "events.edit.beachball_delete": "Beachball-ის წაშლა",
             "events.edit.beachball_delete_confirm": "ნამდვილად გსურთ ამ beachball-ის წაშლა?",
             "events.edit.beachball_delete_success": "Beachball წარმატებით წაიშალა.",

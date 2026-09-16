@@ -185,6 +185,13 @@ function readBeachballPayload() {
     return payload;
 }
 
+function isBeachballMechanismIncomplete(payload) {
+    const filledCount = ["strike", "dip", "rake"].filter(
+        (key) => payload?.[key] !== null && payload?.[key] !== undefined
+    ).length;
+    return filledCount > 0 && filledCount < 3;
+}
+
 async function attachBeachball(eventId, payload) {
     if (!payload || Object.keys(payload).length === 0) {
         return;
@@ -239,6 +246,19 @@ async function submitCreateEventForm(formEvent) {
         return;
     }
 
+    const beachballPayload = readBeachballPayload();
+    if (isBeachballMechanismIncomplete(beachballPayload)) {
+        window.showAlert(
+            CREATE_EVENT_ALERT_ID,
+            "warning",
+            t(
+                "events.edit.beachball_incomplete",
+                "strike, dip, and rake must all be provided together (or omit all three)."
+            )
+        );
+        return;
+    }
+
     if (!(await window.requireEventsAuth?.("add an earthquake"))) {
         return;
     }
@@ -280,7 +300,7 @@ async function submitCreateEventForm(formEvent) {
             }
 
             try {
-                await attachBeachball(created.id, readBeachballPayload());
+                await attachBeachball(created.id, beachballPayload);
             } catch (beachballError) {
                 warnings.push(
                     beachballError.message ||
