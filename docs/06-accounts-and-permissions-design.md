@@ -204,8 +204,8 @@ permissions
 | can_permissions | Implemented | Permissions catalog CRUD + grant/revoke on accounts |
 | can_recips | Seeded + used | Recipients write + Notify UI |
 | can_recips_read | Seeded + used | Recipients read-only (service keys) |
-| can_event_view | Implemented | მიწისძვრის მოვლენების ნახვა |
-| can_event_edit | Implemented | მიწისძვრის მოვლენების შექმნა/რედაქტირება/წაშლა |
+| can_event_view | Implemented | მიწისძვრების სია/დეტალები/ფილტრი, magnitudes, beachball ნახვა |
+| can_event_edit | Implemented | მიწისძვრების შექმნა/რედაქტირება/წაშლა; magnitudes და beachball CRUD |
 
 
 ---
