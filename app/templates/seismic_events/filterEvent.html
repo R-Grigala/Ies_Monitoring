@@ -3,44 +3,35 @@
     <div class="card-body">
         <form id="filterEventForm" class="row g-2" novalidate>
             <div class="col-12 col-sm-6">
-                <label class="form-label small mb-1" for="filterDateFrom" data-i18n="events.filter.date_from">
-                    From
+                <label class="form-label small mb-1" for="filterEventId" data-i18n="events.filter.event_id">
+                    Event ID
                 </label>
-                <input type="date" class="form-control form-control-sm" id="filterDateFrom">
+                <input
+                    type="search"
+                    class="form-control form-control-sm"
+                    id="filterEventId"
+                    autocomplete="off"
+                    data-i18n-placeholder="events.filter.event_id_placeholder"
+                    placeholder="e.g. 555188"
+                >
             </div>
             <div class="col-12 col-sm-6">
-                <label class="form-label small mb-1" for="filterDateTo" data-i18n="events.filter.date_to">
-                    To
+                <label class="form-label small mb-1" for="filterSeiscompOid" data-i18n="events.filter.seiscomp_oid">
+                    SeisComP OID
                 </label>
-                <input type="date" class="form-control form-control-sm" id="filterDateTo">
+                <input
+                    type="search"
+                    class="form-control form-control-sm"
+                    id="filterSeiscompOid"
+                    autocomplete="off"
+                    data-i18n-placeholder="events.filter.seiscomp_oid_placeholder"
+                    placeholder="OID"
+                >
             </div>
+
             <div class="col-12 col-sm-6">
-                <label class="form-label small mb-1" for="filterMagMin" data-i18n="events.filter.mag_min">
-                    Min ML
-                </label>
-                <input type="number" class="form-control form-control-sm" id="filterMagMin" step="0.1">
-            </div>
-            <div class="col-12 col-sm-6">
-                <label class="form-label small mb-1" for="filterMagMax" data-i18n="events.filter.mag_max">
-                    Max ML
-                </label>
-                <input type="number" class="form-control form-control-sm" id="filterMagMax" step="0.1">
-            </div>
-            <div class="col-12 col-sm-6">
-                <label class="form-label small mb-1" for="filterDepthMin" data-i18n="events.filter.depth_min">
-                    Min depth (km)
-                </label>
-                <input type="number" class="form-control form-control-sm" id="filterDepthMin" step="any">
-            </div>
-            <div class="col-12 col-sm-6">
-                <label class="form-label small mb-1" for="filterDepthMax" data-i18n="events.filter.depth_max">
-                    Max depth (km)
-                </label>
-                <input type="number" class="form-control form-control-sm" id="filterDepthMax" step="any">
-            </div>
-            <div class="col-12">
                 <label class="form-label small mb-1" for="filterLocation" data-i18n="events.filter.location">
-                    Location / OID / ID
+                    Location
                 </label>
                 <input
                     type="search"
@@ -48,10 +39,79 @@
                     id="filterLocation"
                     autocomplete="off"
                     data-i18n-placeholder="events.filter.location_placeholder"
-                    placeholder="Search location, OID or id"
+                    placeholder="e.g. Tbilisi"
                 >
             </div>
-            <div class="col-12 d-flex flex-wrap gap-2 mt-2">
+            <div class="col-12 col-sm-6">
+                <label class="form-label small mb-1" for="filterArea" data-i18n="events.filter.area">
+                    Area
+                </label>
+                <select class="form-select form-select-sm" id="filterArea">
+                    <option value="" data-i18n="events.filter.area_all">All</option>
+                    <option value="local" data-i18n="events.area.local">Local</option>
+                    <option value="regional" data-i18n="events.area.regional">Regional</option>
+                    <option value="teleseismic" data-i18n="events.area.teleseismic">Teleseismic</option>
+                </select>
+            </div>
+
+            <div class="col-12">
+                <label class="form-label small mb-1" data-i18n="events.filter.magnitude_types">
+                    Magnitude types
+                </label>
+                <div id="filterMagnitudeRows" class="vstack gap-2"></div>
+                <button
+                    type="button"
+                    class="btn btn-sm btn-outline-primary mt-2"
+                    id="filterMagnitudeAdd"
+                    data-i18n="events.filter.magnitude_add"
+                >
+                    Add magnitude type
+                </button>
+            </div>
+
+            <div class="col-12 col-sm-6">
+                <label class="form-label small mb-1" for="filterDepthMin" data-i18n="events.filter.depth_min">
+                    Depth min
+                </label>
+                <input type="number" class="form-control form-control-sm" id="filterDepthMin" step="any">
+            </div>
+            <div class="col-12 col-sm-6">
+                <label class="form-label small mb-1" for="filterDepthMax" data-i18n="events.filter.depth_max">
+                    Depth max
+                </label>
+                <input type="number" class="form-control form-control-sm" id="filterDepthMax" step="any">
+            </div>
+
+            <div class="col-12 col-sm-6">
+                <label class="form-label small mb-1" for="filterDateFrom" data-i18n="events.filter.date_from">
+                    Date (from)
+                </label>
+                <input
+                    type="text"
+                    class="form-control form-control-sm"
+                    id="filterDateFrom"
+                    inputmode="numeric"
+                    autocomplete="off"
+                    placeholder="dd/mm/yyyy"
+                    data-i18n-placeholder="events.filter.date_placeholder"
+                >
+            </div>
+            <div class="col-12 col-sm-6">
+                <label class="form-label small mb-1" for="filterDateTo" data-i18n="events.filter.date_to">
+                    Date (to)
+                </label>
+                <input
+                    type="text"
+                    class="form-control form-control-sm"
+                    id="filterDateTo"
+                    inputmode="numeric"
+                    autocomplete="off"
+                    placeholder="dd/mm/yyyy"
+                    data-i18n-placeholder="events.filter.date_placeholder"
+                >
+            </div>
+
+            <div class="col-12 d-flex flex-wrap gap-2 mt-2 justify-content-center">
                 <button type="submit" class="btn btn-sm btn-primary" data-i18n="events.filter.apply">
                     Apply
                 </button>

@@ -14,3 +14,6 @@ htmlcov/
 /services/staff_mail_list
 /services/number_list
 /services/mail_list
+
+# Generated beachball images (keep directory via .gitkeep)
+/app/static/beachballs/*.png

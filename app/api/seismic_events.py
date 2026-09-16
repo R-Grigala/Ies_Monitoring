@@ -1,6 +1,7 @@
 import logging
 
 from flask_restx import Resource, marshal
+from sqlalchemy import String, and_, cast, exists, or_
 from sqlalchemy.exc import IntegrityError
 
 from app.extensions import db
@@ -19,18 +20,60 @@ from app.api.nsmodels.seismic_events import (
     error_model,
     seismic_event_create_parser,
     seismic_event_update_parser,
+    seismic_event_filter_parser,
     event_magnitude_create_parser,
     event_magnitude_update_parser,
     event_beachball_parser,
 )
 from app.models import SeismicEvent, Magnitude, EventMagnitude, EventBeachball
 from app.utils.auth_utils import require_permissions
+from app.utils.gen_beachball_img import delete_beachball_image, sync_beachball_image
 
 logger = logging.getLogger("app.seismic_events")
 
 
-def _require_can_events():
-    return require_permissions("can_events")
+def _require_can_event_view():
+    return require_permissions("can_event_edit", "can_event_view")
+
+
+def _require_can_event_edit():
+    return require_permissions("can_event_edit")
+
+
+def _apply_generated_beachball_path(beachball):
+    """Generate PNG when strike/dip/rake are complete; store web path on the model."""
+    web_path = sync_beachball_image(
+        beachball.event_id,
+        beachball.strike,
+        beachball.dip,
+        beachball.rake,
+    )
+    if web_path is not None:
+        beachball.beachball_path = web_path
+    return web_path
+
+
+def _validate_beachball_mechanism_payload(payload):
+    """
+    Require all of strike, dip, rake together, or none of them.
+
+    Returns None if valid, or (error_body, status_code).
+    """
+    provided = [
+        name
+        for name in ("strike", "dip", "rake")
+        if payload.get(name) is not None
+    ]
+    if len(provided) in (0, 3):
+        return None
+    return {
+        "error": "validation_error",
+        "message": (
+            "strike, dip, and rake must all be provided together "
+            "(or omit all three)."
+        ),
+        "provided": provided,
+    }, 400
 
 
 def _get_event_or_404(event_id):
@@ -109,7 +152,196 @@ def _apply_event_fields(event, payload, *, creating=False):
             elif creating:
                 event.__setattr__(field, None)
 
+    if creating:
+        event.is_automatic = bool(payload.get("is_automatic", False))
+    elif "is_automatic" in payload and payload.get("is_automatic") is not None:
+        event.is_automatic = bool(payload.get("is_automatic"))
+
     return None
+
+
+def _normalize_magnitude_criteria(payload):
+    """Build magnitude filter criteria from `magnitudes` list or legacy single fields."""
+    raw_list = payload.get("magnitudes")
+    if isinstance(raw_list, list) and raw_list:
+        criteria = []
+        for item in raw_list:
+            if not isinstance(item, dict):
+                return None, (
+                    {
+                        "error": "validation_error",
+                        "message": "Each magnitudes entry must be an object.",
+                    },
+                    400,
+                )
+            criteria.append(
+                {
+                    "code": _optional_str(
+                        item.get("magnitude") or item.get("magnitude_code") or item.get("code")
+                    ),
+                    "min": item.get("magnitude_min", item.get("min")),
+                    "max": item.get("magnitude_max", item.get("max")),
+                }
+            )
+        return criteria, None
+
+    code = _optional_str(payload.get("magnitude"))
+    magnitude_min = payload.get("magnitude_min")
+    magnitude_max = payload.get("magnitude_max")
+    if code is None and magnitude_min is None and magnitude_max is None:
+        return [], None
+    return [{"code": code, "min": magnitude_min, "max": magnitude_max}], None
+
+
+def _apply_magnitude_criteria(query, criteria):
+    """AND together magnitude constraints using EXISTS subqueries."""
+    for criterion in criteria:
+        code = criterion.get("code")
+        magnitude_min = criterion.get("min")
+        magnitude_max = criterion.get("max")
+
+        if (
+            magnitude_min is not None
+            and magnitude_max is not None
+            and magnitude_min > magnitude_max
+        ):
+            return None, (
+                {
+                    "error": "validation_error",
+                    "message": "magnitude_min cannot be greater than magnitude_max.",
+                },
+                400,
+            )
+
+        conditions = [EventMagnitude.event_id == SeismicEvent.id]
+        if code is not None:
+            magnitude = Magnitude.query.filter_by(code=code.upper()).first()
+            if not magnitude:
+                return None, (
+                    {
+                        "error": "not_found",
+                        "message": f"Magnitude catalog entry not found for code: {code.upper()}",
+                    },
+                    404,
+                )
+            conditions.append(EventMagnitude.magnitude_id == magnitude.id)
+        if magnitude_min is not None:
+            conditions.append(EventMagnitude.value >= magnitude_min)
+        if magnitude_max is not None:
+            conditions.append(EventMagnitude.value <= magnitude_max)
+
+        query = query.filter(exists().where(and_(*conditions)))
+
+    return query, None
+
+
+def _build_filtered_events_query(payload):
+    """Build a SeismicEvent query from optional filter args. Returns (query, error_tuple)."""
+    event_id = payload.get("event_id")
+    event_query = _optional_str(payload.get("event_query"))
+    iesdata_id = _optional_str(payload.get("iesdata_id"))
+    seiscomp_oid = _optional_str(payload.get("seiscomp_oid"))
+    location = _optional_str(payload.get("location"))
+    area = _optional_str(payload.get("area"))
+    depth_min = payload.get("depth_min")
+    depth_max = payload.get("depth_max")
+    date_from = payload.get("date_from")
+    date_to = payload.get("date_to")
+
+    magnitude_criteria, magnitude_error = _normalize_magnitude_criteria(payload)
+    if magnitude_error:
+        return None, magnitude_error
+
+    if depth_min is not None and depth_max is not None and depth_min > depth_max:
+        return None, (
+            {
+                "error": "validation_error",
+                "message": "depth_min cannot be greater than depth_max.",
+            },
+            400,
+        )
+    if date_from is not None and date_to is not None and date_from > date_to:
+        return None, (
+            {
+                "error": "validation_error",
+                "message": "date_from cannot be after date_to.",
+            },
+            400,
+        )
+
+    query = SeismicEvent.query
+
+    if event_id is not None:
+        query = query.filter(SeismicEvent.id == event_id)
+
+    if event_query is not None:
+        pattern = f"%{event_query}%"
+        query = query.filter(
+            or_(
+                cast(SeismicEvent.id, String).ilike(pattern),
+                SeismicEvent.iesdata_id.ilike(pattern),
+            )
+        )
+
+    if iesdata_id is not None:
+        query = query.filter(SeismicEvent.iesdata_id.ilike(f"%{iesdata_id}%"))
+
+    if seiscomp_oid is not None:
+        query = query.filter(SeismicEvent.seiscomp_oid.ilike(f"%{seiscomp_oid}%"))
+
+    if location is not None:
+        pattern = f"%{location}%"
+        query = query.filter(
+            or_(
+                SeismicEvent.location_en.ilike(pattern),
+                SeismicEvent.location_ge.ilike(pattern),
+            )
+        )
+
+    if area is not None:
+        query = query.filter(SeismicEvent.area.ilike(f"%{area}%"))
+
+    if depth_min is not None:
+        query = query.filter(SeismicEvent.depth >= depth_min)
+    if depth_max is not None:
+        query = query.filter(SeismicEvent.depth <= depth_max)
+
+    if date_from is not None:
+        query = query.filter(SeismicEvent.origin_time >= date_from)
+    if date_to is not None:
+        query = query.filter(SeismicEvent.origin_time <= date_to)
+
+    if magnitude_criteria:
+        query, magnitude_apply_error = _apply_magnitude_criteria(query, magnitude_criteria)
+        if magnitude_apply_error:
+            return None, magnitude_apply_error
+
+    return query.order_by(SeismicEvent.origin_time.desc()), None
+
+
+@seismic_events_ns.route("/filter")
+class SeismicEventsFilterApi(Resource):
+    @seismic_events_ns.doc(security=JWT_OR_API_KEY)
+    @seismic_events_ns.expect(seismic_event_filter_parser)
+    @seismic_events_ns.response(200, "Success", seismic_event_list_response_model)
+    @seismic_events_ns.response(400, "Validation Error", error_model)
+    @seismic_events_ns.response(401, "Unauthorized", error_model)
+    @seismic_events_ns.response(403, "Forbidden", error_model)
+    @seismic_events_ns.response(404, "Not Found", error_model)
+    def post(self):
+        """Filter seismic events (requires can_event_view or can_event_edit). All body fields are optional."""
+        denied = _require_can_event_view()
+        if denied:
+            return denied
+
+        payload = seismic_event_filter_parser.parse_args()
+        query, error = _build_filtered_events_query(payload)
+        if error:
+            return error
+
+        items = query.all()
+        response = {"items": [item.to_dict() for item in items], "total": len(items)}
+        return marshal(response, seismic_event_list_response_model), 200
 
 
 @seismic_events_ns.route("/magnitude_types")
@@ -119,8 +351,8 @@ class MagnitudeCatalogApi(Resource):
     @seismic_events_ns.response(401, "Unauthorized", error_model)
     @seismic_events_ns.response(403, "Forbidden", error_model)
     def get(self):
-        """List magnitude catalog types (requires can_events)."""
-        denied = _require_can_events()
+        """List magnitude catalog types (requires can_event_view or can_event_edit)."""
+        denied = _require_can_event_view()
         if denied:
             return denied
 
@@ -136,8 +368,8 @@ class SeismicEventsApi(Resource):
     @seismic_events_ns.response(401, "Unauthorized", error_model)
     @seismic_events_ns.response(403, "Forbidden", error_model)
     def get(self):
-        """List seismic events (requires can_events)."""
-        denied = _require_can_events()
+        """List seismic events (requires can_event_view or can_event_edit)."""
+        denied = _require_can_event_view()
         if denied:
             return denied
 
@@ -153,8 +385,8 @@ class SeismicEventsApi(Resource):
     @seismic_events_ns.response(403, "Forbidden", error_model)
     @seismic_events_ns.response(409, "Conflict", error_model)
     def post(self):
-        """Create a seismic event (requires can_events)."""
-        denied = _require_can_events()
+        """Create a seismic event (requires can_event_edit)."""
+        denied = _require_can_event_edit()
         if denied:
             return denied
 
@@ -191,8 +423,8 @@ class SeismicEventDetailApi(Resource):
     @seismic_events_ns.response(403, "Forbidden", error_model)
     @seismic_events_ns.response(404, "Not Found", error_model)
     def get(self, event_id):
-        """Get a seismic event by id (requires can_events)."""
-        denied = _require_can_events()
+        """Get a seismic event by id (requires can_event_view or can_event_edit)."""
+        denied = _require_can_event_view()
         if denied:
             return denied
 
@@ -210,8 +442,8 @@ class SeismicEventDetailApi(Resource):
     @seismic_events_ns.response(404, "Not Found", error_model)
     @seismic_events_ns.response(409, "Conflict", error_model)
     def put(self, event_id):
-        """Update a seismic event (requires can_events)."""
-        denied = _require_can_events()
+        """Update a seismic event (requires can_event_edit)."""
+        denied = _require_can_event_edit()
         if denied:
             return denied
 
@@ -255,8 +487,8 @@ class SeismicEventDetailApi(Resource):
     @seismic_events_ns.response(403, "Forbidden", error_model)
     @seismic_events_ns.response(404, "Not Found", error_model)
     def delete(self, event_id):
-        """Delete a seismic event and related magnitudes/beachball (requires can_events)."""
-        denied = _require_can_events()
+        """Delete a seismic event and related magnitudes/beachball (requires can_event_edit)."""
+        denied = _require_can_event_edit()
         if denied:
             return denied
 
@@ -265,6 +497,7 @@ class SeismicEventDetailApi(Resource):
             return error
 
         event_id_value = event.id
+        delete_beachball_image(event_id_value)
         event.delete()
         logger.info("Seismic event deleted: event_id=%s", event_id_value)
         return marshal({"message": "Seismic event deleted successfully."}, message_response_model), 200
@@ -281,8 +514,8 @@ class EventMagnitudesApi(Resource):
     @seismic_events_ns.response(404, "Not Found", error_model)
     @seismic_events_ns.response(409, "Conflict", error_model)
     def post(self, event_id):
-        """Add a magnitude to a seismic event (requires can_events)."""
-        denied = _require_can_events()
+        """Add a magnitude to a seismic event (requires can_event_edit)."""
+        denied = _require_can_event_edit()
         if denied:
             return denied
 
@@ -341,8 +574,8 @@ class EventMagnitudeDetailApi(Resource):
     @seismic_events_ns.response(404, "Not Found", error_model)
     @seismic_events_ns.response(409, "Conflict", error_model)
     def put(self, event_magnitude_id):
-        """Update an event magnitude (requires can_events)."""
-        denied = _require_can_events()
+        """Update an event magnitude (requires can_event_edit)."""
+        denied = _require_can_event_edit()
         if denied:
             return denied
 
@@ -387,8 +620,8 @@ class EventMagnitudeDetailApi(Resource):
     @seismic_events_ns.response(403, "Forbidden", error_model)
     @seismic_events_ns.response(404, "Not Found", error_model)
     def delete(self, event_magnitude_id):
-        """Delete an event magnitude (requires can_events)."""
-        denied = _require_can_events()
+        """Delete an event magnitude (requires can_event_edit)."""
+        denied = _require_can_event_edit()
         if denied:
             return denied
 
@@ -413,8 +646,8 @@ class EventBeachballApi(Resource):
     @seismic_events_ns.response(403, "Forbidden", error_model)
     @seismic_events_ns.response(404, "Not Found", error_model)
     def get(self, event_id):
-        """Get beachball for a seismic event (requires can_events)."""
-        denied = _require_can_events()
+        """Get beachball for a seismic event (requires can_event_view or can_event_edit)."""
+        denied = _require_can_event_view()
         if denied:
             return denied
 
@@ -434,8 +667,8 @@ class EventBeachballApi(Resource):
     @seismic_events_ns.response(404, "Not Found", error_model)
     @seismic_events_ns.response(409, "Conflict", error_model)
     def post(self, event_id):
-        """Create beachball for a seismic event (requires can_events)."""
-        denied = _require_can_events()
+        """Create beachball for a seismic event (requires can_event_edit)."""
+        denied = _require_can_event_edit()
         if denied:
             return denied
 
@@ -449,21 +682,36 @@ class EventBeachballApi(Resource):
             }, 409
 
         payload = event_beachball_parser.parse_args()
+        mechanism_error = _validate_beachball_mechanism_payload(payload)
+        if mechanism_error:
+            return mechanism_error
+
         beachball = EventBeachball(
             event_id=event.id,
             rake=payload.get("rake"),
             dip=payload.get("dip"),
             strike=payload.get("strike"),
-            beachball_path=_optional_str(payload.get("beachball_path")),
+            beachball_path=None,
         )
         try:
+            _apply_generated_beachball_path(beachball)
             beachball.create()
+        except ValueError as err:
+            db.session.rollback()
+            return {"error": "validation_error", "message": str(err)}, 400
         except IntegrityError:
             db.session.rollback()
             return {
                 "error": "conflict",
                 "message": "Beachball already exists for this event. Use PUT to update.",
             }, 409
+        except Exception as err:
+            db.session.rollback()
+            logger.exception("Beachball image generation failed: event_id=%s", event.id)
+            return {
+                "error": "generation_error",
+                "message": f"Beachball image generation failed: {err}",
+            }, 500
 
         logger.info("Beachball created: event_id=%s beachball_id=%s", event.id, beachball.id)
         return marshal(
@@ -474,12 +722,13 @@ class EventBeachballApi(Resource):
     @seismic_events_ns.doc(security=JWT_OR_API_KEY)
     @seismic_events_ns.expect(event_beachball_parser)
     @seismic_events_ns.response(200, "Success", event_beachball_response_model)
+    @seismic_events_ns.response(400, "Validation Error", error_model)
     @seismic_events_ns.response(401, "Unauthorized", error_model)
     @seismic_events_ns.response(403, "Forbidden", error_model)
     @seismic_events_ns.response(404, "Not Found", error_model)
     def put(self, event_id):
-        """Update beachball for a seismic event (requires can_events)."""
-        denied = _require_can_events()
+        """Update beachball for a seismic event (requires can_event_edit)."""
+        denied = _require_can_event_edit()
         if denied:
             return denied
 
@@ -490,6 +739,10 @@ class EventBeachballApi(Resource):
             return {"error": "not_found", "message": "Beachball not found for this event."}, 404
 
         payload = event_beachball_parser.parse_args()
+        mechanism_error = _validate_beachball_mechanism_payload(payload)
+        if mechanism_error:
+            return mechanism_error
+
         beachball = event.beachball
         if payload.get("rake") is not None:
             beachball.rake = payload.get("rake")
@@ -497,9 +750,21 @@ class EventBeachballApi(Resource):
             beachball.dip = payload.get("dip")
         if payload.get("strike") is not None:
             beachball.strike = payload.get("strike")
-        if payload.get("beachball_path") is not None:
-            beachball.beachball_path = _optional_str(payload.get("beachball_path"))
-        beachball.save()
+        # beachball_path is server-generated; ignore any client-supplied path.
+
+        try:
+            _apply_generated_beachball_path(beachball)
+            beachball.save()
+        except ValueError as err:
+            db.session.rollback()
+            return {"error": "validation_error", "message": str(err)}, 400
+        except Exception as err:
+            db.session.rollback()
+            logger.exception("Beachball image generation failed: event_id=%s", event.id)
+            return {
+                "error": "generation_error",
+                "message": f"Beachball angles updated but image generation failed: {err}",
+            }, 500
 
         logger.info("Beachball updated: event_id=%s beachball_id=%s", event.id, beachball.id)
         return marshal(
@@ -513,8 +778,8 @@ class EventBeachballApi(Resource):
     @seismic_events_ns.response(403, "Forbidden", error_model)
     @seismic_events_ns.response(404, "Not Found", error_model)
     def delete(self, event_id):
-        """Delete beachball for a seismic event (requires can_events)."""
-        denied = _require_can_events()
+        """Delete beachball for a seismic event (requires can_event_edit)."""
+        denied = _require_can_event_edit()
         if denied:
             return denied
 
@@ -525,6 +790,7 @@ class EventBeachballApi(Resource):
             return {"error": "not_found", "message": "Beachball not found for this event."}, 404
 
         beachball_id = event.beachball.id
+        delete_beachball_image(event.id)
         event.beachball.delete()
         logger.info("Beachball deleted: event_id=%s beachball_id=%s", event.id, beachball_id)
         return marshal({"message": "Beachball deleted successfully."}, message_response_model), 200

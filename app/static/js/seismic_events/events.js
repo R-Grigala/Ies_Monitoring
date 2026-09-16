@@ -5,6 +5,7 @@ const eventsById = new Map();
 const getEventKey = (event) => String(event?.id ?? "");
 
 let allEvents = [];
+let canViewEvents = false;
 let canManageEvents = false;
 
 function t(key, fallback) {
@@ -21,19 +22,26 @@ function escapeHtml(value) {
         .replaceAll("'", "&#39;");
 }
 
+function getEventMagnitude(event) {
+    const list = (Array.isArray(event?.magnitudes) ? event.magnitudes : []).filter(
+        (item) => item.value !== null && item.value !== undefined
+    );
+    if (!list.length) {
+        return null;
+    }
+
+    // ML always wins; otherwise fall back to the first recorded magnitude.
+    const preferred =
+        list.find((item) => (item.magnitude?.code || "").toUpperCase() === "ML") || list[0];
+
+    return {
+        value: Number(preferred.value),
+        code: preferred.magnitude?.code || "",
+    };
+}
+
 function getEventMl(event) {
-    const list = Array.isArray(event?.magnitudes) ? event.magnitudes : [];
-    const ml = list.find((item) => {
-        const code = (item.magnitude?.code || "").toUpperCase();
-        return code === "ML";
-    });
-    if (ml && ml.value !== null && ml.value !== undefined) {
-        return Number(ml.value);
-    }
-    if (list.length && list[0].value !== null && list[0].value !== undefined) {
-        return Number(list[0].value);
-    }
-    return null;
+    return getEventMagnitude(event)?.value ?? null;
 }
 
 function preferredLocation(event) {
@@ -44,23 +52,108 @@ function preferredLocation(event) {
     return event.location_en || event.location_ge || event.area || "-";
 }
 
+function pad2(n) {
+    return String(n).padStart(2, "0");
+}
+
+function toNaiveIsoString(year, month, day, hour = 0, minute = 0, second = 0) {
+    return (
+        `${year}-${pad2(month)}-${pad2(day)}T` +
+        `${pad2(hour)}:${pad2(minute)}:${pad2(second)}`
+    );
+}
+
 function formatOriginTime(value) {
     if (!value) {
         return "-";
     }
-    const date = new Date(value);
-    if (Number.isNaN(date.getTime())) {
-        return String(value);
+
+    const raw = String(value).trim();
+    const isoMatch = raw.match(
+        /^(\d{4})-(\d{2})-(\d{2})[T\s](\d{2}):(\d{2})(?::(\d{2}))?/
+    );
+    if (isoMatch) {
+        return toNaiveIsoString(
+            Number(isoMatch[1]),
+            Number(isoMatch[2]),
+            Number(isoMatch[3]),
+            Number(isoMatch[4]),
+            Number(isoMatch[5]),
+            Number(isoMatch[6] ?? 0)
+        );
     }
-    const lang = window.I18n?.getLanguage?.() || "en";
-    return date.toLocaleString(lang === "ka" ? "ka-GE" : "en-GB", {
-        year: "numeric",
-        month: "2-digit",
-        day: "2-digit",
-        hour: "2-digit",
-        minute: "2-digit",
-        second: "2-digit",
-    });
+
+    const date = new Date(raw);
+    if (Number.isNaN(date.getTime())) {
+        return raw;
+    }
+    return toNaiveIsoString(
+        date.getFullYear(),
+        date.getMonth() + 1,
+        date.getDate(),
+        date.getHours(),
+        date.getMinutes(),
+        date.getSeconds()
+    );
+}
+
+function parseOriginTimeInput(value) {
+    const raw = (value || "").trim();
+    if (!raw) {
+        return null;
+    }
+
+    // YYYY-MM-DD HH:mm:ss or YYYY-MM-DDTHH:mm:ss (seconds optional)
+    const isoLike = raw.match(
+        /^(\d{4})-(\d{2})-(\d{2})(?:[T\s]+(\d{1,2}):(\d{2})(?::(\d{2}))?)?(?:\.\d+)?(?:Z|[+-]\d{2}:?\d{2})?$/
+    );
+    if (isoLike) {
+        const year = Number(isoLike[1]);
+        const month = Number(isoLike[2]);
+        const day = Number(isoLike[3]);
+        const hour = Number(isoLike[4] ?? 0);
+        const minute = Number(isoLike[5] ?? 0);
+        const second = Number(isoLike[6] ?? 0);
+        const probe = new Date(year, month - 1, day, hour, minute, second);
+        if (
+            probe.getFullYear() !== year ||
+            probe.getMonth() !== month - 1 ||
+            probe.getDate() !== day ||
+            probe.getHours() !== hour ||
+            probe.getMinutes() !== minute ||
+            probe.getSeconds() !== second
+        ) {
+            return null;
+        }
+        return toNaiveIsoString(year, month, day, hour, minute, second);
+    }
+
+    // dd/mm/yyyy, HH:mm:ss (comma optional; seconds optional)
+    const dmy = raw.match(
+        /^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:[,\s]+(\d{1,2}):(\d{2})(?::(\d{2}))?)?$/
+    );
+    if (dmy) {
+        const day = Number(dmy[1]);
+        const month = Number(dmy[2]);
+        const year = Number(dmy[3]);
+        const hour = Number(dmy[4] ?? 0);
+        const minute = Number(dmy[5] ?? 0);
+        const second = Number(dmy[6] ?? 0);
+        const probe = new Date(year, month - 1, day, hour, minute, second);
+        if (
+            probe.getFullYear() !== year ||
+            probe.getMonth() !== month - 1 ||
+            probe.getDate() !== day ||
+            probe.getHours() !== hour ||
+            probe.getMinutes() !== minute ||
+            probe.getSeconds() !== second
+        ) {
+            return null;
+        }
+        return toNaiveIsoString(year, month, day, hour, minute, second);
+    }
+
+    return null;
 }
 
 function hasEventsPermission() {
@@ -162,8 +255,13 @@ function renderEvents(events) {
     eventsTableBody.innerHTML = sortedEvents
         .map((event) => {
             const id = escapeHtml(event.id);
-            const ml = getEventMl(event);
-            const mlText = ml === null || Number.isNaN(ml) ? "-" : ml.toFixed(1);
+            const magnitude = getEventMagnitude(event);
+            const magnitudeText =
+                magnitude === null || Number.isNaN(magnitude.value)
+                    ? "-"
+                    : `${magnitude.value.toFixed(1)}${
+                          magnitude.code ? ` ${magnitude.code}` : ""
+                      }`;
             const depth =
                 event.depth === null || event.depth === undefined
                     ? "-"
@@ -217,7 +315,7 @@ function renderEvents(events) {
         </td>
         <td class="font-monospace">${escapeHtml(event.seiscomp_oid || "-")}</td>
         <td>${escapeHtml(formatOriginTime(event.origin_time))}</td>
-        <td>${escapeHtml(mlText)}</td>
+        <td>${escapeHtml(magnitudeText)}</td>
         <td>${escapeHtml(depth)}</td>
         <td class="font-monospace">${escapeHtml(lat)}</td>
         <td class="font-monospace">${escapeHtml(lon)}</td>
@@ -241,25 +339,61 @@ function renderEventsAndMap(events) {
     }
 }
 
-function applyEventsFilter(filterState) {
-    const filtered = window.filterEventsList
-        ? window.filterEventsList(allEvents, filterState)
-        : allEvents;
-    renderEventsAndMap(filtered);
+let filterRequestSeq = 0;
+
+async function applyEventsFilter(filterState) {
+    const requestId = ++filterRequestSeq;
+
+    if (eventsStatus) {
+        eventsStatus.textContent = t("events.loading", "Loading earthquakes...");
+    }
+
+    try {
+        let data;
+        if (!filterState || window.isEmptyEventsFilter?.(filterState)) {
+            data = await window.makeApiRequest("/api/seismic_events/", {
+                method: "GET",
+            });
+        } else {
+            const payload = window.buildEventsFilterPayload(filterState);
+            data = await window.makeApiRequest("/api/seismic_events/filter", {
+                method: "POST",
+                body: JSON.stringify(payload),
+            });
+        }
+
+        if (requestId !== filterRequestSeq) {
+            return;
+        }
+
+        allEvents = Array.isArray(data.items) ? data.items : [];
+        window.updateAreaFilterOptions?.(allEvents);
+        renderEventsAndMap(allEvents);
+    } catch (error) {
+        if (requestId !== filterRequestSeq) {
+            return;
+        }
+        if (eventsTableBody) {
+            eventsTableBody.innerHTML = "";
+        }
+        if (eventsStatus) {
+            eventsStatus.textContent =
+                error.message || t("events.error.load", "Failed to load earthquakes.");
+        }
+        window.showAlert(
+            "alertPlaceholder",
+            "danger",
+            error.message || t("events.error.load", "Failed to load earthquakes.")
+        );
+    }
 }
 
-function onEventUpdated(event) {
-    if (!event?.id) {
-        return;
-    }
-    const without = allEvents.filter((item) => Number(item.id) !== Number(event.id));
-    allEvents = [event, ...without];
+function onEventUpdated() {
     const currentFilter = window.getActiveEventsFilter?.() || null;
     applyEventsFilter(currentFilter);
 }
 
-function onEventDeleted(eventId) {
-    allEvents = allEvents.filter((item) => Number(item.id) !== Number(eventId));
+function onEventDeleted() {
     const currentFilter = window.getActiveEventsFilter?.() || null;
     applyEventsFilter(currentFilter);
 }
@@ -269,7 +403,7 @@ function onEventCreated(event) {
         window.loadEvents?.();
         return;
     }
-    onEventUpdated(event);
+    onEventUpdated();
 }
 
 async function loadEvents() {
@@ -292,10 +426,12 @@ async function loadEvents() {
         const profile = await window.makeApiRequest("/api/accounts/ourself", {
             method: "GET",
         });
-        canManageEvents = Boolean(profile?.can_events);
+        canManageEvents = Boolean(profile?.can_event_edit);
+        canViewEvents = canManageEvents || Boolean(profile?.can_event_view);
         window.canManageEvents = canManageEvents;
+        window.canViewEvents = canViewEvents;
 
-        if (!canManageEvents) {
+        if (!canViewEvents) {
             if (eventsTableBody) {
                 eventsTableBody.innerHTML = "";
             }
@@ -321,12 +457,8 @@ async function loadEvents() {
 
         bindCreateEventAuthGuard();
 
-        const data = await window.makeApiRequest("/api/seismic_events/", {
-            method: "GET",
-        });
-        allEvents = Array.isArray(data.items) ? data.items : [];
         const currentFilter = window.getActiveEventsFilter?.() || null;
-        applyEventsFilter(currentFilter);
+        await applyEventsFilter(currentFilter);
     } catch (error) {
         if (eventsTableBody) {
             eventsTableBody.innerHTML = "";
@@ -344,10 +476,20 @@ async function loadEvents() {
 }
 
 window.escapeHtml = escapeHtml;
+window.formatOriginTime = formatOriginTime;
+window.parseOriginTimeInput = parseOriginTimeInput;
 window.getEventMl = getEventMl;
+window.getEventMagnitude = getEventMagnitude;
 window.requireEventsAuth = requireEventsAuth;
-window.hasPermission = (code) =>
-    code === "can_events" ? hasEventsPermission() : false;
+window.hasPermission = (code) => {
+    if (code === "can_event_edit") {
+        return canManageEvents;
+    }
+    if (code === "can_event_view") {
+        return canViewEvents;
+    }
+    return false;
+};
 window.renderEvents = renderEvents;
 window.renderEventsAndMap = renderEventsAndMap;
 window.applyEventsFilter = applyEventsFilter;

@@ -38,14 +38,18 @@
     function formatPopup(event) {
         const location =
             event.location_en || event.location_ge || event.area || "—";
-        const mag = window.getEventMl?.(event);
-        const magText = mag === null || mag === undefined ? "—" : mag;
-        const time = event.origin_time || "—";
+        const magnitude = window.getEventMagnitude?.(event);
+        const magText = magnitude
+            ? `${magnitude.value.toFixed(1)}${magnitude.code ? ` ${magnitude.code}` : ""}`
+            : "—";
+        const time = window.formatOriginTime
+            ? window.formatOriginTime(event.origin_time)
+            : event.origin_time || "—";
         return `
             <div class="small">
                 <div><strong>#${event.id ?? ""}</strong></div>
                 <div>${time}</div>
-                <div>ML ${magText}</div>
+                <div>${magText}</div>
                 <div>${location}</div>
             </div>
         `;
