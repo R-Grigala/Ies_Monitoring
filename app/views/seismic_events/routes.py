@@ -33,3 +33,23 @@ def events(lang=None):
     if raw_lang is not None and lang is None:
         return redirect(url_for("seismic_events.events", lang="en"))
     return render_template("events.html")
+
+
+@seismic_events_blueprint.route("/seismic_events/<int:event_id>")
+@seismic_events_blueprint.route("/<lang>/seismic_events/<int:event_id>")
+def event_details(event_id, lang=None):
+    raw_lang = lang
+    lang = _normalized_lang(lang)
+    if raw_lang is None:
+        return redirect(
+            url_for(
+                "seismic_events.event_details",
+                lang=_preferred_lang(),
+                event_id=event_id,
+            )
+        )
+    if raw_lang is not None and lang is None:
+        return redirect(
+            url_for("seismic_events.event_details", lang="en", event_id=event_id)
+        )
+    return render_template("eventDetails.html", event_id=event_id)

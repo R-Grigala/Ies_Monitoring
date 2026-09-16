@@ -1,0 +1,162 @@
+{% extends "base.html" %}
+
+{% block title %}
+    IES Monitoring | Event {{ event_id }}
+{% endblock %}
+
+{% block head %}
+<link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+    crossorigin=""
+/>
+{% endblock %}
+
+{% block body %}
+<div
+    class="container-fluid container-lg py-3 event-detail-page"
+    id="eventDetailsPage"
+    data-event-id="{{ event_id }}"
+>
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-start gap-2 mb-2">
+        <div>
+            <a
+                href="{{ url_for('seismic_events.events', lang=current_lang) }}"
+                class="event-detail-back"
+                data-i18n="events.details.back"
+            >
+                &larr; Back to events
+            </a>
+            <h1 class="event-detail-title h3 mb-0" id="eventDetailsTitle" data-i18n="events.details.title">
+                Earthquake details
+            </h1>
+        </div>
+        <div class="d-flex flex-wrap gap-2" id="eventDetailsActions"></div>
+    </div>
+
+    <div id="eventDetailsAlertPlaceholder" class="mb-3"></div>
+
+    <div id="eventDetailsLoading" class="text-center py-5">
+        <div class="spinner-border text-primary" role="status" aria-hidden="true"></div>
+        <p class="text-muted mt-3 mb-0" data-i18n="events.details.loading">Loading event details...</p>
+    </div>
+
+    <div id="eventDetailsContent" class="d-none">
+        <div class="event-summary-banner mb-3" id="eventDetailsSummary"></div>
+
+        <ul class="nav event-detail-tabs mb-0" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button
+                    class="nav-link active"
+                    id="tab-overview"
+                    data-bs-toggle="tab"
+                    data-bs-target="#panel-overview"
+                    type="button"
+                    role="tab"
+                    aria-controls="panel-overview"
+                    aria-selected="true"
+                    data-i18n="events.details.overview"
+                >
+                    Overview
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button
+                    class="nav-link"
+                    id="tab-magnitudes"
+                    data-bs-toggle="tab"
+                    data-bs-target="#panel-magnitudes"
+                    type="button"
+                    role="tab"
+                    aria-controls="panel-magnitudes"
+                    aria-selected="false"
+                    data-i18n="events.edit.magnitudes"
+                >
+                    Magnitudes
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button
+                    class="nav-link"
+                    id="tab-beachball"
+                    data-bs-toggle="tab"
+                    data-bs-target="#panel-beachball"
+                    type="button"
+                    role="tab"
+                    aria-controls="panel-beachball"
+                    aria-selected="false"
+                    data-i18n="events.edit.beachball"
+                >
+                    Beachball
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button
+                    class="nav-link"
+                    id="tab-map"
+                    data-bs-toggle="tab"
+                    data-bs-target="#panel-map"
+                    type="button"
+                    role="tab"
+                    aria-controls="panel-map"
+                    aria-selected="false"
+                    data-i18n="events.details.map"
+                >
+                    Map
+                </button>
+            </li>
+        </ul>
+
+        <div class="tab-content event-detail-tab-content">
+            <div
+                class="tab-pane fade show active"
+                id="panel-overview"
+                role="tabpanel"
+                aria-labelledby="tab-overview"
+            >
+                <div class="metadata-grid" id="eventDetailsOverview"></div>
+            </div>
+
+            <div
+                class="tab-pane fade"
+                id="panel-magnitudes"
+                role="tabpanel"
+                aria-labelledby="tab-magnitudes"
+            >
+                <div id="eventDetailsMagnitudes"></div>
+            </div>
+
+            <div
+                class="tab-pane fade"
+                id="panel-beachball"
+                role="tabpanel"
+                aria-labelledby="tab-beachball"
+            >
+                <div id="eventDetailsBeachball"></div>
+            </div>
+
+            <div
+                class="tab-pane fade"
+                id="panel-map"
+                role="tabpanel"
+                aria-labelledby="tab-map"
+            >
+                <div id="eventDetailsMap" class="event-detail-map-canvas"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% include "seismic_events/editEvent.html" %}
+{% endblock %}
+
+{% block scripts %}
+<script
+    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+    crossorigin=""
+></script>
+<script src="{{ url_for('static', filename='js/seismic_events/editEvent.js') }}" defer></script>
+<script src="{{ url_for('static', filename='js/seismic_events/eventDetailsPage.js') }}" defer></script>
+{% endblock %}
