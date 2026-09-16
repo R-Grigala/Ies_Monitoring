@@ -141,9 +141,9 @@ Requires JWT or API key with **`can_event_view`** (read) and/or **`can_event_edi
 | PUT | `/api/seismic_events/magnitudes/<em_id>` | `can_event_edit` | Update value and/or magnitude type |
 | DELETE | `/api/seismic_events/magnitudes/<em_id>` | `can_event_edit` | Remove magnitude from event |
 | GET | `/api/seismic_events/<id>/beachball` | `can_event_view` or `can_event_edit` | Get beachball (404 if none) |
-| POST | `/api/seismic_events/<id>/beachball` | `can_event_edit` | Create beachball (one per event; 409 if exists) |
-| PUT | `/api/seismic_events/<id>/beachball` | `can_event_edit` | Update `rake` / `dip` / `strike` / `beachball_path` |
-| DELETE | `/api/seismic_events/<id>/beachball` | `can_event_edit` | Remove beachball |
+| POST | `/api/seismic_events/<id>/beachball` | `can_event_edit` | Create beachball (one per event; 409 if exists). `strike`/`dip`/`rake` must be **all three or none**. When all three are set, generates `/static/beachballs/beachball_<id>.png` and stores path (client `beachball_path` ignored) |
+| PUT | `/api/seismic_events/<id>/beachball` | `can_event_edit` | Update mechanism: `strike`/`dip`/`rake` must be **all three or none**; regenerates PNG when all three present |
+| DELETE | `/api/seismic_events/<id>/beachball` | `can_event_edit` | Remove beachball row and generated PNG |
 
 ---
 
