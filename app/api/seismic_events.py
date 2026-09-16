@@ -27,6 +27,7 @@ from app.api.nsmodels.seismic_events import (
 )
 from app.models import SeismicEvent, Magnitude, EventMagnitude, EventBeachball
 from app.utils.auth_utils import require_permissions
+from app.utils.gen_beachball_img import delete_beachball_image, sync_beachball_image
 
 logger = logging.getLogger("app.seismic_events")
 
@@ -37,6 +38,42 @@ def _require_can_event_view():
 
 def _require_can_event_edit():
     return require_permissions("can_event_edit")
+
+
+def _apply_generated_beachball_path(beachball):
+    """Generate PNG when strike/dip/rake are complete; store web path on the model."""
+    web_path = sync_beachball_image(
+        beachball.event_id,
+        beachball.strike,
+        beachball.dip,
+        beachball.rake,
+    )
+    if web_path is not None:
+        beachball.beachball_path = web_path
+    return web_path
+
+
+def _validate_beachball_mechanism_payload(payload):
+    """
+    Require all of strike, dip, rake together, or none of them.
+
+    Returns None if valid, or (error_body, status_code).
+    """
+    provided = [
+        name
+        for name in ("strike", "dip", "rake")
+        if payload.get(name) is not None
+    ]
+    if len(provided) in (0, 3):
+        return None
+    return {
+        "error": "validation_error",
+        "message": (
+            "strike, dip, and rake must all be provided together "
+            "(or omit all three)."
+        ),
+        "provided": provided,
+    }, 400
 
 
 def _get_event_or_404(event_id):
@@ -460,6 +497,7 @@ class SeismicEventDetailApi(Resource):
             return error
 
         event_id_value = event.id
+        delete_beachball_image(event_id_value)
         event.delete()
         logger.info("Seismic event deleted: event_id=%s", event_id_value)
         return marshal({"message": "Seismic event deleted successfully."}, message_response_model), 200
@@ -644,21 +682,36 @@ class EventBeachballApi(Resource):
             }, 409
 
         payload = event_beachball_parser.parse_args()
+        mechanism_error = _validate_beachball_mechanism_payload(payload)
+        if mechanism_error:
+            return mechanism_error
+
         beachball = EventBeachball(
             event_id=event.id,
             rake=payload.get("rake"),
             dip=payload.get("dip"),
             strike=payload.get("strike"),
-            beachball_path=_optional_str(payload.get("beachball_path")),
+            beachball_path=None,
         )
         try:
+            _apply_generated_beachball_path(beachball)
             beachball.create()
+        except ValueError as err:
+            db.session.rollback()
+            return {"error": "validation_error", "message": str(err)}, 400
         except IntegrityError:
             db.session.rollback()
             return {
                 "error": "conflict",
                 "message": "Beachball already exists for this event. Use PUT to update.",
             }, 409
+        except Exception as err:
+            db.session.rollback()
+            logger.exception("Beachball image generation failed: event_id=%s", event.id)
+            return {
+                "error": "generation_error",
+                "message": f"Beachball image generation failed: {err}",
+            }, 500
 
         logger.info("Beachball created: event_id=%s beachball_id=%s", event.id, beachball.id)
         return marshal(
@@ -669,6 +722,7 @@ class EventBeachballApi(Resource):
     @seismic_events_ns.doc(security=JWT_OR_API_KEY)
     @seismic_events_ns.expect(event_beachball_parser)
     @seismic_events_ns.response(200, "Success", event_beachball_response_model)
+    @seismic_events_ns.response(400, "Validation Error", error_model)
     @seismic_events_ns.response(401, "Unauthorized", error_model)
     @seismic_events_ns.response(403, "Forbidden", error_model)
     @seismic_events_ns.response(404, "Not Found", error_model)
@@ -685,6 +739,10 @@ class EventBeachballApi(Resource):
             return {"error": "not_found", "message": "Beachball not found for this event."}, 404
 
         payload = event_beachball_parser.parse_args()
+        mechanism_error = _validate_beachball_mechanism_payload(payload)
+        if mechanism_error:
+            return mechanism_error
+
         beachball = event.beachball
         if payload.get("rake") is not None:
             beachball.rake = payload.get("rake")
@@ -692,9 +750,21 @@ class EventBeachballApi(Resource):
             beachball.dip = payload.get("dip")
         if payload.get("strike") is not None:
             beachball.strike = payload.get("strike")
-        if payload.get("beachball_path") is not None:
-            beachball.beachball_path = _optional_str(payload.get("beachball_path"))
-        beachball.save()
+        # beachball_path is server-generated; ignore any client-supplied path.
+
+        try:
+            _apply_generated_beachball_path(beachball)
+            beachball.save()
+        except ValueError as err:
+            db.session.rollback()
+            return {"error": "validation_error", "message": str(err)}, 400
+        except Exception as err:
+            db.session.rollback()
+            logger.exception("Beachball image generation failed: event_id=%s", event.id)
+            return {
+                "error": "generation_error",
+                "message": f"Beachball angles updated but image generation failed: {err}",
+            }, 500
 
         logger.info("Beachball updated: event_id=%s beachball_id=%s", event.id, beachball.id)
         return marshal(
@@ -720,6 +790,7 @@ class EventBeachballApi(Resource):
             return {"error": "not_found", "message": "Beachball not found for this event."}, 404
 
         beachball_id = event.beachball.id
+        delete_beachball_image(event.id)
         event.beachball.delete()
         logger.info("Beachball deleted: event_id=%s beachball_id=%s", event.id, beachball_id)
         return marshal({"message": "Beachball deleted successfully."}, message_response_model), 200

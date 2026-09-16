@@ -249,7 +249,7 @@ event_beachball_parser.add_argument(
     "beachball_path",
     type=str,
     required=False,
-    help="Path or URL to beachball image",
+    help="Ignored. Image path is generated server-side from strike/dip/rake.",
 )
 
 def parse_magnitude_filters(value):

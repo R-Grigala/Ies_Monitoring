@@ -137,24 +137,41 @@ def test_event_magnitude_and_beachball_crud(client, admin_auth_headers, app):
         json={"rake": 90.0, "dip": 45.0, "strike": 180.0},
     )
     assert beachball_create.status_code == 201
-    assert beachball_create.get_json()["beachball"]["strike"] == 180.0
+    created_bb = beachball_create.get_json()["beachball"]
+    assert created_bb["strike"] == 180.0
+    expected_path = f"/static/beachballs/beachball_{event_id}.png"
+    assert created_bb["beachball_path"] == expected_path
+
+    from app.utils.gen_beachball_img import beachball_fs_path
+
+    assert beachball_fs_path(event_id).is_file()
 
     beachball_dup = client.post(
         f"/api/seismic_events/{event_id}/beachball",
         headers=admin_auth_headers,
-        json={"rake": 10.0},
+        json={"rake": 10.0, "dip": 20.0, "strike": 30.0},
     )
     assert beachball_dup.status_code == 409
+
+    partial_update = client.put(
+        f"/api/seismic_events/{event_id}/beachball",
+        headers=admin_auth_headers,
+        json={"strike": 200.0},
+    )
+    assert partial_update.status_code == 400
+    assert partial_update.get_json()["error"] == "validation_error"
 
     beachball_update = client.put(
         f"/api/seismic_events/{event_id}/beachball",
         headers=admin_auth_headers,
-        json={"strike": 200.0, "beachball_path": "/static/bb.png"},
+        json={"strike": 200.0, "dip": 45.0, "rake": 90.0, "beachball_path": "/static/bb.png"},
     )
     assert beachball_update.status_code == 200
     beachball = beachball_update.get_json()["beachball"]
     assert beachball["strike"] == 200.0
-    assert beachball["beachball_path"] == "/static/bb.png"
+    # Client-supplied path is ignored; server regenerates fixed path.
+    assert beachball["beachball_path"] == expected_path
+    assert beachball_fs_path(event_id).is_file()
 
     get_event = client.get(f"/api/seismic_events/{event_id}", headers=admin_auth_headers)
     assert get_event.status_code == 200
@@ -173,10 +190,41 @@ def test_event_magnitude_and_beachball_crud(client, admin_auth_headers, app):
         headers=admin_auth_headers,
     )
     assert delete_beachball.status_code == 200
+    assert not beachball_fs_path(event_id).is_file()
 
     catalog = client.get("/api/seismic_events/magnitude_types", headers=admin_auth_headers)
     assert catalog.status_code == 200
     assert catalog.get_json()["total"] >= 1
+
+
+def test_beachball_requires_all_or_none_angles(client, admin_auth_headers):
+    create_response = client.post(
+        "/api/seismic_events/",
+        headers=admin_auth_headers,
+        json={
+            "origin_time": "2026-08-05T15:00:00",
+            "latitude": 41.5,
+            "longitude": 44.5,
+        },
+    )
+    assert create_response.status_code == 201
+    event_id = create_response.get_json()["event"]["id"]
+
+    partial_create = client.post(
+        f"/api/seismic_events/{event_id}/beachball",
+        headers=admin_auth_headers,
+        json={"strike": 10.0, "dip": 20.0},
+    )
+    assert partial_create.status_code == 400
+    assert partial_create.get_json()["error"] == "validation_error"
+
+    empty_create = client.post(
+        f"/api/seismic_events/{event_id}/beachball",
+        headers=admin_auth_headers,
+        json={},
+    )
+    assert empty_create.status_code == 201
+    assert empty_create.get_json()["beachball"]["beachball_path"] is None
 
 
 def test_filter_seismic_events(client, admin_auth_headers, app):
