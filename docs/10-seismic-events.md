@@ -30,8 +30,9 @@ i18n: EN/KA (`app/static/js/i18n.js`).
 ### 2.1 სია (`events.html`)
 
 - **რუკა + ფილტრები** ზედა ზონაში; ქვემოთ earthquake ცხრილი.
-- **Actions:** Details · Map focus · Edit · Delete (`can_event_edit`-ისთვის Edit/Delete).
-- Event ID ლინკი და Details ღილაკი გადაჰყავს `/seismic_events/<id>`-ზე.
+- **ცხრილის სვეტები:** Action · Earthquake Time · Magnitude · Location (`location_en` EN-ზე, `location_ge` KA-ზე).
+- **Actions:** Details · Edit · Delete (`can_event_edit`-ისთვის Edit/Delete).
+- Details ღილაკი გადაჰყავს `/seismic_events/<id>`-ზე.
 - **Add Earthquake** — მხოლოდ `can_event_edit`.
 
 ### 2.2 ფილტრაცია (server-side)
@@ -147,7 +148,7 @@ Delete → სიაზე დაბრუნება.
 | `app/static/js/seismic_events/createEvent.js` | შექმნა + magnitudes + beachball |
 | `app/static/js/seismic_events/editEvent.js` | რედაქტირება + magnitudes + beachball |
 | `app/static/js/seismic_events/eventDetailsPage.js` | დეტალების გვერდი |
-| `app/static/js/seismic_events/eventDetail.js` | Actions: details / map buttons |
+| `app/static/js/seismic_events/eventDetail.js` | Actions: details button + Event ID link |
 | `app/static/js/seismic_events/map.js` | სიის Leaflet რუკა |
 | `app/static/js/seismic_events/deleteEvent.js` | წაშლა სიიდან |
 
