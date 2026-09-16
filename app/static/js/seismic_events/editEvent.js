@@ -34,7 +34,11 @@ function clearEditEventAlert() {
     }
 }
 
-function toDatetimeLocalValue(isoValue) {
+function toOriginTimeInputValue(isoValue) {
+    if (window.formatOriginTime) {
+        const formatted = window.formatOriginTime(isoValue);
+        return formatted === "-" ? "" : formatted;
+    }
     if (!isoValue) {
         return "";
     }
@@ -43,26 +47,21 @@ function toDatetimeLocalValue(isoValue) {
         return "";
     }
     const pad = (value) => String(value).padStart(2, "0");
-    return [
-        date.getFullYear(),
-        "-",
-        pad(date.getMonth() + 1),
-        "-",
-        pad(date.getDate()),
-        "T",
-        pad(date.getHours()),
-        ":",
-        pad(date.getMinutes()),
-        ":",
-        pad(date.getSeconds()),
-    ].join("");
+    return (
+        `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T` +
+        `${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`
+    );
 }
 
-function fromDatetimeLocalValue(localValue) {
-    if (!localValue) {
+function fromOriginTimeInput(value) {
+    if (window.parseOriginTimeInput) {
+        return window.parseOriginTimeInput(value);
+    }
+    const raw = (value || "").trim();
+    if (!raw) {
         return null;
     }
-    const date = new Date(localValue);
+    const date = new Date(raw);
     if (Number.isNaN(date.getTime())) {
         return null;
     }
@@ -409,7 +408,7 @@ function setAreaValue(area) {
 
 function fillEventForm(event) {
     document.getElementById("editEventId").value = event.id || "";
-    document.getElementById("editEventOriginTime").value = toDatetimeLocalValue(
+    document.getElementById("editEventOriginTime").value = toOriginTimeInputValue(
         event.origin_time
     );
     document.getElementById("editEventDepth").value =
@@ -466,8 +465,8 @@ async function submitEditEventForm(formEvent) {
     const depth = document.getElementById("editEventDepth").value;
     const submitButton = document.getElementById("editEventSubmit");
 
-    const origin_time = fromDatetimeLocalValue(originTimeLocal);
-    if (!eventId || !origin_time || latitude === "" || longitude === "") {
+    const origin_time = fromOriginTimeInput(originTimeLocal);
+    if (!eventId || !origin_time || depth === "" || latitude === "" || longitude === "") {
         window.showAlert(
             EDIT_EVENT_ALERT_ID,
             "danger",
@@ -484,15 +483,13 @@ async function submitEditEventForm(formEvent) {
             origin_time,
             latitude: Number(latitude),
             longitude: Number(longitude),
+            depth: Number(depth),
             location_ge: document.getElementById("editEventLocationGe").value.trim() || null,
             location_en: document.getElementById("editEventLocationEn").value.trim() || null,
             area: document.getElementById("editEventArea").value.trim() || null,
             iesdata_id: document.getElementById("editEventIesdataId").value.trim() || null,
             seiscomp_oid: document.getElementById("editEventSeiscompOid").value.trim() || null,
         };
-        if (depth !== "") {
-            payload.depth = Number(depth);
-        }
 
         const data = await window.makeApiRequest(`/api/seismic_events/${eventId}`, {
             method: "PUT",

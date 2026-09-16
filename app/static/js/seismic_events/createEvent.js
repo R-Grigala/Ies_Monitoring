@@ -134,11 +134,15 @@ async function openCreateEventModal() {
     addMagnitudeRow();
 }
 
-function fromDatetimeLocalValue(localValue) {
-    if (!localValue) {
+function fromOriginTimeInput(value) {
+    if (window.parseOriginTimeInput) {
+        return window.parseOriginTimeInput(value);
+    }
+    const raw = (value || "").trim();
+    if (!raw) {
         return null;
     }
-    const date = new Date(localValue);
+    const date = new Date(raw);
     if (Number.isNaN(date.getTime())) {
         return null;
     }
@@ -154,10 +158,47 @@ async function attachMagnitudes(eventId, entries) {
     }
 }
 
+function readOptionalNumber(id) {
+    const raw = document.getElementById(id)?.value;
+    if (raw === null || raw === undefined || raw === "") {
+        return null;
+    }
+    const value = Number(raw);
+    return Number.isNaN(value) ? null : value;
+}
+
+function readBeachballPayload() {
+    const payload = {};
+    const strike = readOptionalNumber("createEventBeachballStrike");
+    const dip = readOptionalNumber("createEventBeachballDip");
+    const rake = readOptionalNumber("createEventBeachballRake");
+
+    if (strike !== null) {
+        payload.strike = strike;
+    }
+    if (dip !== null) {
+        payload.dip = dip;
+    }
+    if (rake !== null) {
+        payload.rake = rake;
+    }
+    return payload;
+}
+
+async function attachBeachball(eventId, payload) {
+    if (!payload || Object.keys(payload).length === 0) {
+        return;
+    }
+    await window.makeApiRequest(`/api/seismic_events/${eventId}/beachball`, {
+        method: "POST",
+        body: JSON.stringify(payload),
+    });
+}
+
 async function submitCreateEventForm(formEvent) {
     formEvent.preventDefault();
 
-    const origin_time = fromDatetimeLocalValue(
+    const origin_time = fromOriginTimeInput(
         document.getElementById("createEventOriginTime")?.value
     );
     const latitude = document.getElementById("createEventLatitude")?.value;
@@ -165,7 +206,7 @@ async function submitCreateEventForm(formEvent) {
     const depth = document.getElementById("createEventDepth")?.value;
     const submitButton = document.getElementById("createEventSubmit");
 
-    if (!origin_time || latitude === "" || longitude === "") {
+    if (!origin_time || depth === "" || latitude === "" || longitude === "") {
         window.showAlert(
             CREATE_EVENT_ALERT_ID,
             "danger",
@@ -210,15 +251,13 @@ async function submitCreateEventForm(formEvent) {
             origin_time,
             latitude: Number(latitude),
             longitude: Number(longitude),
+            depth: Number(depth),
             location_ge: document.getElementById("createEventLocationGe")?.value.trim() || null,
             location_en: document.getElementById("createEventLocationEn")?.value.trim() || null,
             area: document.getElementById("createEventArea")?.value.trim() || null,
             iesdata_id: document.getElementById("createEventIesdataId")?.value.trim() || null,
             seiscomp_oid: document.getElementById("createEventSeiscompOid")?.value.trim() || null,
         };
-        if (depth !== "") {
-            payload.depth = Number(depth);
-        }
 
         const data = await window.makeApiRequest("/api/seismic_events/", {
             method: "POST",
@@ -227,12 +266,11 @@ async function submitCreateEventForm(formEvent) {
 
         let created = data.event || data;
         if (created?.id) {
+            const warnings = [];
             try {
                 await attachMagnitudes(created.id, magnitudeEntries);
             } catch (attachError) {
-                window.showAlert(
-                    "alertPlaceholder",
-                    "warning",
+                warnings.push(
                     attachError.message ||
                         t(
                             "events.create.magnitude_warning",
@@ -241,9 +279,35 @@ async function submitCreateEventForm(formEvent) {
                 );
             }
 
+            try {
+                await attachBeachball(created.id, readBeachballPayload());
+            } catch (beachballError) {
+                warnings.push(
+                    beachballError.message ||
+                        t(
+                            "events.create.beachball_warning",
+                            "Event created, but the beachball could not be saved."
+                        )
+                );
+            }
+
             created = await window.makeApiRequest(`/api/seismic_events/${created.id}`, {
                 method: "GET",
             });
+
+            window.onEventCreated?.(created);
+            ensureCreateEventModal()?.hide();
+
+            if (warnings.length) {
+                window.showAlert("alertPlaceholder", "warning", warnings.join(" "));
+            } else {
+                window.showAlert(
+                    "alertPlaceholder",
+                    "success",
+                    data.message || t("events.create.success", "Earthquake created successfully.")
+                );
+            }
+            return;
         }
 
         window.onEventCreated?.(created);

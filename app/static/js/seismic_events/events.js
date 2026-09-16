@@ -52,19 +52,108 @@ function preferredLocation(event) {
     return event.location_en || event.location_ge || event.area || "-";
 }
 
+function pad2(n) {
+    return String(n).padStart(2, "0");
+}
+
+function toNaiveIsoString(year, month, day, hour = 0, minute = 0, second = 0) {
+    return (
+        `${year}-${pad2(month)}-${pad2(day)}T` +
+        `${pad2(hour)}:${pad2(minute)}:${pad2(second)}`
+    );
+}
+
 function formatOriginTime(value) {
     if (!value) {
         return "-";
     }
-    const date = new Date(value);
-    if (Number.isNaN(date.getTime())) {
-        return String(value);
-    }
-    const pad = (n) => String(n).padStart(2, "0");
-    return (
-        `${pad(date.getDate())}/${pad(date.getMonth() + 1)}/${date.getFullYear()}, ` +
-        `${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`
+
+    const raw = String(value).trim();
+    const isoMatch = raw.match(
+        /^(\d{4})-(\d{2})-(\d{2})[T\s](\d{2}):(\d{2})(?::(\d{2}))?/
     );
+    if (isoMatch) {
+        return toNaiveIsoString(
+            Number(isoMatch[1]),
+            Number(isoMatch[2]),
+            Number(isoMatch[3]),
+            Number(isoMatch[4]),
+            Number(isoMatch[5]),
+            Number(isoMatch[6] ?? 0)
+        );
+    }
+
+    const date = new Date(raw);
+    if (Number.isNaN(date.getTime())) {
+        return raw;
+    }
+    return toNaiveIsoString(
+        date.getFullYear(),
+        date.getMonth() + 1,
+        date.getDate(),
+        date.getHours(),
+        date.getMinutes(),
+        date.getSeconds()
+    );
+}
+
+function parseOriginTimeInput(value) {
+    const raw = (value || "").trim();
+    if (!raw) {
+        return null;
+    }
+
+    // YYYY-MM-DD HH:mm:ss or YYYY-MM-DDTHH:mm:ss (seconds optional)
+    const isoLike = raw.match(
+        /^(\d{4})-(\d{2})-(\d{2})(?:[T\s]+(\d{1,2}):(\d{2})(?::(\d{2}))?)?(?:\.\d+)?(?:Z|[+-]\d{2}:?\d{2})?$/
+    );
+    if (isoLike) {
+        const year = Number(isoLike[1]);
+        const month = Number(isoLike[2]);
+        const day = Number(isoLike[3]);
+        const hour = Number(isoLike[4] ?? 0);
+        const minute = Number(isoLike[5] ?? 0);
+        const second = Number(isoLike[6] ?? 0);
+        const probe = new Date(year, month - 1, day, hour, minute, second);
+        if (
+            probe.getFullYear() !== year ||
+            probe.getMonth() !== month - 1 ||
+            probe.getDate() !== day ||
+            probe.getHours() !== hour ||
+            probe.getMinutes() !== minute ||
+            probe.getSeconds() !== second
+        ) {
+            return null;
+        }
+        return toNaiveIsoString(year, month, day, hour, minute, second);
+    }
+
+    // dd/mm/yyyy, HH:mm:ss (comma optional; seconds optional)
+    const dmy = raw.match(
+        /^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:[,\s]+(\d{1,2}):(\d{2})(?::(\d{2}))?)?$/
+    );
+    if (dmy) {
+        const day = Number(dmy[1]);
+        const month = Number(dmy[2]);
+        const year = Number(dmy[3]);
+        const hour = Number(dmy[4] ?? 0);
+        const minute = Number(dmy[5] ?? 0);
+        const second = Number(dmy[6] ?? 0);
+        const probe = new Date(year, month - 1, day, hour, minute, second);
+        if (
+            probe.getFullYear() !== year ||
+            probe.getMonth() !== month - 1 ||
+            probe.getDate() !== day ||
+            probe.getHours() !== hour ||
+            probe.getMinutes() !== minute ||
+            probe.getSeconds() !== second
+        ) {
+            return null;
+        }
+        return toNaiveIsoString(year, month, day, hour, minute, second);
+    }
+
+    return null;
 }
 
 function hasEventsPermission() {
@@ -388,6 +477,7 @@ async function loadEvents() {
 
 window.escapeHtml = escapeHtml;
 window.formatOriginTime = formatOriginTime;
+window.parseOriginTimeInput = parseOriginTimeInput;
 window.getEventMl = getEventMl;
 window.getEventMagnitude = getEventMagnitude;
 window.requireEventsAuth = requireEventsAuth;
