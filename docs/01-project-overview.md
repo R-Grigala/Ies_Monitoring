@@ -18,9 +18,11 @@ Earthquake Notification System (ENS) წარმოადგენს რეა
 | Permissions models + seed + runtime checks | Implemented |
 | Permissions catalog REST (list/create/delete) | Implemented |
 | Notification recipients (`recips`) + `/notify` UI | Implemented |
+| Seismic Events API + list/filter/details UI + beachball images | Implemented |
 | Push / Devices / Queue / Earthquake ingest | Planned |
 
-დეტალური API სია: [`09-api-inventory.md`](09-api-inventory.md).
+დეტალური API სია: [`09-api-inventory.md`](09-api-inventory.md).  
+Seismic Events UI/API დეტალები: [`10-seismic-events.md`](10-seismic-events.md).
 
 ---
 

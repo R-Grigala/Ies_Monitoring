@@ -144,6 +144,8 @@
 - მიწისძვრების სიის ნახვა;
 - დეტალური ინფორმაციის ნახვა.
 
+**Implementation note (admin Web UI):** `/<lang>/seismic_events` (სია, რუკა, server-side ფილტრი) და `/<lang>/seismic_events/<id>` (Overview / Magnitudes / Beachball / Map). დეტალები: [`10-seismic-events.md`](10-seismic-events.md). SeisComP ავტო-ingest და მობილური კლიენტი — planned.
+
 ---
 
 ## FR-11 Push შეტყობინებები

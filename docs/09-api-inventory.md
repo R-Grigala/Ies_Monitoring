@@ -24,6 +24,8 @@ Swagger UI: `http://localhost:5000/api/docs`
 | `GET /api/health` | Planned |
 | SeisComP ingest / Push / Redis / Celery | Planned |
 
+Seismic Events UI/API დეტალური აღწერა: [`10-seismic-events.md`](10-seismic-events.md).
+
 ---
 
 ## Authentication methods
@@ -132,7 +134,7 @@ Requires JWT or API key with **`can_event_view`** (read) and/or **`can_event_edi
 |--------|------|------|--------|
 | GET | `/api/seismic_events/` | `can_event_view` or `can_event_edit` | List events with nested magnitudes + beachball |
 | POST | `/api/seismic_events/filter` | `can_event_view` or `can_event_edit` | Filter by body fields: `event_id` (exact), `event_query` (substring on id or iesdata_id), `iesdata_id`, `seiscomp_oid`, `location`, `area`, `magnitude` (code), `magnitude_min`, `magnitude_max`, `magnitudes` (list of `{magnitude, magnitude_min, magnitude_max}` for AND), `depth_min`, `depth_max`, `date_from`, `date_to`. All optional; AND combined. `iesdata_id`, `seiscomp_oid`, `location`, `area` are substring matches |
-| POST | `/api/seismic_events/` | `can_event_edit` | Create. Required: `origin_time`, `latitude`, `longitude`. Optional: `depth`, `iesdata_id`, `seiscomp_oid`, `location_ge`, `location_en`, `area`, `is_automatic` (default false) |
+| POST | `/api/seismic_events/` | `can_event_edit` | Create. Required: `origin_time`, `latitude`, `longitude`. Optional: `depth`, `iesdata_id`, `seiscomp_oid`, `location_ge`, `location_en`, `area`, `is_automatic` (default false). **UI also requires `depth`.** |
 | GET | `/api/seismic_events/<id>` | `can_event_view` or `can_event_edit` | Detail |
 | PUT | `/api/seismic_events/<id>` | `can_event_edit` | Update fields |
 | DELETE | `/api/seismic_events/<id>` | `can_event_edit` | Delete event + cascade magnitudes/beachball |
@@ -196,7 +198,8 @@ Admin seed (`flask populate_db`):
 | `/<lang>/registration` | Register new user (full page) | `can_users` (client-checked; API enforces) |
 | `/<lang>/services` | Service registration / delete (from Accounts) | `can_users` |
 | `/<lang>/permissions` | Permission catalog list/create/delete (from Accounts) | `can_permissions` only |
-| `/<lang>/seismic_events` | Seismic events list + edit/delete detail | `can_event_view` / `can_event_edit` |
+| `/<lang>/seismic_events` | Seismic events list, map, filters, create/edit modals | `can_event_view` / `can_event_edit` |
+| `/<lang>/seismic_events/<id>` | Event details (summary + Overview / Magnitudes / Beachball / Map tabs) | `can_event_view` / `can_event_edit` |
 | `/<lang>/notify` | Recipients admin | `can_recips` |
 | `/<lang>/change_password` | Change password page | Logged-in (API pending) |
 | `/<lang>/reset_password/<token>` | Reset password | Public |
@@ -206,6 +209,14 @@ Registration of users happens on `/<lang>/registration` (linked from Accounts �
 Service API keys are shown once after register on the Services page.
 
 UI strings: EN/KA via `app/static/js/i18n.js`.
+
+### Seismic Events UI notes
+
+- List filtering is **server-side** (`GET /` when empty, `POST /filter` when criteria set) — see [`10-seismic-events.md`](10-seismic-events.md).
+- Origin time in UI is plain text (`YYYY-MM-DD HH:mm:ss` / ISO); displayed as `YYYY-MM-DDTHH:mm:ss` without client timezone shift.
+- Filter dates use Flatpickr `dd/mm/yyyy`.
+- Beachball `strike`/`dip`/`rake`: UI validates all-three-or-none before submit (same rule as API).
+- Details page Edit opens the edit modal in-place (does not redirect to the list).
 
 ---
 
@@ -217,4 +228,4 @@ UI strings: EN/KA via `app/static/js/i18n.js`.
 | Accounts | `app/api/accounts.py`, `app/api/nsmodels/accounts.py` |
 | Services | `app/api/services.py`, `app/api/nsmodels/services.py` |
 | Recips | `app/api/recips.py`, `app/api/nsmodels/recips.py` |
-| Seismic Events | `app/api/seismic_events.py`, `app/api/nsmodels/seismic_events.py` |
+| Seismic Events | `app/api/seismic_events.py`, `app/api/nsmodels/seismic_events.py`, `app/utils/gen_beachball_img.py` |
