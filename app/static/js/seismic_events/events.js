@@ -279,6 +279,7 @@ function renderEvents(events) {
       <tr data-event-id="${id}">
         <td>
           <div class="d-flex align-items-center justify-content-center gap-1">
+            ${window.buildEventDetailsButton ? window.buildEventDetailsButton(event.id) : ""}
             ${window.buildViewEventButton ? window.buildViewEventButton(event.id) : ""}
             ${
                 canManageEvents
@@ -519,5 +520,13 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
 
-    loadEvents();
+    loadEvents().then(() => {
+        const editId = new URLSearchParams(window.location.search).get("edit");
+        if (editId && canManageEvents) {
+            window.openEditEventModal?.(editId);
+            const url = new URL(window.location.href);
+            url.searchParams.delete("edit");
+            window.history.replaceState({}, "", url.pathname + url.search);
+        }
+    });
 });

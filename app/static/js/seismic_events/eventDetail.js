@@ -1,3 +1,8 @@
+function buildEventDetailsUrl(eventId) {
+    const path = `/seismic_events/${eventId}`;
+    return window.I18n?.localizePath?.(path) || path;
+}
+
 function buildViewEventButton(eventId) {
     if (eventId === null || eventId === undefined || eventId === "") {
         return "";
@@ -15,17 +20,35 @@ function buildViewEventButton(eventId) {
     `;
 }
 
+function buildEventDetailsButton(eventId) {
+    if (eventId === null || eventId === undefined || eventId === "") {
+        return "";
+    }
+    const href = buildEventDetailsUrl(eventId);
+    const label = window.I18n?.t?.("events.table.details", "Details") || "Details";
+    return `
+        <a
+            class="btn btn-sm btn-outline-info d-inline-flex align-items-center justify-content-center"
+            href="${window.escapeHtml?.(href) ?? href}"
+            title="${label}"
+            aria-label="${label}"
+        >
+            <i class="fa-solid fa-circle-info"></i>
+        </a>
+    `;
+}
+
 function buildEventIdLink(eventId, label) {
     const safeId = window.escapeHtml?.(eventId) ?? String(eventId ?? "");
     const safeLabel = window.escapeHtml?.(label) ?? String(label ?? "-");
+    const href = buildEventDetailsUrl(eventId);
     return `
-        <button
-            type="button"
+        <a
             class="btn btn-link btn-sm p-0 text-decoration-none"
-            data-view-id="${safeId}"
+            href="${window.escapeHtml?.(href) ?? href}"
         >
             ${safeLabel}
-        </button>
+        </a>
     `;
 }
 
@@ -48,5 +71,7 @@ function viewEvent(eventId) {
 }
 
 window.buildViewEventButton = buildViewEventButton;
+window.buildEventDetailsButton = buildEventDetailsButton;
 window.buildEventIdLink = buildEventIdLink;
+window.buildEventDetailsUrl = buildEventDetailsUrl;
 window.viewEvent = viewEvent;
