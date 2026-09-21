@@ -349,14 +349,3 @@ seismic_event_filter_parser.add_argument(
     required=False,
     help="Origin time to (ISO 8601, inclusive)",
 )
-
-publish_event_response_model = seismic_events_ns.model(
-    "PublishEventResponse",
-    {
-        "message": fields.String(required=True, example="Publish request completed."),
-        "event_id": fields.Integer(required=True, example=1),
-        "wp_response": fields.String(required=False, example="1"),
-        "published": fields.Boolean(required=True, example=True),
-        "event": fields.Nested(seismic_event_model, required=True),
-    },
-)

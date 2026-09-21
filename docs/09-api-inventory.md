@@ -16,6 +16,7 @@ Swagger UI: `http://localhost:5000/api/docs`
 | Service accounts + API keys (`/api/services`) | Implemented |
 | Recipients (`/api/recips`) | Implemented |
 | Seismic Events (`/api/seismic_events`) | Implemented |
+| Publish Events (`/api/publish_events`) | Implemented |
 | Permissions models + seed + runtime checks | Implemented |
 | Permissions REST catalog (list/create/delete) | Implemented |
 | User permission grant/revoke on accounts | Implemented |
@@ -128,7 +129,7 @@ Raw API key is shown only once at registration (`api_key_hash` is stored).
 
 ## Seismic Events — `/api/seismic_events`
 
-Requires JWT or API key with **`can_event_view`** (read) and/or **`can_event_edit`** (write). Editors can also read. Publish/unpublish requires **`can_event_publish`**.
+Requires JWT or API key with **`can_event_view`** (read) and/or **`can_event_edit`** (write). Editors can also read.
 
 | Method | Path | Auth | Notes |
 |--------|------|------|--------|
@@ -146,8 +147,17 @@ Requires JWT or API key with **`can_event_view`** (read) and/or **`can_event_edi
 | POST | `/api/seismic_events/<id>/beachball` | `can_event_edit` | Create beachball (one per event; 409 if exists). `strike`/`dip`/`rake` must be **all three or none**. When all three are set, generates `/static/beachballs/beachball_<id>.png` and stores path (client `beachball_path` ignored) |
 | PUT | `/api/seismic_events/<id>/beachball` | `can_event_edit` | Update mechanism: `strike`/`dip`/`rake` must be **all three or none**; regenerates PNG when all three present |
 | DELETE | `/api/seismic_events/<id>/beachball` | `can_event_edit` | Remove beachball row and generated PNG |
-| POST | `/api/seismic_events/<id>/publish` | `can_event_publish` | Publish/update on WordPress (no body). WP `id` = our event id; `type` = `A`/`M` from `is_automatic`; `description_*` and `region_*` both from `location_*`; mag prefers ML. Upserts `published_events` |
-| POST | `/api/seismic_events/<id>/unpublish` | `can_event_publish` | Unpublish from WordPress and delete `published_events` row |
+
+---
+
+## Publish Events — `/api/publish_events`
+
+Requires JWT or API key with **`can_event_publish`**.
+
+| Method | Path | Auth | Notes |
+|--------|------|------|--------|
+| POST | `/api/publish_events/<id>/publish` | `can_event_publish` | Publish/update on WordPress (no body). WP `id` = our event id; `type` = `A`/`M` from `is_automatic`; `description_*` and `region_*` both from `location_*`; mag prefers ML. Upserts `published_events` |
+| POST | `/api/publish_events/<id>/unpublish` | `can_event_publish` | Unpublish from WordPress and delete `published_events` row |
 
 ---
 
@@ -232,4 +242,5 @@ UI strings: EN/KA via `app/static/js/i18n.js`.
 | Accounts | `app/api/accounts.py`, `app/api/nsmodels/accounts.py` |
 | Services | `app/api/services.py`, `app/api/nsmodels/services.py` |
 | Recips | `app/api/recips.py`, `app/api/nsmodels/recips.py` |
-| Seismic Events | `app/api/seismic_events.py`, `app/api/nsmodels/seismic_events.py`, `app/utils/gen_beachball_img.py`, `app/utils/wp_publish_client.py` |
+| Seismic Events | `app/api/seismic_events.py`, `app/api/nsmodels/seismic_events.py`, `app/utils/gen_beachball_img.py` |
+| Publish Events | `app/api/publish_events.py`, `app/api/nsmodels/publish_events.py`, `app/utils/wp_publish_client.py` |

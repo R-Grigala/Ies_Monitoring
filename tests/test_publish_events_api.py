@@ -47,7 +47,7 @@ def test_publish_requires_permission(client, user_auth_headers, admin_auth_heade
     event_id = _create_event_with_ml(client, admin_auth_headers)
 
     response = client.post(
-        f"/api/seismic_events/{event_id}/publish",
+        f"/api/publish_events/{event_id}/publish",
         headers=user_auth_headers,
     )
     assert response.status_code == 403
@@ -58,9 +58,9 @@ def test_publish_and_unpublish_with_jwt(client, admin_auth_headers, app):
         _seed_magnitude("ML")
     event_id = _create_event_with_ml(client, admin_auth_headers, is_automatic=True)
 
-    with patch("app.api.seismic_events.publish_eq", return_value="ok-publish") as mock_publish:
+    with patch("app.api.publish_events.publish_eq", return_value="ok-publish") as mock_publish:
         response = client.post(
-            f"/api/seismic_events/{event_id}/publish",
+            f"/api/publish_events/{event_id}/publish",
             headers=admin_auth_headers,
         )
 
@@ -86,9 +86,9 @@ def test_publish_and_unpublish_with_jwt(client, admin_auth_headers, app):
     with app.app_context():
         assert PublishedEvent.query.filter_by(event_id=event_id).count() == 1
 
-    with patch("app.api.seismic_events.unpublish_eq", return_value="ok-unpublish") as mock_unpublish:
+    with patch("app.api.publish_events.unpublish_eq", return_value="ok-unpublish") as mock_unpublish:
         unpublish_response = client.post(
-            f"/api/seismic_events/{event_id}/unpublish",
+            f"/api/publish_events/{event_id}/unpublish",
             headers=admin_auth_headers,
         )
 
@@ -124,9 +124,9 @@ def test_publish_manual_type_and_service_api_key(client, admin_auth_headers, app
         "Accept": "application/json",
     }
 
-    with patch("app.api.seismic_events.publish_eq", return_value="service-ok") as mock_publish:
+    with patch("app.api.publish_events.publish_eq", return_value="service-ok") as mock_publish:
         response = client.post(
-            f"/api/seismic_events/{event_id}/publish",
+            f"/api/publish_events/{event_id}/publish",
             headers=service_headers,
         )
 
@@ -148,9 +148,9 @@ def test_publish_rejects_event_without_magnitude(client, admin_auth_headers, app
     assert create_response.status_code == 201
     event_id = create_response.get_json()["event"]["id"]
 
-    with patch("app.api.seismic_events.publish_eq") as mock_publish:
+    with patch("app.api.publish_events.publish_eq") as mock_publish:
         response = client.post(
-            f"/api/seismic_events/{event_id}/publish",
+            f"/api/publish_events/{event_id}/publish",
             headers=admin_auth_headers,
         )
 
@@ -176,9 +176,9 @@ def test_publish_permission_only_user_can_publish(client, permissions, admin_aut
     assert login_response.status_code == 200
     headers = auth_headers(login_response.get_json()["access_token"])
 
-    with patch("app.api.seismic_events.publish_eq", return_value="pub-ok"):
+    with patch("app.api.publish_events.publish_eq", return_value="pub-ok"):
         response = client.post(
-            f"/api/seismic_events/{event_id}/publish",
+            f"/api/publish_events/{event_id}/publish",
             headers=headers,
         )
     assert response.status_code == 200
