@@ -51,6 +51,17 @@ class Config:
         },
     }
 
+    WP_AJAX_URL = os.getenv(
+        "WP_AJAX_URL",
+        "https://ies-staging.iliauni.edu.ge/wp-admin/admin-ajax.php",
+    )
+    WP_PUBLISH_CODE = os.getenv("WP_PUBLISH_CODE", "")
+    WP_SSL_VERIFY = os.getenv("WP_SSL_VERIFY", "true").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
 
 class DevelopmentConfig(Config):
     DEBUG = True
@@ -88,6 +99,9 @@ class TestingConfig(Config):
     LOG_DIR = path.join(Config.BASE_DIR, "logs", "test")
     LOG_LEVEL = "WARNING"
     WTF_CSRF_ENABLED = False
+    WP_AJAX_URL = "https://example.test/wp-admin/admin-ajax.php"
+    WP_PUBLISH_CODE = "test-wp-publish-code"
+    WP_SSL_VERIFY = True
 
 
 def get_config():

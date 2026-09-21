@@ -42,7 +42,14 @@ def admin_user(app, permissions):
         first_name="Admin",
         last_name="User",
         password=VALID_PASSWORD,
-        permission_codes=["can_users", "can_permissions", "can_recips", "can_event_view", "can_event_edit"],
+        permission_codes=[
+            "can_users",
+            "can_permissions",
+            "can_recips",
+            "can_event_view",
+            "can_event_edit",
+            "can_event_publish",
+        ],
     )
 
 

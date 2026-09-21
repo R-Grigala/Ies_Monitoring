@@ -12,7 +12,7 @@
 | Permissions catalog create/delete + `/permissions` UI | Implemented (`can_permissions` only) |
 | Assign/revoke user permissions (`/api/accounts/<uuid>/permissions`) | Implemented |
 | Register with optional permission codes | Implemented |
-| Permission codes seeded | `can_users`, `can_permissions`, `can_recips`, `can_recips_read` |
+| Permission codes seeded | `can_users`, `can_permissions`, `can_recips`, `can_recips_read`, `can_event_view`, `can_event_edit`, `can_event_publish` |
 
 აქტუალური endpoint-ები: [`09-api-inventory.md`](09-api-inventory.md).
 
@@ -206,6 +206,7 @@ permissions
 | can_recips_read | Seeded + used | Recipients read-only (service keys) |
 | can_event_view | Implemented | მიწისძვრების სია/დეტალები/ფილტრი, magnitudes, beachball ნახვა |
 | can_event_edit | Implemented | მიწისძვრების შექმნა/რედაქტირება/წაშლა; magnitudes და beachball CRUD |
+| can_event_publish | Implemented | WordPress-ზე publish / unpublish (JWT ან service API key) |
 
 
 ---

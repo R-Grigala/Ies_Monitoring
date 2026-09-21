@@ -47,6 +47,10 @@ current_user_model = accounts_ns.inherit(
             required=False,
             example=True,
         ),
+        "can_event_publish": fields.Boolean(
+            required=False,
+            example=True,
+        ),
     },
 )
 

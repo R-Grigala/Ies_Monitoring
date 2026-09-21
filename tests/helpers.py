@@ -13,6 +13,11 @@ PERMISSIONS = (
     ("can_recips_read", "Recips Read-Only", "Read recipients list and details."),
     ("can_event_view", "Seismic Events View", "View seismic events, magnitudes, and beachballs."),
     ("can_event_edit", "Seismic Events Edit", "Create, update, and delete seismic events, magnitudes, and beachballs."),
+    (
+        "can_event_publish",
+        "Seismic Events Publish",
+        "Publish and unpublish seismic events to the WordPress site.",
+    ),
 )
 
 

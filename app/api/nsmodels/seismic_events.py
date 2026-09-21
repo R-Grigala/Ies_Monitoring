@@ -85,6 +85,8 @@ seismic_event_model = seismic_events_ns.model(
         "created_at": fields.String(required=False, example="2026-08-05T12:31:00"),
         "magnitudes": fields.List(fields.Nested(event_magnitude_model), required=True),
         "beachball": fields.Nested(event_beachball_model, required=False, allow_null=True),
+        "is_published": fields.Boolean(required=True, example=False),
+        "published_at": fields.String(required=False, example="2026-08-05T12:35:00", allow_null=True),
     },
 )
 
@@ -346,4 +348,15 @@ seismic_event_filter_parser.add_argument(
     type=parse_datetime,
     required=False,
     help="Origin time to (ISO 8601, inclusive)",
+)
+
+publish_event_response_model = seismic_events_ns.model(
+    "PublishEventResponse",
+    {
+        "message": fields.String(required=True, example="Publish request completed."),
+        "event_id": fields.Integer(required=True, example=1),
+        "wp_response": fields.String(required=False, example="1"),
+        "published": fields.Boolean(required=True, example=True),
+        "event": fields.Nested(seismic_event_model, required=True),
+    },
 )
