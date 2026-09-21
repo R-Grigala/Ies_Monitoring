@@ -11,6 +11,7 @@ from app.models.seismic_events import SeismicEvent
 from app.models.magnitudes import Magnitude
 from app.models.event_magnitudes import EventMagnitude
 from app.models.event_beachball import EventBeachball
+from app.models.published_events import PublishedEvent
 
 __all__ = [
     "User",
@@ -26,4 +27,5 @@ __all__ = [
     "Magnitude",
     "EventMagnitude",
     "EventBeachball",
+    "PublishedEvent",
 ]

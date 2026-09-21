@@ -32,3 +32,7 @@ from app.api.seismic_events import (
     EventMagnitudeDetailApi,
     EventBeachballApi,
 )
+from app.api.publish_events import (
+    PublishEventApi,
+    UnpublishEventApi,
+)

@@ -11,8 +11,9 @@ API endpoint-ების მოკლე ცხრილი: [`09-api-inventory
 |------|----------|
 | `can_event_view` | სიის, ფილტრის, დეტალების და beachball/magnitude ნახვა |
 | `can_event_edit` | შექმნა, რედაქტირება, წაშლა; magnitude და beachball CRUD |
+| `can_event_publish` | WordPress publish / unpublish (API only for now) |
 
-`can_event_edit` ასევე იძლევა read უფლებას.
+`can_event_edit` ასევე იძლევა read უფლებას. Publish ცალკე უფლებაა (`can_event_publish`).
 
 Navbar → Events ჩანს თუ მომხმარებელს აქვს რომელიმე ამ უფლებიდან.
 

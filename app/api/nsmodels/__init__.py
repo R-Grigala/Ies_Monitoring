@@ -77,3 +77,9 @@ from app.api.nsmodels.seismic_events import (
     event_beachball_parser,
     JWT_OR_API_KEY as SEISMIC_JWT_OR_API_KEY,
 )
+from app.api.nsmodels.publish_events import (
+    publish_events_ns,
+    publish_event_response_model,
+    error_model as publish_events_error_model,
+    JWT_OR_API_KEY as PUBLISH_EVENTS_JWT_OR_API_KEY,
+)

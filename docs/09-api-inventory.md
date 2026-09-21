@@ -16,6 +16,7 @@ Swagger UI: `http://localhost:5000/api/docs`
 | Service accounts + API keys (`/api/services`) | Implemented |
 | Recipients (`/api/recips`) | Implemented |
 | Seismic Events (`/api/seismic_events`) | Implemented |
+| Publish Events (`/api/publish_events`) | Implemented |
 | Permissions models + seed + runtime checks | Implemented |
 | Permissions REST catalog (list/create/delete) | Implemented |
 | User permission grant/revoke on accounts | Implemented |
@@ -60,7 +61,7 @@ Password policy: min 12 chars, upper + lower + digit + special. Hashing: Werkzeu
 
 | Method | Path | Auth | Notes |
 |--------|------|------|--------|
-| GET | `/api/accounts/ourself` | JWT | Profile + flags `can_users`, `can_permissions`, `can_recips`, `can_event_view`, `can_event_edit` |
+| GET | `/api/accounts/ourself` | JWT | Profile + flags `can_users`, `can_permissions`, `can_recips`, `can_event_view`, `can_event_edit`, `can_event_publish` |
 | PUT | `/api/accounts/ourself` | JWT | Own `first_name`, `last_name` |
 | GET | `/api/accounts/` | JWT/API key + `can_users` | `{ items, total }` |
 | GET | `/api/accounts/<uuid>` | JWT/API key + `can_users` | Single user |
@@ -149,6 +150,17 @@ Requires JWT or API key with **`can_event_view`** (read) and/or **`can_event_edi
 
 ---
 
+## Publish Events — `/api/publish_events`
+
+Requires JWT or API key with **`can_event_publish`**.
+
+| Method | Path | Auth | Notes |
+|--------|------|------|--------|
+| POST | `/api/publish_events/<id>/publish` | `can_event_publish` | Publish/update on WordPress (no body). WP `id` = our event id; `type` = `A`/`M` from `is_automatic`; `description_*` and `region_*` both from `location_*`; mag prefers ML. Upserts `published_events` |
+| POST | `/api/publish_events/<id>/unpublish` | `can_event_publish` | Unpublish from WordPress and delete `published_events` row |
+
+---
+
 ## Seeded permissions
 
 | Code | Usage |
@@ -159,12 +171,13 @@ Requires JWT or API key with **`can_event_view`** (read) and/or **`can_event_edi
 | `can_recips_read` | Read-only recipients (typical for service API keys) |
 | `can_event_view` | View seismic events, magnitudes, beachballs |
 | `can_event_edit` | Create/update/delete seismic events, magnitudes, beachballs |
+| `can_event_publish` | Publish/unpublish seismic events to WordPress (JWT or service API key) |
 
 Admin seed (`flask populate_db`):
 
 - email: `roma.grigalashvili@iliauni.edu.ge`
 - password: `PASSWORD` (change before production)
-- all seeded permissions assigned (including `can_event_view` and `can_event_edit`)
+- all seeded permissions assigned (including `can_event_view`, `can_event_edit`, `can_event_publish`)
 - magnitude catalog: ML, MB, MS, MD, MW, K, MPV, MLH, MC, MLV, M
 
 ---
@@ -186,6 +199,7 @@ Admin seed (`flask populate_db`):
 | `magnitudes` | Magnitude type catalog |
 | `event_magnitudes` | Event ↔ magnitude values |
 | `event_beachball` | Focal mechanism / beachball (0..1 per event) |
+| `published_events` | WordPress publish state (0..1 per seismic event) |
 
 ---
 
@@ -229,3 +243,4 @@ UI strings: EN/KA via `app/static/js/i18n.js`.
 | Services | `app/api/services.py`, `app/api/nsmodels/services.py` |
 | Recips | `app/api/recips.py`, `app/api/nsmodels/recips.py` |
 | Seismic Events | `app/api/seismic_events.py`, `app/api/nsmodels/seismic_events.py`, `app/utils/gen_beachball_img.py` |
+| Publish Events | `app/api/publish_events.py`, `app/api/nsmodels/publish_events.py`, `app/utils/wp_publish_client.py` |

@@ -34,8 +34,16 @@ class SeismicEvent(db.Model, BaseModel):
         uselist=False,
         lazy="select",
     )
+    published_event = db.relationship(
+        "PublishedEvent",
+        back_populates="event",
+        cascade="all, delete-orphan",
+        uselist=False,
+        lazy="select",
+    )
 
     def to_dict(self):
+        published = self.published_event
         return {
             "id": self.id,
             "iesdata_id": self.iesdata_id,
@@ -51,6 +59,12 @@ class SeismicEvent(db.Model, BaseModel):
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "magnitudes": [item.to_dict() for item in self.event_magnitudes],
             "beachball": self.beachball.to_dict() if self.beachball else None,
+            "is_published": published is not None,
+            "published_at": (
+                published.published_at.isoformat()
+                if published and published.published_at
+                else None
+            ),
         }
 
     def __repr__(self):
