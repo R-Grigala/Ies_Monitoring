@@ -152,10 +152,11 @@ Requires JWT or API key with **`can_event_view`** (read) and/or **`can_event_edi
 
 ## Publish Events — `/api/publish_events`
 
-Requires JWT or API key with **`can_event_publish`**.
+Publish/unpublish require JWT or API key with **`can_event_publish`**. List is public.
 
 | Method | Path | Auth | Notes |
 |--------|------|------|--------|
+| GET | `/api/publish_events/` | Public (no auth) | List all published events (`items` + `total`), newest `published_at` first; each item includes nested seismic `event` |
 | POST | `/api/publish_events/<id>/publish` | `can_event_publish` | Publish/update on WordPress (no body). WP `id` = our event id; `type` = `A`/`M` from `is_automatic`; `description_*` and `region_*` both from `location_*`; mag prefers ML. Upserts `published_events` |
 | POST | `/api/publish_events/<id>/unpublish` | `can_event_publish` | Unpublish from WordPress and delete `published_events` row |
 

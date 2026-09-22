@@ -33,6 +33,7 @@ from app.api.seismic_events import (
     EventBeachballApi,
 )
 from app.api.publish_events import (
+    PublishedEventsListApi,
     PublishEventApi,
     UnpublishEventApi,
 )
