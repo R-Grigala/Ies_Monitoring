@@ -41,6 +41,33 @@ def _create_event_with_ml(client, headers, *, is_automatic=False):
     return event_id
 
 
+def test_list_published_events_is_public(client, admin_auth_headers, app):
+    with app.app_context():
+        _seed_magnitude("ML")
+        assert client.get("/api/publish_events/").status_code == 200
+        assert client.get("/api/publish_events/").get_json() == {"items": [], "total": 0}
+
+    event_id = _create_event_with_ml(client, admin_auth_headers, is_automatic=True)
+    with patch("app.api.publish_events.publish_eq", return_value="ok-publish"):
+        publish_response = client.post(
+            f"/api/publish_events/{event_id}/publish",
+            headers=admin_auth_headers,
+        )
+    assert publish_response.status_code == 200
+
+    # No Authorization header — public endpoint.
+    listed = client.get("/api/publish_events/")
+    assert listed.status_code == 200
+    data = listed.get_json()
+    assert data["total"] == 1
+    assert len(data["items"]) == 1
+    assert data["items"][0]["event_id"] == event_id
+    assert data["items"][0]["event"]["id"] == event_id
+    assert data["items"][0]["event"]["is_published"] is True
+    assert data["items"][0]["published_at"] is not None
+    assert "wp_response" not in data["items"][0]
+
+
 def test_publish_requires_permission(client, user_auth_headers, admin_auth_headers, app):
     with app.app_context():
         _seed_magnitude("ML")

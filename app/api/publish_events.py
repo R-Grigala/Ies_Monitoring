@@ -8,6 +8,7 @@ from app.api.nsmodels.publish_events import (
     publish_events_ns,
     JWT_OR_API_KEY,
     publish_event_response_model,
+    published_events_list_response_model,
     error_model,
 )
 from app.models import SeismicEvent, PublishedEvent
@@ -67,6 +68,31 @@ def _wp_publish_code_or_error():
             500,
         )
     return publish_code, None
+
+
+def _published_item_payload(row):
+    return {
+        "id": row.id,
+        "event_id": row.event_id,
+        "published_at": row.published_at.isoformat() if row.published_at else None,
+        "event": row.event.to_dict() if row.event else None,
+    }
+
+
+@publish_events_ns.route("/")
+class PublishedEventsListApi(Resource):
+    @publish_events_ns.doc(security=[])
+    @publish_events_ns.response(200, "Success", published_events_list_response_model)
+    def get(self):
+        """List all published seismic events (public, no auth required)."""
+        rows = (
+            PublishedEvent.query.order_by(PublishedEvent.published_at.desc()).all()
+        )
+        items = [_published_item_payload(row) for row in rows]
+        return marshal(
+            {"items": items, "total": len(items)},
+            published_events_list_response_model,
+        ), 200
 
 
 @publish_events_ns.route("/<int:event_id>/publish")

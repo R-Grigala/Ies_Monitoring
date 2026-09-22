@@ -22,6 +22,24 @@ error_model = publish_events_ns.model(
     },
 )
 
+published_event_item_model = publish_events_ns.model(
+    "PublishedEventItem",
+    {
+        "id": fields.Integer(required=True, example=1),
+        "event_id": fields.Integer(required=True, example=1),
+        "published_at": fields.String(required=False, example="2026-08-05T12:35:00"),
+        "event": fields.Nested(seismic_event_model, required=True),
+    },
+)
+
+published_events_list_response_model = publish_events_ns.model(
+    "PublishedEventsListResponse",
+    {
+        "items": fields.List(fields.Nested(published_event_item_model), required=True),
+        "total": fields.Integer(required=True, example=1),
+    },
+)
+
 publish_event_response_model = publish_events_ns.model(
     "PublishEventResponse",
     {
