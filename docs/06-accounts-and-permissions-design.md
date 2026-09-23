@@ -206,7 +206,7 @@ permissions
 | can_recips_read | Seeded + used | Recipients read-only (service keys) |
 | can_event_view | Implemented | მიწისძვრების სია/დეტალები/ფილტრი, magnitudes, beachball ნახვა |
 | can_event_edit | Implemented | მიწისძვრების შექმნა/რედაქტირება/წაშლა; magnitudes და beachball CRUD |
-| can_event_publish | Implemented | WordPress-ზე publish / unpublish (JWT ან service API key) |
+| can_event_publish | Implemented | WordPress-ზე publish / unpublish (JWT ან service API key); დეტალების გვერდის publish panel; seismic read |
 
 
 ---

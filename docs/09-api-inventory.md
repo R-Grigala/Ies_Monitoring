@@ -3,7 +3,9 @@
 ეს დოკუმენტი აღწერს **ამჟამად იმპლემენტირებულ** API-ებსა და UI-ს. დაგეგმილი ფუნქციონალი მონიშნულია ცალკე.
 
 Base URL: `http://localhost:5000/api`  
-Swagger UI: `http://localhost:5000/api/docs`
+Swagger UI: `http://localhost:5000/docs/`
+
+Flask-RESTX mounting: `Api` has no URL `prefix`; each namespace uses `path="/api"` and resource routes include the segment (e.g. `/auth/login`, `/seismic_events/`). Public paths stay `/api/...`.
 
 ---
 
@@ -129,21 +131,21 @@ Raw API key is shown only once at registration (`api_key_hash` is stored).
 
 ## Seismic Events — `/api/seismic_events`
 
-Requires JWT or API key with **`can_event_view`** (read) and/or **`can_event_edit`** (write). Editors can also read.
+Requires JWT or API key with **`can_event_view`**, **`can_event_edit`**, or **`can_event_publish`** for read endpoints. Write endpoints require **`can_event_edit`**. Editors and publishers can also read.
 
 | Method | Path | Auth | Notes |
 |--------|------|------|--------|
-| GET | `/api/seismic_events/` | `can_event_view` or `can_event_edit` | List events with nested magnitudes + beachball |
-| POST | `/api/seismic_events/filter` | `can_event_view` or `can_event_edit` | Filter by body fields: `event_id` (exact), `event_query` (substring on id or iesdata_id), `iesdata_id`, `seiscomp_oid`, `location`, `area`, `magnitude` (code), `magnitude_min`, `magnitude_max`, `magnitudes` (list of `{magnitude, magnitude_min, magnitude_max}` for AND), `depth_min`, `depth_max`, `date_from`, `date_to`. All optional; AND combined. `iesdata_id`, `seiscomp_oid`, `location`, `area` are substring matches |
+| GET | `/api/seismic_events/` | `can_event_view` / `can_event_edit` / `can_event_publish` | List events with nested magnitudes + beachball; payload includes `is_published`, `published_at` |
+| POST | `/api/seismic_events/filter` | `can_event_view` / `can_event_edit` / `can_event_publish` | Filter by body fields: `event_id` (exact), `event_query` (substring on id or iesdata_id), `iesdata_id`, `seiscomp_oid`, `location`, `area`, `magnitude` (code), `magnitude_min`, `magnitude_max`, `magnitudes` (list of `{magnitude, magnitude_min, magnitude_max}` for AND), `depth_min`, `depth_max`, `date_from`, `date_to`. All optional; AND combined. `iesdata_id`, `seiscomp_oid`, `location`, `area` are substring matches |
 | POST | `/api/seismic_events/` | `can_event_edit` | Create. Required: `origin_time`, `latitude`, `longitude`. Optional: `depth`, `iesdata_id`, `seiscomp_oid`, `location_ge`, `location_en`, `area`, `is_automatic` (default false). **UI also requires `depth`.** |
-| GET | `/api/seismic_events/<id>` | `can_event_view` or `can_event_edit` | Detail |
+| GET | `/api/seismic_events/<id>` | `can_event_view` / `can_event_edit` / `can_event_publish` | Detail (includes `is_published`, `published_at`) |
 | PUT | `/api/seismic_events/<id>` | `can_event_edit` | Update fields |
 | DELETE | `/api/seismic_events/<id>` | `can_event_edit` | Delete event + cascade magnitudes/beachball |
-| GET | `/api/seismic_events/magnitude_types` | `can_event_view` or `can_event_edit` | Magnitude catalog (ML, MW, …) |
+| GET | `/api/seismic_events/magnitude_types` | `can_event_view` / `can_event_edit` / `can_event_publish` | Magnitude catalog (ML, MW, …) |
 | POST | `/api/seismic_events/<id>/magnitudes` | `can_event_edit` | Add magnitude. Required: `value` + (`magnitude_id` or `magnitude_code`) |
 | PUT | `/api/seismic_events/magnitudes/<em_id>` | `can_event_edit` | Update value and/or magnitude type |
 | DELETE | `/api/seismic_events/magnitudes/<em_id>` | `can_event_edit` | Remove magnitude from event |
-| GET | `/api/seismic_events/<id>/beachball` | `can_event_view` or `can_event_edit` | Get beachball (404 if none) |
+| GET | `/api/seismic_events/<id>/beachball` | `can_event_view` / `can_event_edit` / `can_event_publish` | Get beachball (404 if none) |
 | POST | `/api/seismic_events/<id>/beachball` | `can_event_edit` | Create beachball (one per event; 409 if exists). `strike`/`dip`/`rake` must be **all three or none**. When all three are set, generates `/static/beachballs/beachball_<id>.png` and stores path (client `beachball_path` ignored) |
 | PUT | `/api/seismic_events/<id>/beachball` | `can_event_edit` | Update mechanism: `strike`/`dip`/`rake` must be **all three or none**; regenerates PNG when all three present |
 | DELETE | `/api/seismic_events/<id>/beachball` | `can_event_edit` | Remove beachball row and generated PNG |
@@ -172,7 +174,7 @@ Publish/unpublish require JWT or API key with **`can_event_publish`**. List is p
 | `can_recips_read` | Read-only recipients (typical for service API keys) |
 | `can_event_view` | View seismic events, magnitudes, beachballs |
 | `can_event_edit` | Create/update/delete seismic events, magnitudes, beachballs |
-| `can_event_publish` | Publish/unpublish seismic events to WordPress (JWT or service API key) |
+| `can_event_publish` | Publish/unpublish seismic events to WordPress (JWT or service API key); also allows read of seismic events for the details publish UI |
 
 Admin seed (`flask populate_db`):
 
@@ -213,8 +215,8 @@ Admin seed (`flask populate_db`):
 | `/<lang>/registration` | Register new user (full page) | `can_users` (client-checked; API enforces) |
 | `/<lang>/services` | Service registration / delete (from Accounts) | `can_users` |
 | `/<lang>/permissions` | Permission catalog list/create/delete (from Accounts) | `can_permissions` only |
-| `/<lang>/seismic_events` | Seismic events list, map, filters, create/edit modals | `can_event_view` / `can_event_edit` |
-| `/<lang>/seismic_events/<id>` | Event details (summary + Overview / Magnitudes / Beachball / Map tabs) | `can_event_view` / `can_event_edit` |
+| `/<lang>/seismic_events` | Seismic events list, map, filters, create/edit modals | `can_event_view` / `can_event_edit` / `can_event_publish` |
+| `/<lang>/seismic_events/<id>` | Event details (summary, publish panel, Overview / Magnitudes / Beachball / Map) | `can_event_view` / `can_event_edit` / `can_event_publish` |
 | `/<lang>/notify` | Recipients admin | `can_recips` |
 | `/<lang>/change_password` | Change password page | Logged-in (API pending) |
 | `/<lang>/reset_password/<token>` | Reset password | Public |
@@ -232,6 +234,7 @@ UI strings: EN/KA via `app/static/js/i18n.js`.
 - Filter dates use Flatpickr `dd/mm/yyyy`.
 - Beachball `strike`/`dip`/`rake`: UI validates all-three-or-none before submit (same rule as API).
 - Details page Edit opens the edit modal in-place (does not redirect to the list).
+- Details page **publish panel** (below summary): shows published / not published, optional `published_at`, and Publish / Update publish / Unpublish when the user has `can_event_publish`. Calls `POST /api/publish_events/publish|unpublish/<id>`. Event must have at least one magnitude before publish.
 
 ---
 
