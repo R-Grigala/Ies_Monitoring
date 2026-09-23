@@ -50,7 +50,7 @@ def test_list_published_events_is_public(client, admin_auth_headers, app):
     event_id = _create_event_with_ml(client, admin_auth_headers, is_automatic=True)
     with patch("app.api.publish_events.publish_eq", return_value="ok-publish"):
         publish_response = client.post(
-            f"/api/publish_events/{event_id}/publish",
+            f"/api/publish_events/publish/{event_id}",
             headers=admin_auth_headers,
         )
     assert publish_response.status_code == 200
@@ -74,7 +74,7 @@ def test_publish_requires_permission(client, user_auth_headers, admin_auth_heade
     event_id = _create_event_with_ml(client, admin_auth_headers)
 
     response = client.post(
-        f"/api/publish_events/{event_id}/publish",
+        f"/api/publish_events/publish/{event_id}",
         headers=user_auth_headers,
     )
     assert response.status_code == 403
@@ -87,7 +87,7 @@ def test_publish_and_unpublish_with_jwt(client, admin_auth_headers, app):
 
     with patch("app.api.publish_events.publish_eq", return_value="ok-publish") as mock_publish:
         response = client.post(
-            f"/api/publish_events/{event_id}/publish",
+            f"/api/publish_events/publish/{event_id}",
             headers=admin_auth_headers,
         )
 
@@ -115,7 +115,7 @@ def test_publish_and_unpublish_with_jwt(client, admin_auth_headers, app):
 
     with patch("app.api.publish_events.unpublish_eq", return_value="ok-unpublish") as mock_unpublish:
         unpublish_response = client.post(
-            f"/api/publish_events/{event_id}/unpublish",
+            f"/api/publish_events/unpublish/{event_id}",
             headers=admin_auth_headers,
         )
 
@@ -153,7 +153,7 @@ def test_publish_manual_type_and_service_api_key(client, admin_auth_headers, app
 
     with patch("app.api.publish_events.publish_eq", return_value="service-ok") as mock_publish:
         response = client.post(
-            f"/api/publish_events/{event_id}/publish",
+            f"/api/publish_events/publish/{event_id}",
             headers=service_headers,
         )
 
@@ -177,7 +177,7 @@ def test_publish_rejects_event_without_magnitude(client, admin_auth_headers, app
 
     with patch("app.api.publish_events.publish_eq") as mock_publish:
         response = client.post(
-            f"/api/publish_events/{event_id}/publish",
+            f"/api/publish_events/publish/{event_id}",
             headers=admin_auth_headers,
         )
 
@@ -205,7 +205,7 @@ def test_publish_permission_only_user_can_publish(client, permissions, admin_aut
 
     with patch("app.api.publish_events.publish_eq", return_value="pub-ok"):
         response = client.post(
-            f"/api/publish_events/{event_id}/publish",
+            f"/api/publish_events/publish/{event_id}",
             headers=headers,
         )
     assert response.status_code == 200

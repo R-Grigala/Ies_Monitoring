@@ -95,7 +95,7 @@ class PublishedEventsListApi(Resource):
         ), 200
 
 
-@publish_events_ns.route("/<int:event_id>/publish")
+@publish_events_ns.route("/publish/<int:event_id>")
 @publish_events_ns.param("event_id", "Seismic event id")
 class PublishEventApi(Resource):
     @publish_events_ns.doc(security=JWT_OR_API_KEY)
@@ -190,7 +190,7 @@ class PublishEventApi(Resource):
         ), 200
 
 
-@publish_events_ns.route("/<int:event_id>/unpublish")
+@publish_events_ns.route("/unpublish/<int:event_id>")
 @publish_events_ns.param("event_id", "Seismic event id")
 class UnpublishEventApi(Resource):
     @publish_events_ns.doc(security=JWT_OR_API_KEY)
