@@ -16,9 +16,13 @@
             "nav.lang.ka": "KA",
 
             "index.hero.title": "IES Monitoring",
+            "index.hero.kicker": "Earthquake monitoring platform",
             "index.hero.lead": "Real-time earthquake notification and monitoring platform for seismic event processing, alert delivery, and operational visibility.",
             "index.hero.sub": "The platform connects SeisComP ingestion, background processing, permissions-based access control, and mobile push notifications.",
             "index.hero.docs": "Open API Docs",
+            "index.hero.events": "View events",
+            "index.hero.panel": "Track, review, and publish seismic events from one place.",
+            "index.card.section": "What the platform covers",
             "index.card.build": "What We Build",
             "index.card.build.text": "We ingest and process seismic events, then deliver alerts to users through reliable notification channels.",
             "index.card.how": "How It Works",
@@ -34,6 +38,7 @@
             "index.flow.process.text": "Execute asynchronous processing with workers and queue-backed jobs.",
             "index.flow.deliver.title": "4) Deliver",
             "index.flow.deliver.text": "Send notifications through FCM/APNs and expose operational APIs.",
+            "footer.developed_by": "Developed by OfDigital",
 
             "login.welcome": "Welcome Back",
             "login.subtitle": "Sign in to continue in IES Monitoring.",
@@ -422,9 +427,13 @@
             "nav.lang.ka": "KA",
 
             "index.hero.title": "IES Monitoring",
+            "index.hero.kicker": "მიწისძვრების მონიტორინგის პლატფორმა",
             "index.hero.lead": "რეალურ დროში მიწისძვრის შეტყობინებებისა და მონიტორინგის პლატფორმა სეისმური მოვლენების დამუშავებისა და შეტყობინებების გაგზავნისთვის.",
             "index.hero.sub": "პლატფორმა აერთიანებს SeisComP ingestion-ს, ფონურ დამუშავებას, permissions-ზე დაფუძნებულ წვდომას და მობილურ push შეტყობინებებს.",
             "index.hero.docs": "API დოკუმენტაცია",
+            "index.hero.events": "მიწისძვრების ნახვა",
+            "index.hero.panel": "თვალყური ადევნეთ, გადაამოწმეთ და გამოაქვეყნეთ სეისმური მოვლენები ერთი ადგილიდან.",
+            "index.card.section": "რას მოიცავს პლატფორმა",
             "index.card.build": "რას ვაშენებთ",
             "index.card.build.text": "ვიღებთ და ვამუშავებთ სეისმურ მოვლენებს, შემდეგ კი მომხმარებლებს ვუგზავნით სანდო შეტყობინებებს.",
             "index.card.how": "როგორ მუშაობს",
@@ -440,6 +449,7 @@
             "index.flow.process.text": "ასინქრონული დამუშავება worker-ებით და queue-backed დავალებებით.",
             "index.flow.deliver.title": "4) მიწოდება",
             "index.flow.deliver.text": "შეტყობინებების გაგზავნა FCM/APNs-ით და ოპერაციული API-ების მიწოდება.",
+            "footer.developed_by": "Developed by OfDigital",
 
             "login.welcome": "ავტორიზაცია",
             "login.subtitle": "ავტორიზაცია IES Monitoring საიტზე.",
