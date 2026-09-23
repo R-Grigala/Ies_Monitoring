@@ -356,22 +356,195 @@ function goToEventsList() {
     window.location.href = path;
 }
 
-function applyEventToPage(event, canManage) {
+function applyEventToPage(event, permissions) {
     document.title = `IES Monitoring | Event ${event.id}`;
     renderSummary(event);
+    renderPublishPanel(event, permissions);
     renderOverview(event);
     renderMagnitudes(event.magnitudes);
     renderBeachball(event.beachball);
     renderDetailMap(event);
-    renderActions(event, canManage);
+    renderActions(event, permissions);
     window.I18n?.applyTranslations?.();
 }
 
-function renderActions(event, canManage) {
+function renderPublishPanel(event, permissions = {}) {
+    const container = document.getElementById("eventDetailsPublish");
+    if (!container) {
+        return;
+    }
+
+    const isPublished = Boolean(event.is_published);
+    const canPublish = Boolean(permissions.canPublish);
+    const statusText = isPublished
+        ? t("events.publish.published", "Published")
+        : t("events.publish.not_published", "Not published");
+    const publishedAtText = isPublished
+        ? `${t("events.publish.published_at", "Published at")}: ${formatOriginTime(
+              event.published_at
+          )}`
+        : t(
+              "events.publish.hint_unpublished",
+              "This earthquake is not visible on the public website."
+          );
+
+    let actionsHtml = "";
+    if (canPublish) {
+        if (isPublished) {
+            actionsHtml = `
+                <div class="event-publish-actions">
+                    <button
+                        type="button"
+                        class="btn btn-outline-success"
+                        id="eventDetailsPublishBtn"
+                        data-i18n="events.publish.update"
+                    >
+                        Update publish
+                    </button>
+                    <button
+                        type="button"
+                        class="btn btn-warning"
+                        id="eventDetailsUnpublishBtn"
+                        data-i18n="events.publish.unpublish"
+                    >
+                        Unpublish
+                    </button>
+                </div>
+            `;
+        } else {
+            actionsHtml = `
+                <div class="event-publish-actions">
+                    <button
+                        type="button"
+                        class="btn btn-success"
+                        id="eventDetailsPublishBtn"
+                        data-i18n="events.publish.action"
+                    >
+                        Publish
+                    </button>
+                </div>
+            `;
+        }
+    }
+
+    container.classList.remove("d-none", "is-published", "is-unpublished");
+    container.classList.add(isPublished ? "is-published" : "is-unpublished");
+    container.innerHTML = `
+        <div class="event-publish-row">
+            <div class="event-publish-status">
+                <div class="event-publish-status-icon" aria-hidden="true">
+                    <i class="fa-solid ${isPublished ? "fa-globe" : "fa-eye-slash"}"></i>
+                </div>
+                <div>
+                    <div
+                        class="event-publish-status-label"
+                        data-i18n="events.publish.status_label"
+                    >
+                        Publication status
+                    </div>
+                    <div class="event-publish-status-value">${escapeHtml(statusText)}</div>
+                    <div class="event-publish-status-meta">${escapeHtml(publishedAtText)}</div>
+                </div>
+            </div>
+            ${actionsHtml}
+        </div>
+    `;
+
+    document.getElementById("eventDetailsPublishBtn")?.addEventListener("click", () => {
+        publishOrUnpublishEvent(event, true, permissions);
+    });
+    document.getElementById("eventDetailsUnpublishBtn")?.addEventListener("click", () => {
+        publishOrUnpublishEvent(event, false, permissions);
+    });
+}
+
+async function publishOrUnpublishEvent(event, publish, permissions) {
+    const isPublish = Boolean(publish);
+    const wasPublished = Boolean(event.is_published);
+    const confirmMessage = isPublish
+        ? wasPublished
+            ? t(
+                  "events.publish.update_confirm",
+                  "Update this earthquake on the public website?"
+              )
+            : t(
+                  "events.publish.confirm",
+                  "Publish this earthquake to the public website?"
+              )
+        : t(
+              "events.publish.unpublish_confirm",
+              "Unpublish this earthquake from the public website?"
+          );
+
+    const confirmed = await window.confirmDelete?.({
+        title: isPublish
+            ? wasPublished
+                ? t("events.publish.update", "Update publish")
+                : t("events.publish.action", "Publish")
+            : t("events.publish.unpublish", "Unpublish"),
+        message: confirmMessage,
+        confirmText: isPublish
+            ? wasPublished
+                ? t("events.publish.update", "Update publish")
+                : t("events.publish.action", "Publish")
+            : t("events.publish.unpublish", "Unpublish"),
+    });
+    if (!confirmed) {
+        return;
+    }
+
+    const path = isPublish
+        ? `/api/publish_events/publish/${event.id}`
+        : `/api/publish_events/unpublish/${event.id}`;
+
+    try {
+        const data = await window.makeApiRequest(path, { method: "POST" });
+        const updated = data?.event
+            ? data.event
+            : {
+                  ...event,
+                  is_published: Boolean(data?.published),
+                  published_at: data?.published ? event.published_at : null,
+              };
+        applyEventToPage(updated, permissions);
+        window.showAlert(
+            EVENT_DETAILS_ALERT_ID,
+            "success",
+            data?.message ||
+                (isPublish
+                    ? wasPublished
+                        ? t(
+                              "events.publish.update_success",
+                              "Published earthquake updated successfully."
+                          )
+                        : t("events.publish.success", "Earthquake published successfully.")
+                    : t(
+                          "events.publish.unpublish_success",
+                          "Earthquake unpublished successfully."
+                      ))
+        );
+    } catch (error) {
+        window.showAlert(
+            EVENT_DETAILS_ALERT_ID,
+            "danger",
+            error.message ||
+                (isPublish
+                    ? t("events.publish.error", "Failed to publish earthquake.")
+                    : t(
+                          "events.publish.unpublish_error",
+                          "Failed to unpublish earthquake."
+                      ))
+        );
+    }
+}
+
+function renderActions(event, permissions = {}) {
     const container = document.getElementById("eventDetailsActions");
     if (!container) {
         return;
     }
+
+    const canManage = Boolean(permissions.canManage);
 
     if (!canManage) {
         container.innerHTML = "";
@@ -463,8 +636,14 @@ async function loadEventDetails() {
         const profile = await window.makeApiRequest("/api/accounts/ourself", {
             method: "GET",
         });
-        const canManage = Boolean(profile?.can_event_edit);
-        const canView = canManage || Boolean(profile?.can_event_view);
+        const permissions = {
+            canManage: Boolean(profile?.can_event_edit),
+            canPublish: Boolean(profile?.can_event_publish),
+        };
+        const canView =
+            permissions.canManage ||
+            permissions.canPublish ||
+            Boolean(profile?.can_event_view);
 
         if (!canView) {
             showLoadingError(
@@ -487,13 +666,13 @@ async function loadEventDetails() {
                 loadEventDetails();
                 return;
             }
-            applyEventToPage(updated, canManage);
+            applyEventToPage(updated, permissions);
         };
         window.onEventDeleted = () => {
             goToEventsList();
         };
 
-        applyEventToPage(event, canManage);
+        applyEventToPage(event, permissions);
         showContent();
     } catch (error) {
         showLoadingError(

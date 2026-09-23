@@ -63,7 +63,7 @@ def _service_payload(service):
     return data
 
 
-@services_ns.route("/")
+@services_ns.route("/services/")
 class ServicesApi(Resource):
     @services_ns.doc(security=JWT_OR_API_KEY)
     @services_ns.response(200, "OK")
@@ -177,7 +177,7 @@ class ServicesApi(Resource):
         }, 201
 
 
-@services_ns.route("/<string:service_uuid>")
+@services_ns.route("/services/<string:service_uuid>")
 class ServiceDetailApi(Resource):
     @services_ns.doc(security=JWT_OR_API_KEY)
     @services_ns.response(200, "OK")

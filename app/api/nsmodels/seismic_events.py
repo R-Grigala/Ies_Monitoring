@@ -7,7 +7,7 @@ from app.extensions import api
 seismic_events_ns = api.namespace(
     "Seismic Events",
     description="Seismic events, magnitudes, and beachball management endpoints",
-    path="/seismic_events",
+    path="/api",
 )
 
 JWT_OR_API_KEY = ["JsonWebToken", "ApiKeyAuth"]

@@ -5,7 +5,7 @@ from app.extensions import api
 permissions_ns = api.namespace(
     "Permissions",
     description="Permission catalog management (list, create, delete)",
-    path="/permissions",
+    path="/api",
 )
 
 JWT_OR_API_KEY = ["JsonWebToken", "ApiKeyAuth"]

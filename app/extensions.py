@@ -16,8 +16,7 @@ api = Api(
     version='1.0',
     description='Seismic Monitoring API',
     authorizations=Config.AUTHORIZATION,
-    prefix='/api',  # API prefix
-    doc='/docs', # Swagger UI path
-    mask_swagger=False,  # Disable Swagger masking
-    error_404_help=False  # Disable 404 help messages
+    doc='/docs/', # Swagger UI path
+    mask_swagger=False,
+    error_404_help=False,
 )

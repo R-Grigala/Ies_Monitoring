@@ -59,7 +59,7 @@ def _normalize_code(raw_code):
     return code
 
 
-@permissions_ns.route("/")
+@permissions_ns.route("/permissions/")
 class PermissionsApi(Resource):
     @permissions_ns.doc(security=JWT_OR_API_KEY)
     @permissions_ns.response(200, "Success", permission_list_response_model)
@@ -154,7 +154,7 @@ class PermissionsApi(Resource):
         )
 
 
-@permissions_ns.route("/<string:code_or_id>")
+@permissions_ns.route("/permissions/<string:code_or_id>")
 class PermissionDetailApi(Resource):
     @permissions_ns.doc(security=JWT_OR_API_KEY)
     @permissions_ns.response(200, "Success", permission_model)

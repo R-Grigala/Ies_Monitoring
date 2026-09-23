@@ -520,6 +520,91 @@
     border-top: 1px solid var(--bs-border-color);
 }
 
+.event-publish-panel {
+    border: 1px solid var(--bs-border-color);
+    border-radius: 0.75rem;
+    background: #fff;
+    padding: 0.95rem 1.1rem;
+    box-shadow: 0 0.125rem 0.35rem rgba(0, 0, 0, 0.04);
+}
+
+.event-publish-panel.is-published {
+    border-color: rgba(25, 135, 84, 0.35);
+    background: linear-gradient(180deg, #f4fbf7 0%, #fff 70%);
+}
+
+.event-publish-panel.is-unpublished {
+    border-color: rgba(108, 117, 125, 0.35);
+    background: linear-gradient(180deg, #f8f9fa 0%, #fff 70%);
+}
+
+.event-publish-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.85rem 1.25rem;
+}
+
+.event-publish-status {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.85rem;
+    min-width: 0;
+}
+
+.event-publish-status-icon {
+    width: 2.4rem;
+    height: 2.4rem;
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    font-size: 1rem;
+}
+
+.event-publish-panel.is-published .event-publish-status-icon {
+    color: #198754;
+    background: rgba(25, 135, 84, 0.12);
+}
+
+.event-publish-panel.is-unpublished .event-publish-status-icon {
+    color: #6c757d;
+    background: rgba(108, 117, 125, 0.12);
+}
+
+.event-publish-status-label {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--bs-secondary-color);
+    margin-bottom: 0.15rem;
+}
+
+.event-publish-status-value {
+    font-size: 1.05rem;
+    font-weight: 650;
+    line-height: 1.25;
+}
+
+.event-publish-status-meta {
+    margin-top: 0.15rem;
+    font-size: 0.85rem;
+    color: var(--bs-secondary-color);
+}
+
+.event-publish-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.event-publish-actions .btn {
+    min-width: 9.5rem;
+}
+
 .event-detail-tabs {
     border-bottom: 1px solid var(--bs-border-color);
     gap: 0.15rem;
@@ -591,6 +676,20 @@
     .event-summary-grid,
     .metadata-grid {
         grid-template-columns: 1fr;
+    }
+
+    .event-publish-row {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .event-publish-actions {
+        width: 100%;
+    }
+
+    .event-publish-actions .btn {
+        flex: 1 1 auto;
+        min-width: 0;
     }
 
     .event-detail-map-canvas {

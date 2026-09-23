@@ -6,7 +6,7 @@ from app.api.nsmodels.seismic_events import seismic_event_model
 publish_events_ns = api.namespace(
     "Publish Events",
     description="Publish and unpublish seismic events to WordPress",
-    path="/publish_events",
+    path="/api",
 )
 
 JWT_OR_API_KEY = ["JsonWebToken", "ApiKeyAuth"]
