@@ -79,7 +79,7 @@ def _auth_response(access_token, refresh_token):
     return response
 
 
-@auth_ns.route("/register")
+@auth_ns.route("/auth/register")
 @auth_ns.doc(
     responses={
         200: "OK",
@@ -204,7 +204,7 @@ class RegistrationApi(Resource):
         }, 200
 
 
-@auth_ns.route("/login")
+@auth_ns.route("/auth/login")
 class AuthorizationApi(Resource):
     @auth_ns.doc(parser=auth_parser)
     def post(self):
@@ -234,7 +234,7 @@ class AuthorizationApi(Resource):
             return {"error": "internal_error", "message": "Internal error occurred during authorization."}, 500
 
 
-@auth_ns.route("/refresh")
+@auth_ns.route("/auth/refresh")
 class AccessTokenRefreshApi(Resource):
     @jwt_required(refresh=True)
     def post(self):
@@ -265,7 +265,7 @@ class AccessTokenRefreshApi(Resource):
         return _auth_response(access_token, refresh_token)
 
 
-@auth_ns.route("/logout")
+@auth_ns.route("/auth/logout")
 class LogoutApi(Resource):
     def post(self):
         """Revoke the current refresh session (docs/05) and clear cookies."""
@@ -285,7 +285,7 @@ class LogoutApi(Resource):
         return response
 
 
-@auth_ns.route("/logout_all")
+@auth_ns.route("/auth/logout_all")
 class LogoutAllApi(Resource):
     @jwt_required()
     @auth_ns.doc(security="JsonWebToken")
@@ -304,7 +304,7 @@ class LogoutAllApi(Resource):
         return response
 
 
-@auth_ns.route("/request_reset_password")
+@auth_ns.route("/auth/request_reset_password")
 @auth_ns.doc(
     responses={
         200: "OK",
@@ -360,7 +360,7 @@ class RequestResetPasswordApi(Resource):
             return {"error": f"An error occurred while sending email: {err}"}, 400
 
 
-@auth_ns.route("/reset_password")
+@auth_ns.route("/auth/reset_password")
 @auth_ns.doc(
     responses={
         200: "OK",

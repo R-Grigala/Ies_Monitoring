@@ -5,7 +5,7 @@ from app.extensions import api
 services_ns = api.namespace(
     "Services",
     description="Service account (API key) management endpoints",
-    path="/services",
+    path="/api",
 )
 
 JWT_OR_API_KEY = ["JsonWebToken", "ApiKeyAuth"]

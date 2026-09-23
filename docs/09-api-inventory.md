@@ -3,7 +3,9 @@
 ეს დოკუმენტი აღწერს **ამჟამად იმპლემენტირებულ** API-ებსა და UI-ს. დაგეგმილი ფუნქციონალი მონიშნულია ცალკე.
 
 Base URL: `http://localhost:5000/api`  
-Swagger UI: `http://localhost:5000/api/docs`
+Swagger UI: `http://localhost:5000/docs/`
+
+Flask-RESTX mounting: `Api` has no URL `prefix`; each namespace uses `path="/api"` and resource routes include the segment (e.g. `/auth/login`, `/seismic_events/`). Public paths stay `/api/...`.
 
 ---
 
@@ -16,6 +18,7 @@ Swagger UI: `http://localhost:5000/api/docs`
 | Service accounts + API keys (`/api/services`) | Implemented |
 | Recipients (`/api/recips`) | Implemented |
 | Seismic Events (`/api/seismic_events`) | Implemented |
+| Publish Events (`/api/publish_events`) | Implemented |
 | Permissions models + seed + runtime checks | Implemented |
 | Permissions REST catalog (list/create/delete) | Implemented |
 | User permission grant/revoke on accounts | Implemented |
@@ -23,6 +26,8 @@ Swagger UI: `http://localhost:5000/api/docs`
 | `PUT /api/auth/change_password` | Planned (UI page exists) |
 | `GET /api/health` | Planned |
 | SeisComP ingest / Push / Redis / Celery | Planned |
+
+Seismic Events UI/API დეტალური აღწერა: [`10-seismic-events.md`](10-seismic-events.md).
 
 ---
 
@@ -58,7 +63,7 @@ Password policy: min 12 chars, upper + lower + digit + special. Hashing: Werkzeu
 
 | Method | Path | Auth | Notes |
 |--------|------|------|--------|
-| GET | `/api/accounts/ourself` | JWT | Profile + flags `can_users`, `can_permissions`, `can_recips`, `can_event_view`, `can_event_edit` |
+| GET | `/api/accounts/ourself` | JWT | Profile + flags `can_users`, `can_permissions`, `can_recips`, `can_event_view`, `can_event_edit`, `can_event_publish` |
 | PUT | `/api/accounts/ourself` | JWT | Own `first_name`, `last_name` |
 | GET | `/api/accounts/` | JWT/API key + `can_users` | `{ items, total }` |
 | GET | `/api/accounts/<uuid>` | JWT/API key + `can_users` | Single user |
@@ -126,24 +131,36 @@ Raw API key is shown only once at registration (`api_key_hash` is stored).
 
 ## Seismic Events — `/api/seismic_events`
 
-Requires JWT or API key with **`can_event_view`** (read) and/or **`can_event_edit`** (write). Editors can also read.
+Requires JWT or API key with **`can_event_view`**, **`can_event_edit`**, or **`can_event_publish`** for read endpoints. Write endpoints require **`can_event_edit`**. Editors and publishers can also read.
 
 | Method | Path | Auth | Notes |
 |--------|------|------|--------|
-| GET | `/api/seismic_events/` | `can_event_view` or `can_event_edit` | List events with nested magnitudes + beachball |
-| POST | `/api/seismic_events/filter` | `can_event_view` or `can_event_edit` | Filter by body fields: `event_id` (exact), `event_query` (substring on id or iesdata_id), `iesdata_id`, `seiscomp_oid`, `location`, `area`, `magnitude` (code), `magnitude_min`, `magnitude_max`, `magnitudes` (list of `{magnitude, magnitude_min, magnitude_max}` for AND), `depth_min`, `depth_max`, `date_from`, `date_to`. All optional; AND combined. `iesdata_id`, `seiscomp_oid`, `location`, `area` are substring matches |
-| POST | `/api/seismic_events/` | `can_event_edit` | Create. Required: `origin_time`, `latitude`, `longitude`. Optional: `depth`, `iesdata_id`, `seiscomp_oid`, `location_ge`, `location_en`, `area`, `is_automatic` (default false) |
-| GET | `/api/seismic_events/<id>` | `can_event_view` or `can_event_edit` | Detail |
+| GET | `/api/seismic_events/` | `can_event_view` / `can_event_edit` / `can_event_publish` | List events with nested magnitudes + beachball; payload includes `is_published`, `published_at` |
+| POST | `/api/seismic_events/filter` | `can_event_view` / `can_event_edit` / `can_event_publish` | Filter by body fields: `event_id` (exact), `event_query` (substring on id or iesdata_id), `iesdata_id`, `seiscomp_oid`, `location`, `area`, `magnitude` (code), `magnitude_min`, `magnitude_max`, `magnitudes` (list of `{magnitude, magnitude_min, magnitude_max}` for AND), `depth_min`, `depth_max`, `date_from`, `date_to`. All optional; AND combined. `iesdata_id`, `seiscomp_oid`, `location`, `area` are substring matches |
+| POST | `/api/seismic_events/` | `can_event_edit` | Create. Required: `origin_time`, `latitude`, `longitude`. Optional: `depth`, `iesdata_id`, `seiscomp_oid`, `location_ge`, `location_en`, `area`, `is_automatic` (default false). **UI also requires `depth`.** |
+| GET | `/api/seismic_events/<id>` | `can_event_view` / `can_event_edit` / `can_event_publish` | Detail (includes `is_published`, `published_at`) |
 | PUT | `/api/seismic_events/<id>` | `can_event_edit` | Update fields |
 | DELETE | `/api/seismic_events/<id>` | `can_event_edit` | Delete event + cascade magnitudes/beachball |
-| GET | `/api/seismic_events/magnitude_types` | `can_event_view` or `can_event_edit` | Magnitude catalog (ML, MW, …) |
+| GET | `/api/seismic_events/magnitude_types` | `can_event_view` / `can_event_edit` / `can_event_publish` | Magnitude catalog (ML, MW, …) |
 | POST | `/api/seismic_events/<id>/magnitudes` | `can_event_edit` | Add magnitude. Required: `value` + (`magnitude_id` or `magnitude_code`) |
 | PUT | `/api/seismic_events/magnitudes/<em_id>` | `can_event_edit` | Update value and/or magnitude type |
 | DELETE | `/api/seismic_events/magnitudes/<em_id>` | `can_event_edit` | Remove magnitude from event |
-| GET | `/api/seismic_events/<id>/beachball` | `can_event_view` or `can_event_edit` | Get beachball (404 if none) |
+| GET | `/api/seismic_events/<id>/beachball` | `can_event_view` / `can_event_edit` / `can_event_publish` | Get beachball (404 if none) |
 | POST | `/api/seismic_events/<id>/beachball` | `can_event_edit` | Create beachball (one per event; 409 if exists). `strike`/`dip`/`rake` must be **all three or none**. When all three are set, generates `/static/beachballs/beachball_<id>.png` and stores path (client `beachball_path` ignored) |
 | PUT | `/api/seismic_events/<id>/beachball` | `can_event_edit` | Update mechanism: `strike`/`dip`/`rake` must be **all three or none**; regenerates PNG when all three present |
 | DELETE | `/api/seismic_events/<id>/beachball` | `can_event_edit` | Remove beachball row and generated PNG |
+
+---
+
+## Publish Events — `/api/publish_events`
+
+Publish/unpublish require JWT or API key with **`can_event_publish`**. List is public.
+
+| Method | Path | Auth | Notes |
+|--------|------|------|--------|
+| GET | `/api/publish_events/` | Public (no auth) | List all published events (`items` + `total`), newest `published_at` first; each item includes nested seismic `event` |
+| POST | `/api/publish_events/publish/<id>` | `can_event_publish` | Publish/update on WordPress (no body). WP `id` = our event id; `type` = `A`/`M` from `is_automatic`; `description_*` and `region_*` both from `location_*`; mag prefers ML. Upserts `published_events` |
+| POST | `/api/publish_events/unpublish/<id>` | `can_event_publish` | Unpublish from WordPress and delete `published_events` row |
 
 ---
 
@@ -157,12 +174,13 @@ Requires JWT or API key with **`can_event_view`** (read) and/or **`can_event_edi
 | `can_recips_read` | Read-only recipients (typical for service API keys) |
 | `can_event_view` | View seismic events, magnitudes, beachballs |
 | `can_event_edit` | Create/update/delete seismic events, magnitudes, beachballs |
+| `can_event_publish` | Publish/unpublish seismic events to WordPress (JWT or service API key); also allows read of seismic events for the details publish UI |
 
 Admin seed (`flask populate_db`):
 
 - email: `roma.grigalashvili@iliauni.edu.ge`
 - password: `PASSWORD` (change before production)
-- all seeded permissions assigned (including `can_event_view` and `can_event_edit`)
+- all seeded permissions assigned (including `can_event_view`, `can_event_edit`, `can_event_publish`)
 - magnitude catalog: ML, MB, MS, MD, MW, K, MPV, MLH, MC, MLV, M
 
 ---
@@ -184,6 +202,7 @@ Admin seed (`flask populate_db`):
 | `magnitudes` | Magnitude type catalog |
 | `event_magnitudes` | Event ↔ magnitude values |
 | `event_beachball` | Focal mechanism / beachball (0..1 per event) |
+| `published_events` | WordPress publish state (0..1 per seismic event) |
 
 ---
 
@@ -196,7 +215,8 @@ Admin seed (`flask populate_db`):
 | `/<lang>/registration` | Register new user (full page) | `can_users` (client-checked; API enforces) |
 | `/<lang>/services` | Service registration / delete (from Accounts) | `can_users` |
 | `/<lang>/permissions` | Permission catalog list/create/delete (from Accounts) | `can_permissions` only |
-| `/<lang>/seismic_events` | Seismic events list + edit/delete detail | `can_event_view` / `can_event_edit` |
+| `/<lang>/seismic_events` | Seismic events list, map, filters, create/edit modals | `can_event_view` / `can_event_edit` / `can_event_publish` |
+| `/<lang>/seismic_events/<id>` | Event details (summary, publish panel, Overview / Magnitudes / Beachball / Map) | `can_event_view` / `can_event_edit` / `can_event_publish` |
 | `/<lang>/notify` | Recipients admin | `can_recips` |
 | `/<lang>/change_password` | Change password page | Logged-in (API pending) |
 | `/<lang>/reset_password/<token>` | Reset password | Public |
@@ -206,6 +226,15 @@ Registration of users happens on `/<lang>/registration` (linked from Accounts �
 Service API keys are shown once after register on the Services page.
 
 UI strings: EN/KA via `app/static/js/i18n.js`.
+
+### Seismic Events UI notes
+
+- List filtering is **server-side** (`GET /` when empty, `POST /filter` when criteria set) — see [`10-seismic-events.md`](10-seismic-events.md).
+- Origin time in UI is plain text (`YYYY-MM-DD HH:mm:ss` / ISO); displayed as `YYYY-MM-DDTHH:mm:ss` without client timezone shift.
+- Filter dates use Flatpickr `dd/mm/yyyy`.
+- Beachball `strike`/`dip`/`rake`: UI validates all-three-or-none before submit (same rule as API).
+- Details page Edit opens the edit modal in-place (does not redirect to the list).
+- Details page **publish panel** (below summary): shows published / not published, optional `published_at`, and Publish / Update publish / Unpublish when the user has `can_event_publish`. Calls `POST /api/publish_events/publish|unpublish/<id>`. Event must have at least one magnitude before publish.
 
 ---
 
@@ -217,4 +246,5 @@ UI strings: EN/KA via `app/static/js/i18n.js`.
 | Accounts | `app/api/accounts.py`, `app/api/nsmodels/accounts.py` |
 | Services | `app/api/services.py`, `app/api/nsmodels/services.py` |
 | Recips | `app/api/recips.py`, `app/api/nsmodels/recips.py` |
-| Seismic Events | `app/api/seismic_events.py`, `app/api/nsmodels/seismic_events.py` |
+| Seismic Events | `app/api/seismic_events.py`, `app/api/nsmodels/seismic_events.py`, `app/utils/gen_beachball_img.py` |
+| Publish Events | `app/api/publish_events.py`, `app/api/nsmodels/publish_events.py`, `app/utils/wp_publish_client.py` |

@@ -5,7 +5,7 @@ from app.extensions import api
 accounts_ns = api.namespace(
     "Accounts",
     description="Accounts and profile endpoints",
-    path="/accounts",
+    path="/api",
 )
 
 JWT_OR_API_KEY = ["JsonWebToken", "ApiKeyAuth"]
@@ -44,6 +44,10 @@ current_user_model = accounts_ns.inherit(
             example=True,
         ),
         "can_event_edit": fields.Boolean(
+            required=False,
+            example=True,
+        ),
+        "can_event_publish": fields.Boolean(
             required=False,
             example=True,
         ),

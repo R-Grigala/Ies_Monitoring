@@ -67,14 +67,17 @@ python run.py
 |---------|-----|
 | App | `http://localhost:5000` |
 | API Base | `http://localhost:5000/api` |
-| Swagger UI | `http://localhost:5000/api/docs` |
+| Swagger UI | `http://localhost:5000/docs/` |
 | Accounts UI | `http://localhost:5000/en/accounts` |
 | Services UI | `http://localhost:5000/en/services` |
 | Notify UI | `http://localhost:5000/en/notify` |
+| Seismic Events UI | `http://localhost:5000/en/seismic_events` |
+| Event details UI | `http://localhost:5000/en/seismic_events/<id>` |
 
 > `GET /api/health` ჯერ არ არის იმპლემენტირებული (planned).
 
-იმპლემენტირებული API-ების სრული სია: [`09-api-inventory.md`](09-api-inventory.md).
+იმპლემენტირებული API-ების სრული სია: [`09-api-inventory.md`](09-api-inventory.md).  
+Seismic Events: [`10-seismic-events.md`](10-seismic-events.md).
 
 ---
 
@@ -98,6 +101,8 @@ tests/
   test_accounts_api.py
   test_services_api.py
   test_recips_api.py
+  test_permissions_api.py
+  test_seismic_events_api.py
 ```
 
 ---

@@ -7,7 +7,7 @@ from app.extensions import api
 seismic_events_ns = api.namespace(
     "Seismic Events",
     description="Seismic events, magnitudes, and beachball management endpoints",
-    path="/seismic_events",
+    path="/api",
 )
 
 JWT_OR_API_KEY = ["JsonWebToken", "ApiKeyAuth"]
@@ -85,6 +85,8 @@ seismic_event_model = seismic_events_ns.model(
         "created_at": fields.String(required=False, example="2026-08-05T12:31:00"),
         "magnitudes": fields.List(fields.Nested(event_magnitude_model), required=True),
         "beachball": fields.Nested(event_beachball_model, required=False, allow_null=True),
+        "is_published": fields.Boolean(required=True, example=False),
+        "published_at": fields.String(required=False, example="2026-08-05T12:35:00", allow_null=True),
     },
 )
 

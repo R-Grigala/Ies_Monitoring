@@ -107,6 +107,11 @@ def populate_db_core():
             "Seismic Events Edit",
             "Create, update, and delete seismic events, magnitudes, and beachballs.",
         ),
+        (
+            "can_event_publish",
+            "Seismic Events Publish",
+            "Publish and unpublish seismic events to the WordPress site.",
+        ),
     ]
     permissions = [
         _ensure_permission(code, name, description)

@@ -47,9 +47,9 @@ function getEventMl(event) {
 function preferredLocation(event) {
     const lang = window.I18n?.getLanguage?.() || "en";
     if (lang === "ka") {
-        return event.location_ge || event.location_en || event.area || "-";
+        return event.location_ge || "-";
     }
-    return event.location_en || event.location_ge || event.area || "-";
+    return event.location_en || "-";
 }
 
 function pad2(n) {
@@ -256,36 +256,21 @@ function renderEvents(events) {
         .map((event) => {
             const id = escapeHtml(event.id);
             const magnitude = getEventMagnitude(event);
-            const magnitudeText =
-                magnitude === null || Number.isNaN(magnitude.value)
-                    ? "-"
-                    : `${magnitude.value.toFixed(1)}${
-                          magnitude.code ? ` ${magnitude.code}` : ""
-                      }`;
-            const depth =
-                event.depth === null || event.depth === undefined
-                    ? "-"
-                    : Number(event.depth).toFixed(1);
-            const lat =
-                event.latitude === null || event.latitude === undefined
-                    ? "-"
-                    : Number(event.latitude).toFixed(4);
-            const lon =
-                event.longitude === null || event.longitude === undefined
-                    ? "-"
-                    : Number(event.longitude).toFixed(4);
+            const hasMagnitude = magnitude !== null && !Number.isNaN(magnitude.value);
+            const magnitudeValue = hasMagnitude ? magnitude.value.toFixed(1) : "-";
+            const magnitudeCode = hasMagnitude && magnitude.code ? magnitude.code : "";
 
             return `
       <tr data-event-id="${id}">
-        <td>
-          <div class="d-flex align-items-center justify-content-center gap-1">
-            ${window.buildViewEventButton ? window.buildViewEventButton(event.id) : ""}
+        <td class="events-col-actions">
+          <div class="events-actions">
+            ${window.buildEventDetailsButton ? window.buildEventDetailsButton(event.id) : ""}
             ${
                 canManageEvents
                     ? `
             <button
               type="button"
-              class="btn btn-sm btn-outline-secondary edit-event-btn d-inline-flex align-items-center justify-content-center"
+              class="btn btn-sm btn-outline-secondary events-action-btn"
               data-edit-id="${id}"
               title="${t("events.table.edit", "Edit")}"
               aria-label="${t("events.table.edit", "Edit")}"
@@ -294,7 +279,7 @@ function renderEvents(events) {
             </button>
             <button
               type="button"
-              class="btn btn-sm btn-outline-danger d-inline-flex align-items-center justify-content-center"
+              class="btn btn-sm btn-outline-danger events-action-btn"
               data-delete-id="${id}"
               title="${t("events.table.delete", "Delete")}"
               aria-label="${t("events.table.delete", "Delete")}"
@@ -306,20 +291,25 @@ function renderEvents(events) {
             }
           </div>
         </td>
-        <td>
+        <td class="events-col-time">
+          <span class="events-time">${escapeHtml(formatOriginTime(event.origin_time))}</span>
+        </td>
+        <td class="events-col-mag">
           ${
-              window.buildEventIdLink
-                  ? window.buildEventIdLink(event.id, event.id)
-                  : escapeHtml(event.id)
+              hasMagnitude
+                  ? `<span class="events-mag-badge"><span class="events-mag-value">${escapeHtml(
+                        magnitudeValue
+                    )}</span>${
+                        magnitudeCode
+                            ? `<span class="events-mag-code">${escapeHtml(magnitudeCode)}</span>`
+                            : ""
+                    }</span>`
+                  : `<span class="text-muted">-</span>`
           }
         </td>
-        <td class="font-monospace">${escapeHtml(event.seiscomp_oid || "-")}</td>
-        <td>${escapeHtml(formatOriginTime(event.origin_time))}</td>
-        <td>${escapeHtml(magnitudeText)}</td>
-        <td>${escapeHtml(depth)}</td>
-        <td class="font-monospace">${escapeHtml(lat)}</td>
-        <td class="font-monospace">${escapeHtml(lon)}</td>
-        <td class="text-start">${escapeHtml(preferredLocation(event))}</td>
+        <td class="events-col-location">
+          <span class="events-location">${escapeHtml(preferredLocation(event))}</span>
+        </td>
       </tr>
     `;
         })
@@ -501,12 +491,6 @@ window.eventsById = eventsById;
 
 document.addEventListener("DOMContentLoaded", () => {
     eventsTableBody?.addEventListener("click", (event) => {
-        const viewButton = event.target.closest("[data-view-id]");
-        if (viewButton) {
-            window.viewEvent?.(viewButton.dataset.viewId);
-            return;
-        }
-
         const editButton = event.target.closest("[data-edit-id]");
         if (editButton) {
             window.openEditEventModal?.(editButton.dataset.editId);
@@ -519,5 +503,13 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
 
-    loadEvents();
+    loadEvents().then(() => {
+        const editId = new URLSearchParams(window.location.search).get("edit");
+        if (editId && canManageEvents) {
+            window.openEditEventModal?.(editId);
+            const url = new URL(window.location.href);
+            url.searchParams.delete("edit");
+            window.history.replaceState({}, "", url.pathname + url.search);
+        }
+    });
 });

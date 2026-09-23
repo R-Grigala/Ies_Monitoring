@@ -36,6 +36,7 @@ Real-time earthquake notification platform for Android and iOS devices.
 - [Notification Design](docs/07-notification-design.md)
 - [Backend Setup](docs/08-backend-setup.md)
 - [API Inventory (Implemented)](docs/09-api-inventory.md)
+- [Seismic Events (UI + API)](docs/10-seismic-events.md)
 
 ## Current Backend Status
 
@@ -46,17 +47,19 @@ Real-time earthquake notification platform for Android and iOS devices.
 - Service accounts + API keys UI/API (`/api/services`, `/services`)
 - Recipients UI/API (`/api/recips`, `/notify`)
 - Permissions catalog REST (`/api/permissions`) + user grant/revoke on accounts
-- Permissions seed + runtime checks (`can_users`, `can_permissions`, `can_recips`, `can_recips_read`)
+- Permissions seed + runtime checks (`can_users`, `can_permissions`, `can_recips`, `can_recips_read`, `can_event_view`, `can_event_edit`, `can_event_publish`)
 - JWT + service `X-API-Key` auth
-
+- Seismic Events API + Web UI: list/map/filters, create/edit, details page (incl. WordPress publish panel), magnitudes, beachball PNG generation
+- WordPress publish/unpublish API + details UI (`/api/publish_events/publish|unpublish/<id>`)
 **Planned**
 
 - Change-password API
-- Earthquakes / SeisComP ingest
-- Push delivery, Redis/Celery
+- SeisComP automatic ingest / push delivery
+- Redis/Celery workers
 - Health endpoint
 
-Source of truth for endpoints: [docs/09-api-inventory.md](docs/09-api-inventory.md).
+Source of truth for endpoints: [docs/09-api-inventory.md](docs/09-api-inventory.md).  
+Seismic Events details: [docs/10-seismic-events.md](docs/10-seismic-events.md).
 
 ## Testing
 
