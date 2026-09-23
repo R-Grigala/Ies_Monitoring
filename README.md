@@ -49,8 +49,8 @@ Real-time earthquake notification platform for Android and iOS devices.
 - Permissions catalog REST (`/api/permissions`) + user grant/revoke on accounts
 - Permissions seed + runtime checks (`can_users`, `can_permissions`, `can_recips`, `can_recips_read`, `can_event_view`, `can_event_edit`, `can_event_publish`)
 - JWT + service `X-API-Key` auth
-- Seismic Events API + Web UI: list/map/filters, create/edit, details page, magnitudes, beachball PNG generation
-- WordPress publish/unpublish API (`/api/publish_events/publish|unpublish/<id>`)
+- Seismic Events API + Web UI: list/map/filters, create/edit, details page (incl. WordPress publish panel), magnitudes, beachball PNG generation
+- WordPress publish/unpublish API + details UI (`/api/publish_events/publish|unpublish/<id>`)
 **Planned**
 
 - Change-password API

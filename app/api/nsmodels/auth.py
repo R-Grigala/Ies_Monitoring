@@ -5,7 +5,7 @@ from app.extensions import api
 auth_ns = api.namespace(
     "Auth",
     description="API endpoints for authentication related operations",
-    path="/auth",
+    path="/api",
 )
 
 registration_parser = reqparse.RequestParser()

@@ -33,7 +33,7 @@ logger = logging.getLogger("app.seismic_events")
 
 
 def _require_can_event_view():
-    return require_permissions("can_event_edit", "can_event_view")
+    return require_permissions("can_event_edit", "can_event_view", "can_event_publish")
 
 
 def _require_can_event_edit():
@@ -319,7 +319,7 @@ def _build_filtered_events_query(payload):
     return query.order_by(SeismicEvent.origin_time.desc()), None
 
 
-@seismic_events_ns.route("/filter")
+@seismic_events_ns.route("/seismic_events/filter")
 class SeismicEventsFilterApi(Resource):
     @seismic_events_ns.doc(security=JWT_OR_API_KEY)
     @seismic_events_ns.expect(seismic_event_filter_parser)
@@ -344,7 +344,7 @@ class SeismicEventsFilterApi(Resource):
         return marshal(response, seismic_event_list_response_model), 200
 
 
-@seismic_events_ns.route("/magnitude_types")
+@seismic_events_ns.route("/seismic_events/magnitude_types")
 class MagnitudeCatalogApi(Resource):
     @seismic_events_ns.doc(security=JWT_OR_API_KEY)
     @seismic_events_ns.response(200, "Success", magnitude_catalog_list_response_model)
@@ -361,7 +361,7 @@ class MagnitudeCatalogApi(Resource):
         return marshal(payload, magnitude_catalog_list_response_model), 200
 
 
-@seismic_events_ns.route("/")
+@seismic_events_ns.route("/seismic_events/")
 class SeismicEventsApi(Resource):
     @seismic_events_ns.doc(security=JWT_OR_API_KEY)
     @seismic_events_ns.response(200, "Success", seismic_event_list_response_model)
@@ -415,7 +415,7 @@ class SeismicEventsApi(Resource):
         ), 201
 
 
-@seismic_events_ns.route("/<int:event_id>")
+@seismic_events_ns.route("/seismic_events/<int:event_id>")
 class SeismicEventDetailApi(Resource):
     @seismic_events_ns.doc(security=JWT_OR_API_KEY)
     @seismic_events_ns.response(200, "Success", seismic_event_model)
@@ -503,7 +503,7 @@ class SeismicEventDetailApi(Resource):
         return marshal({"message": "Seismic event deleted successfully."}, message_response_model), 200
 
 
-@seismic_events_ns.route("/<int:event_id>/magnitudes")
+@seismic_events_ns.route("/seismic_events/<int:event_id>/magnitudes")
 class EventMagnitudesApi(Resource):
     @seismic_events_ns.doc(security=JWT_OR_API_KEY)
     @seismic_events_ns.expect(event_magnitude_create_parser)
@@ -563,7 +563,7 @@ class EventMagnitudesApi(Resource):
         ), 201
 
 
-@seismic_events_ns.route("/magnitudes/<int:event_magnitude_id>")
+@seismic_events_ns.route("/seismic_events/magnitudes/<int:event_magnitude_id>")
 class EventMagnitudeDetailApi(Resource):
     @seismic_events_ns.doc(security=JWT_OR_API_KEY)
     @seismic_events_ns.expect(event_magnitude_update_parser)
@@ -638,7 +638,7 @@ class EventMagnitudeDetailApi(Resource):
         ), 200
 
 
-@seismic_events_ns.route("/<int:event_id>/beachball")
+@seismic_events_ns.route("/seismic_events/<int:event_id>/beachball")
 class EventBeachballApi(Resource):
     @seismic_events_ns.doc(security=JWT_OR_API_KEY)
     @seismic_events_ns.response(200, "Success", event_beachball_model)

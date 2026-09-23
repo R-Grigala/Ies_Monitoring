@@ -4,115 +4,133 @@
 IES Monitoring | Home
 {% endblock %}
 
+{% block main_container_class %}container-lg py-4 py-md-5{% endblock %}
+
 {% block body %}
-<div class="container py-5">
-
-  <div class="row align-items-center mb-4">
-    <div class="col-md-7">
-      <h1 class="display-5 fw-bold" data-i18n="index.hero.title">IES Monitoring</h1>
-      <p class="lead text-muted mt-3" data-i18n="index.hero.lead">
-        Real-time earthquake notification and monitoring platform for
-        seismic event processing, alert delivery, and operational visibility.
-      </p>
-      <p class="text-muted mb-0" data-i18n="index.hero.sub">
-        The platform connects SeisComP ingestion, background processing,
-        permissions-based access control, and mobile push notifications.
-      </p>
-
-      <div class="mt-4">
-        <a href="/docs" class="btn btn-primary btn-lg me-2" data-i18n="index.hero.docs">
-          Open API Docs
-        </a>
-      </div>
-    </div>
-
-    <div class="col-md-5 text-center d-none d-md-block">
-      <img
-        src="{{ url_for('static', filename='images/earthquakes.png') }}"
-        class="img-fluid"
-        style="max-height: 260px;"
-        alt="Earthquake"
-      >
-    </div>
-  </div>
-
-  <div class="row g-4 mb-4">
-    <div class="col-lg-4">
-      <div class="card h-100 shadow-sm border-0">
-        <div class="card-body">
-          <h5 class="card-title" data-i18n="index.card.build">What We Build</h5>
-          <p class="card-text text-muted" data-i18n="index.card.build.text">
-            We ingest and process seismic events, then deliver alerts to users
-            through reliable notification channels.
-          </p>
-        </div>
-      </div>
-    </div>
-
-    <div class="col-lg-4">
-      <div class="card h-100 shadow-sm border-0">
-        <div class="card-body">
-          <h5 class="card-title" data-i18n="index.card.how">How It Works</h5>
-          <p class="card-text text-muted" data-i18n="index.card.how.text">
-            Event data flows through API, queue, worker, and delivery services
-            with auditable authentication and permission checks.
-          </p>
-        </div>
-      </div>
-    </div>
-
-    <div class="col-lg-4">
-      <div class="card h-100 shadow-sm border-0">
-        <div class="card-body">
-          <h5 class="card-title" data-i18n="index.card.why">Why It Matters</h5>
-          <p class="card-text text-muted" data-i18n="index.card.why.text">
-            A unified operational layer improves response time, consistency,
-            and reliability during seismic incidents.
-          </p>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <div class="card shadow-sm border-0">
-    <div class="card-body">
-      <h5 class="card-title mb-3" data-i18n="index.flow.title">Platform Flow</h5>
-      <div class="row g-3">
-        <div class="col-md-3">
-          <div class="p-3 bg-light rounded h-100">
-            <div class="fw-semibold" data-i18n="index.flow.ingest.title">1) Ingest</div>
-            <div class="small text-muted mt-1" data-i18n="index.flow.ingest.text">
-              Receive earthquake events from SeisComP and internal ingestion endpoints.
+<section class="index-hero mb-4 mb-md-5">
+    <div class="row align-items-center g-4">
+        <div class="col-lg-7">
+            <p class="index-kicker text-uppercase mb-2" data-i18n="index.hero.kicker">
+                Earthquake monitoring platform
+            </p>
+            <h1 class="display-5 fw-bold mb-3" data-i18n="index.hero.title">IES Monitoring</h1>
+            <p class="lead text-muted mb-3" data-i18n="index.hero.lead">
+                Real-time earthquake notification and monitoring platform for
+                seismic event processing, alert delivery, and operational visibility.
+            </p>
+            <p class="text-muted mb-4" data-i18n="index.hero.sub">
+                The platform connects SeisComP ingestion, background processing,
+                permissions-based access control, and mobile push notifications.
+            </p>
+            <div class="d-flex flex-wrap gap-2">
+                <a href="/docs/" class="btn btn-primary btn-lg" data-i18n="index.hero.docs">
+                    Open API Docs
+                </a>
+                <a
+                    href="{{ url_for('seismic_events.events', lang=current_lang) }}"
+                    class="btn btn-outline-secondary btn-lg"
+                    data-i18n="index.hero.events"
+                >
+                    View events
+                </a>
             </div>
-          </div>
         </div>
-        <div class="col-md-3">
-          <div class="p-3 bg-light rounded h-100">
-            <div class="fw-semibold" data-i18n="index.flow.auth.title">2) Authorize</div>
-            <div class="small text-muted mt-1" data-i18n="index.flow.auth.text">
-              Enforce JWT authentication, permission validation, and payload checks.
-            </div>
-          </div>
-        </div>
-        <div class="col-md-3">
-          <div class="p-3 bg-light rounded h-100">
-            <div class="fw-semibold" data-i18n="index.flow.process.title">3) Process</div>
-            <div class="small text-muted mt-1" data-i18n="index.flow.process.text">
-              Execute asynchronous processing with workers and queue-backed jobs.
-            </div>
-          </div>
-        </div>
-        <div class="col-md-3">
-          <div class="p-3 bg-light rounded h-100">
-            <div class="fw-semibold" data-i18n="index.flow.deliver.title">4) Deliver</div>
-            <div class="small text-muted mt-1" data-i18n="index.flow.deliver.text">
-              Send notifications through FCM/APNs and expose operational APIs.
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
 
-</div>
+        <div class="col-lg-5">
+            <div class="index-hero-media text-center">
+                <img
+                    src="{{ url_for('static', filename='images/earthquakes.png') }}"
+                    class="img-fluid index-hero-image"
+                    alt="Earth cross-section"
+                >
+                <p class="mb-0 mt-3 text-muted" data-i18n="index.hero.panel">
+                    Track, review, and publish seismic events from one place.
+                </p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="mb-4 mb-md-5" aria-labelledby="indexCapabilitiesHeading">
+    <h2 class="h4 mb-3" id="indexCapabilitiesHeading" data-i18n="index.card.section">
+        What the platform covers
+    </h2>
+    <div class="row g-3 g-md-4">
+        <div class="col-md-4">
+            <article class="card h-100 border-0 shadow-sm index-info-card">
+                <div class="card-body">
+                    <h3 class="h5 card-title" data-i18n="index.card.build">What We Build</h3>
+                    <p class="card-text text-muted mb-0" data-i18n="index.card.build.text">
+                        We ingest and process seismic events, then deliver alerts to users
+                        through reliable notification channels.
+                    </p>
+                </div>
+            </article>
+        </div>
+        <div class="col-md-4">
+            <article class="card h-100 border-0 shadow-sm index-info-card">
+                <div class="card-body">
+                    <h3 class="h5 card-title" data-i18n="index.card.how">How It Works</h3>
+                    <p class="card-text text-muted mb-0" data-i18n="index.card.how.text">
+                        Event data flows through API, queue, worker, and delivery services
+                        with auditable authentication and permission checks.
+                    </p>
+                </div>
+            </article>
+        </div>
+        <div class="col-md-4">
+            <article class="card h-100 border-0 shadow-sm index-info-card">
+                <div class="card-body">
+                    <h3 class="h5 card-title" data-i18n="index.card.why">Why It Matters</h3>
+                    <p class="card-text text-muted mb-0" data-i18n="index.card.why.text">
+                        A unified operational layer improves response time, consistency,
+                        and reliability during seismic incidents.
+                    </p>
+                </div>
+            </article>
+        </div>
+    </div>
+</section>
+
+<section aria-labelledby="indexFlowHeading">
+    <div class="card border-0 shadow-sm">
+        <div class="card-body p-3 p-md-4">
+            <h2 class="h4 mb-3" id="indexFlowHeading" data-i18n="index.flow.title">Platform Flow</h2>
+            <div class="row g-3">
+                <div class="col-md-6 col-xl-3">
+                    <div class="index-flow-step h-100">
+                        <div class="fw-semibold" data-i18n="index.flow.ingest.title">1) Ingest</div>
+                        <p class="small text-muted mb-0 mt-1" data-i18n="index.flow.ingest.text">
+                            Receive earthquake events from SeisComP and internal ingestion endpoints.
+                        </p>
+                    </div>
+                </div>
+                <div class="col-md-6 col-xl-3">
+                    <div class="index-flow-step h-100">
+                        <div class="fw-semibold" data-i18n="index.flow.auth.title">2) Authorize</div>
+                        <p class="small text-muted mb-0 mt-1" data-i18n="index.flow.auth.text">
+                            Enforce JWT authentication, permission validation, and payload checks.
+                        </p>
+                    </div>
+                </div>
+                <div class="col-md-6 col-xl-3">
+                    <div class="index-flow-step h-100">
+                        <div class="fw-semibold" data-i18n="index.flow.process.title">3) Process</div>
+                        <p class="small text-muted mb-0 mt-1" data-i18n="index.flow.process.text">
+                            Execute asynchronous processing with workers and queue-backed jobs.
+                        </p>
+                    </div>
+                </div>
+                <div class="col-md-6 col-xl-3">
+                    <div class="index-flow-step h-100">
+                        <div class="fw-semibold" data-i18n="index.flow.deliver.title">4) Deliver</div>
+                        <p class="small text-muted mb-0 mt-1" data-i18n="index.flow.deliver.text">
+                            Send notifications through FCM/APNs and expose operational APIs.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
 {% endblock %}

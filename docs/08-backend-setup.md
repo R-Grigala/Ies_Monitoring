@@ -67,7 +67,7 @@ python run.py
 |---------|-----|
 | App | `http://localhost:5000` |
 | API Base | `http://localhost:5000/api` |
-| Swagger UI | `http://localhost:5000/api/docs` |
+| Swagger UI | `http://localhost:5000/docs/` |
 | Accounts UI | `http://localhost:5000/en/accounts` |
 | Services UI | `http://localhost:5000/en/services` |
 | Notify UI | `http://localhost:5000/en/notify` |

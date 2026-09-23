@@ -79,7 +79,7 @@ def _published_item_payload(row):
     }
 
 
-@publish_events_ns.route("/")
+@publish_events_ns.route("/publish_events/")
 class PublishedEventsListApi(Resource):
     @publish_events_ns.doc(security=[])
     @publish_events_ns.response(200, "Success", published_events_list_response_model)
@@ -95,7 +95,7 @@ class PublishedEventsListApi(Resource):
         ), 200
 
 
-@publish_events_ns.route("/publish/<int:event_id>")
+@publish_events_ns.route("/publish_events/publish/<int:event_id>")
 @publish_events_ns.param("event_id", "Seismic event id")
 class PublishEventApi(Resource):
     @publish_events_ns.doc(security=JWT_OR_API_KEY)
@@ -190,7 +190,7 @@ class PublishEventApi(Resource):
         ), 200
 
 
-@publish_events_ns.route("/unpublish/<int:event_id>")
+@publish_events_ns.route("/publish_events/unpublish/<int:event_id>")
 @publish_events_ns.param("event_id", "Seismic event id")
 class UnpublishEventApi(Resource):
     @publish_events_ns.doc(security=JWT_OR_API_KEY)

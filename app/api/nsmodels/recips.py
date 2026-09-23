@@ -5,7 +5,7 @@ from app.extensions import api
 recips_ns = api.namespace(
     "Recips",
     description="Notification recipients management endpoints",
-    path="/recips",
+    path="/api",
 )
 
 recip_email_model = recips_ns.model(

@@ -68,7 +68,7 @@ def _create_number_for_recip(recip, phone_value, is_active, actor_id):
     return number
 
 
-@recips_ns.route("/")
+@recips_ns.route("/recips/")
 class RecipsApi(Resource):
     @recips_ns.doc(security=JWT_OR_API_KEY)
     @recips_ns.response(200, "Success", recip_list_response_model)
@@ -118,7 +118,7 @@ class RecipsApi(Resource):
         ), 201
 
 
-@recips_ns.route("/<int:recip_id>")
+@recips_ns.route("/recips/<int:recip_id>")
 class RecipDetailApi(Resource):
     @recips_ns.doc(security=JWT_OR_API_KEY)
     @recips_ns.response(200, "Success", recip_model)
@@ -198,7 +198,7 @@ class RecipDetailApi(Resource):
         return marshal({"message": "Recipient deleted successfully."}, message_response_model), 200
 
 
-@recips_ns.route("/<int:recip_id>/emails")
+@recips_ns.route("/recips/<int:recip_id>/emails")
 class RecipEmailsApi(Resource):
     @recips_ns.doc(security=JWT_OR_API_KEY)
     @recips_ns.expect(recip_email_create_parser)
@@ -249,7 +249,7 @@ class RecipEmailsApi(Resource):
         ), 201
 
 
-@recips_ns.route("/emails/<int:email_id>")
+@recips_ns.route("/recips/emails/<int:email_id>")
 class RecipEmailDetailApi(Resource):
     @recips_ns.doc(security=JWT_OR_API_KEY)
     @recips_ns.expect(recip_email_update_parser)
@@ -323,7 +323,7 @@ class RecipEmailDetailApi(Resource):
         return marshal({"message": "Email deleted successfully."}, message_response_model), 200
 
 
-@recips_ns.route("/<int:recip_id>/numbers")
+@recips_ns.route("/recips/<int:recip_id>/numbers")
 class RecipNumbersApi(Resource):
     @recips_ns.doc(security=JWT_OR_API_KEY)
     @recips_ns.expect(recip_number_create_parser)
@@ -374,7 +374,7 @@ class RecipNumbersApi(Resource):
         ), 201
 
 
-@recips_ns.route("/numbers/<int:number_id>")
+@recips_ns.route("/recips/numbers/<int:number_id>")
 class RecipNumberDetailApi(Resource):
     @recips_ns.doc(security=JWT_OR_API_KEY)
     @recips_ns.expect(recip_number_update_parser)
