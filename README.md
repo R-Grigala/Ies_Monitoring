@@ -42,7 +42,7 @@ Real-time earthquake notification platform for Android and iOS devices.
 
 **Implemented**
 
-- Auth: login, admin register, refresh/logout, password reset
+- Auth: login, admin register, refresh/logout, password reset, change password
 - Accounts admin UI/API (`/api/accounts/...`)
 - Service accounts + API keys UI/API (`/api/services`, `/services`)
 - Recipients UI/API (`/api/recips`, `/notify`)
@@ -51,9 +51,9 @@ Real-time earthquake notification platform for Android and iOS devices.
 - JWT + service `X-API-Key` auth
 - Seismic Events API + Web UI: list/map/filters, create/edit, details page (incl. WordPress publish panel), magnitudes, beachball PNG generation
 - WordPress publish/unpublish API + details UI (`/api/publish_events/publish|unpublish/<id>`)
+
 **Planned**
 
-- Change-password API
 - SeisComP automatic ingest / push delivery
 - Redis/Celery workers
 - Health endpoint

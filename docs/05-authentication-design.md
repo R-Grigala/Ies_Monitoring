@@ -96,7 +96,7 @@ Auth: JWT **ან** service API key + `can_users`.
 Validation:
 
 - `email` უნდა იყოს ვალიდური და უნიკალური;
-- `password` მინ. 12 სიმბოლო, მინიმუმ 1 დიდი ასო, 1 პატარა ასო, 1 ციფრი, 1 სპეციალური სიმბოლო;
+- `password` მინ. 6 სიმბოლო, მინიმუმ 1 დიდი ასო, 1 პატარა ასო, 1 ციფრი, 1 სპეციალური სიმბოლო;
 - `password` და `passwordRepeat` უნდა ემთხვეოდეს.
 
 ---
@@ -155,13 +155,24 @@ Logout ტიპები:
 
 ---
 
-## პაროლის შეცვლა (Planned)
+## პაროლის შეცვლა
 
 ```http
 PUT /api/auth/change_password
 ```
 
-Web UI (`/<lang>/change_password`) უკვე არსებობს; API endpoint ჯერ არ არის იმპლემენტირებული.
+Auth: JWT Access.
+
+Body: `current_password`, `password`, `retype_password`.
+
+წესები:
+
+- მიმდინარე პაროლი სწორი უნდა იყოს;
+- ახალი პაროლი უნდა ემთხვეოდეს `retype_password`-ს და პაროლის პოლიტიკას;
+- ახალი პაროლი არ უნდა ემთხვეოდეს მიმდინარეს;
+- წარმატებისას ყველა refresh session იშლება და cookie-ები იწმინდება (ხელახალი login).
+
+Web UI: `/<lang>/change_password`.
 
 ---
 

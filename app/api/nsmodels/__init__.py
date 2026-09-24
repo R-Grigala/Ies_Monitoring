@@ -4,6 +4,7 @@ from app.api.nsmodels.auth import (
     auth_parser,
     request_reset_password_parser,
     reset_password_parser,
+    change_password_parser,
 )
 from app.api.nsmodels.accounts import (
     accounts_ns,

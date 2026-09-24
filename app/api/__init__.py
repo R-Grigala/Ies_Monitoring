@@ -5,6 +5,7 @@ from app.api.auth import (
     AccessTokenRefreshApi,
     LogoutApi,
     LogoutAllApi,
+    ChangePasswordApi,
 )
 from app.api.services import ServicesApi, ServiceDetailApi
 from app.api.accounts import (

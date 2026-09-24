@@ -31,7 +31,7 @@ registration_parser.add_argument(
     "password",
     type=str,
     required=True,
-    help="Password must be at least 12 characters with upper, lower, digit and special character",
+    help="Password must be at least 6 characters with upper, lower, digit and special character",
 )
 registration_parser.add_argument(
     "passwordRepeat",
@@ -94,4 +94,27 @@ reset_password_parser.add_argument(
     required=True,
     type=str,
     help="Repeat the password",
+)
+
+change_password_parser = reqparse.RequestParser()
+change_password_parser.add_argument(
+    "current_password",
+    required=True,
+    type=str,
+    location="json",
+    help="Current password",
+)
+change_password_parser.add_argument(
+    "password",
+    required=True,
+    type=str,
+    location="json",
+    help="New password",
+)
+change_password_parser.add_argument(
+    "retype_password",
+    required=True,
+    type=str,
+    location="json",
+    help="Repeat the new password",
 )

@@ -1,17 +1,69 @@
 from string import ascii_lowercase, ascii_uppercase, digits, punctuation
 import re
 
+from flask import has_request_context, request
 
-def validate_password(password: str) -> None:
+
+def _resolve_lang(lang=None):
+    """Resolve UI language for validation messages (en|ka). Default: en."""
+    if lang in {"en", "ka"}:
+        return lang
+
+    if has_request_context():
+        header_lang = (request.headers.get("X-App-Lang") or "").strip().lower()
+        if header_lang in {"en", "ka"}:
+            return header_lang
+
+        cookie_lang = (request.cookies.get("lang") or "").strip().lower()
+        if cookie_lang in {"en", "ka"}:
+            return cookie_lang
+
+        accept = (request.headers.get("Accept-Language") or "").lower()
+        if accept.startswith("ka"):
+            return "ka"
+
+    return "en"
+
+
+_PASSWORD_MESSAGES = {
+    "en": {
+        "required": "Password is required.",
+        "min_length": "Password must be at least 6 characters.",
+        "allowed_chars": (
+            "Password may only contain English letters, digits, and symbols !@#$%^&*"
+        ),
+        "uppercase": "Password must contain at least one uppercase letter.",
+        "lowercase": "Password must contain at least one lowercase letter.",
+        "digit": "Password must contain at least one digit.",
+        "special": "Password must contain at least one special character.",
+    },
+    "ka": {
+        "required": "პაროლი სავალდებულოა.",
+        "min_length": "პაროლი უნდა იყოს მინიმუმ 6 სიმბოლო.",
+        "allowed_chars": (
+            "პაროლი შეიძლება შეიცავდეს მხოლოდ ინგლისურ ასოებს, ციფრებს და სიმბოლოებს !@#$%^&*"
+        ),
+        "uppercase": "პაროლი უნდა შეიცავდეს მინიმუმ ერთ დიდ ასოს.",
+        "lowercase": "პაროლი უნდა შეიცავდეს მინიმუმ ერთ პატარა ასოს.",
+        "digit": "პაროლი უნდა შეიცავდეს მინიმუმ ერთ ციფრს.",
+        "special": "პაროლი უნდა შეიცავდეს მინიმუმ ერთ სპეციალურ სიმბოლოს.",
+    },
+}
+
+
+def validate_password(password: str, lang=None) -> None:
     """Validate password policy and raise ValueError on invalid input.
 
-    Policy (docs/05): min 12 chars, at least 1 upper, 1 lower, 1 digit, 1 special.
+    Policy (docs/05): min 6 chars, at least 1 upper, 1 lower, 1 digit, 1 special.
+    Messages follow the active UI language (en/ka).
     """
-    if not isinstance(password, str) or not password:
-        raise ValueError("პაროლი სავალდებულოა.")
+    messages = _PASSWORD_MESSAGES[_resolve_lang(lang)]
 
-    if len(password) < 12:
-        raise ValueError("პაროლი უნდა იყოს მინიმუმ 12 სიმბოლო.")
+    if not isinstance(password, str) or not password:
+        raise ValueError(messages["required"])
+
+    if len(password) < 6:
+        raise ValueError(messages["min_length"])
 
     contains_uppercase = False
     contains_lowercase = False
@@ -21,9 +73,7 @@ def validate_password(password: str) -> None:
 
     for character in password:
         if character not in allowed_characters:
-            raise ValueError(
-                "პაროლი შეიძლება შეიცავდეს მხოლოდ ინგლისურ ასოებს, ციფრებს და სიმბოლოებს !@#$%^&*"
-            )
+            raise ValueError(messages["allowed_chars"])
         if character in ascii_uppercase:
             contains_uppercase = True
         elif character in ascii_lowercase:
@@ -34,13 +84,13 @@ def validate_password(password: str) -> None:
             contains_special = True
 
     if not contains_uppercase:
-        raise ValueError("პაროლი უნდა შეიცავდეს მინიმუმ ერთ დიდ ასოს.")
+        raise ValueError(messages["uppercase"])
     if not contains_lowercase:
-        raise ValueError("პაროლი უნდა შეიცავდეს მინიმუმ ერთ პატარა ასოს.")
+        raise ValueError(messages["lowercase"])
     if not contains_digits:
-        raise ValueError("პაროლი უნდა შეიცავდეს მინიმუმ ერთ ციფრს.")
+        raise ValueError(messages["digit"])
     if not contains_special:
-        raise ValueError("პაროლი უნდა შეიცავდეს მინიმუმ ერთ სპეციალურ სიმბოლოს.")
+        raise ValueError(messages["special"])
 
 
 def normalize_ge_phone(phone: str) -> str:
