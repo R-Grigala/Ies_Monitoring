@@ -38,27 +38,16 @@
                         ></textarea>
                     </div>
                     <div class="mb-3">
-                        <div class="form-label" data-i18n="services.register.permissions">Permissions</div>
-                        <div id="registerServicePermissions" class="d-flex flex-column gap-2">
-                            <div class="form-check">
-                                <input class="form-check-input service-permission-check" type="checkbox" value="can_recips_read" id="perm_can_recips_read">
-                                <label class="form-check-label" for="perm_can_recips_read">can_recips_read</label>
+                        <div class="registration-permissions">
+                            <div class="mb-2">
+                                <div class="form-label fw-semibold mb-1" data-i18n="services.register.permissions">
+                                    Permissions
+                                </div>
+                                <div class="form-text mt-0" data-i18n="services.register.permissions_hint">
+                                    Select at least one permission for this service.
+                                </div>
                             </div>
-                            <div class="form-check">
-                                <input class="form-check-input service-permission-check" type="checkbox" value="can_recips" id="perm_can_recips">
-                                <label class="form-check-label" for="perm_can_recips">can_recips</label>
-                            </div>
-                            <div class="form-check">
-                                <input class="form-check-input service-permission-check" type="checkbox" value="can_users" id="perm_can_users">
-                                <label class="form-check-label" for="perm_can_users">can_users</label>
-                            </div>
-                            <div class="form-check">
-                                <input class="form-check-input service-permission-check" type="checkbox" value="can_permissions" id="perm_can_permissions">
-                                <label class="form-check-label" for="perm_can_permissions">can_permissions</label>
-                            </div>
-                        </div>
-                        <div class="form-text" data-i18n="services.register.permissions_hint">
-                            Select at least one permission for this service.
+                            <div id="registerServicePermissions" class="registration-permissions-list"></div>
                         </div>
                     </div>
 

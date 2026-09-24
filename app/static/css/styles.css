@@ -206,14 +206,16 @@
     object-fit: contain;
 }
 
-.registration-page .registration-permissions {
+.registration-page .registration-permissions,
+.registration-permissions {
     border: 1px solid rgba(var(--bs-primary-rgb), 0.12);
     border-radius: 0.85rem;
     background: rgba(var(--bs-primary-rgb), 0.04);
     padding: 0.875rem;
 }
 
-.registration-page .registration-permissions-list {
+.registration-page .registration-permissions-list,
+.registration-permissions-list {
     display: grid;
     grid-template-columns: 1fr;
     gap: 0.5rem;
@@ -222,7 +224,8 @@
     -webkit-overflow-scrolling: touch;
 }
 
-.registration-page .registration-permission-item {
+.registration-page .registration-permission-item,
+.registration-permission-item {
     display: flex;
     align-items: flex-start;
     gap: 0.75rem;
@@ -235,29 +238,35 @@
     transition: border-color 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
 }
 
-.registration-page .registration-permission-item:hover {
+.registration-page .registration-permission-item:hover,
+.registration-permission-item:hover {
     border-color: rgba(var(--bs-primary-rgb), 0.35);
 }
 
-.registration-page .registration-permission-item:has(.registration-permission:checked) {
+.registration-page .registration-permission-item:has(.registration-permission:checked),
+.registration-permission-item:has(.registration-permission:checked),
+.registration-permission-item:has(.service-permission-check:checked) {
     border-color: rgba(var(--bs-primary-rgb), 0.55);
     background: rgba(var(--bs-primary-rgb), 0.06);
     box-shadow: 0 0 0 1px rgba(var(--bs-primary-rgb), 0.12);
 }
 
-.registration-page .registration-permission-item .form-check-input {
+.registration-page .registration-permission-item .form-check-input,
+.registration-permission-item .form-check-input {
     margin-top: 0.2rem;
     flex-shrink: 0;
 }
 
-.registration-page .registration-permission-copy {
+.registration-page .registration-permission-copy,
+.registration-permission-copy {
     display: flex;
     flex-direction: column;
     gap: 0.15rem;
     min-width: 0;
 }
 
-.registration-page .registration-permission-code {
+.registration-page .registration-permission-code,
+.registration-permission-code {
     font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
     font-size: 0.8rem;
     font-weight: 600;
@@ -265,13 +274,15 @@
     word-break: break-word;
 }
 
-.registration-page .registration-permission-name {
+.registration-page .registration-permission-name,
+.registration-permission-name {
     font-size: 0.925rem;
     color: var(--bs-body-color);
     word-break: break-word;
 }
 
-.registration-page .registration-permission-desc {
+.registration-page .registration-permission-desc,
+.registration-permission-desc {
     font-size: 0.8rem;
     line-height: 1.35;
     word-break: break-word;
@@ -282,7 +293,8 @@
 }
 
 @media (min-width: 576px) {
-    .registration-page .registration-permissions-list {
+    .registration-page .registration-permissions-list,
+    .registration-permissions-list {
         grid-template-columns: repeat(2, minmax(0, 1fr));
         max-height: min(44vh, 20rem);
     }
