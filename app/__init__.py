@@ -1,4 +1,5 @@
 from flask import Flask, g, redirect, render_template, request, url_for
+from flask_cors import CORS
 
 from app.config import get_config
 from app.commands import init_db, populate_db
@@ -30,6 +31,8 @@ DEFAULT_LANG = "en"
 
 def create_app(config_object=None):
     app = Flask(__name__)
+
+    CORS(app)
     app.config.from_object(config_object or get_config())
     configure_logging(app)
 
