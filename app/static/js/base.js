@@ -222,6 +222,11 @@ async function makeApiRequest(path, options = {}) {
         ...(options.headers || {}),
     };
 
+    const appLang = window.I18n?.getLanguage?.();
+    if (appLang && !headers["X-App-Lang"] && !headers["x-app-lang"]) {
+        headers["X-App-Lang"] = appLang;
+    }
+
     const isFormData = typeof FormData !== "undefined" && options.body instanceof FormData;
     if (!isFormData && !headers["Content-Type"] && !headers["content-type"]) {
         headers["Content-Type"] = "application/json";

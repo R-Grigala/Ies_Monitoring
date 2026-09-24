@@ -19,6 +19,7 @@ from app.api.nsmodels import (
     registration_parser,
     request_reset_password_parser,
     reset_password_parser,
+    change_password_parser,
 )
 from app.models import User, Permission, UserPermission
 from app.utils import normalize_email, validate_password, mailer, url_serializer
@@ -302,6 +303,73 @@ class LogoutAllApi(Resource):
         )
         unset_jwt_cookies(response)
         return response
+
+
+@auth_ns.route("/auth/change_password")
+class ChangePasswordApi(Resource):
+    @jwt_required()
+    @auth_ns.doc(parser=change_password_parser, security="JsonWebToken")
+    def put(self):
+        """Change password for the current authenticated user."""
+        args = change_password_parser.parse_args()
+        user = current_user
+
+        if not user or not user.is_active:
+            return {"error": "forbidden", "message": "User account is inactive."}, 403
+
+        current_password = args.get("current_password") or ""
+        new_password = args.get("password") or ""
+        retype_password = args.get("retype_password") or ""
+
+        if not user.check_password(current_password):
+            logger.info("Change password failed: user_uuid=%s wrong current password", user.uuid)
+            return {
+                "error": "invalid_credentials",
+                "message": "Current password is incorrect.",
+            }, 400
+
+        if new_password != retype_password:
+            return {
+                "error": "validation_error",
+                "message": "Passwords do not match.",
+            }, 400
+
+        if user.check_password(new_password):
+            return {
+                "error": "validation_error",
+                "message": "New password must be different from the current password.",
+            }, 400
+
+        try:
+            validate_password(new_password)
+        except ValueError as err:
+            logger.info("Change password failed: user_uuid=%s password policy error", user.uuid)
+            return {"error": "validation_error", "message": str(err)}, 400
+
+        try:
+            user.password = new_password
+            user.updated_by_user_id = user.id
+            user.save()
+            revoked = revoke_all_user_tokens(user.id)
+            logger.info(
+                "Change password success: user_uuid=%s revoked_sessions=%s",
+                user.uuid,
+                revoked,
+            )
+            response = jsonify(
+                {
+                    "message": "Password changed successfully. Please sign in again.",
+                    "revoked_sessions": revoked,
+                }
+            )
+            unset_jwt_cookies(response)
+            return response, 200
+        except Exception:
+            logger.exception("Change password exception: user_uuid=%s", user.uuid)
+            return {
+                "error": "internal_error",
+                "message": "An error occurred while changing password.",
+            }, 500
 
 
 @auth_ns.route("/auth/request_reset_password")

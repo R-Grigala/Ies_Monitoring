@@ -23,7 +23,7 @@ Flask-RESTX mounting: `Api` has no URL `prefix`; each namespace uses `path="/api
 | Permissions REST catalog (list/create/delete) | Implemented |
 | User permission grant/revoke on accounts | Implemented |
 | Register with optional permissions | Implemented |
-| `PUT /api/auth/change_password` | Planned (UI page exists) |
+| `PUT /api/auth/change_password` | Implemented |
 | `GET /api/health` | Planned |
 | SeisComP ingest / Push / Redis / Celery | Planned |
 
@@ -54,8 +54,9 @@ Seismic Events UI/API დეტალური აღწერა: [`10-seismic-
 | POST | `/api/auth/logout_all` | JWT | All sessions; response has `revoked_sessions` |
 | POST | `/api/auth/request_reset_password` | Public | Body: `email`. 60s cooldown (`users.last_sent_email`) |
 | PUT | `/api/auth/reset_password` | Public | Body: `token`, `password`, `retype_password`. itsdangerous URL token, TTL 300s |
+| PUT | `/api/auth/change_password` | JWT | Body: `current_password`, `password`, `retype_password`. Validates policy; revokes all refresh sessions and clears cookies |
 
-Password policy: min 12 chars, upper + lower + digit + special. Hashing: Werkzeug.
+Password policy: min 6 chars, upper + lower + digit + special. Hashing: Werkzeug.
 
 ---
 
@@ -218,7 +219,7 @@ Admin seed (`flask populate_db`):
 | `/<lang>/seismic_events` | Seismic events list, map, filters, create/edit modals | `can_event_view` / `can_event_edit` / `can_event_publish` |
 | `/<lang>/seismic_events/<id>` | Event details (summary, publish panel, Overview / Magnitudes / Beachball / Map) | `can_event_view` / `can_event_edit` / `can_event_publish` |
 | `/<lang>/notify` | Recipients admin | `can_recips` |
-| `/<lang>/change_password` | Change password page | Logged-in (API pending) |
+| `/<lang>/change_password` | Change password page | Logged-in (JWT; API implemented) |
 | `/<lang>/reset_password/<token>` | Reset password | Public |
 | `/<lang>/forgot` (or auth forgot flow) | Request reset | Public |
 

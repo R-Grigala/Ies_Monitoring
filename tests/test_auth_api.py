@@ -143,3 +143,52 @@ def test_register_unknown_permission_rejected(client, admin_auth_headers, permis
 def test_logout_success(client, admin_auth_headers):
     response = client.post("/api/auth/logout", headers=admin_auth_headers)
     assert response.status_code == 200
+
+
+def test_change_password_requires_auth(client):
+    response = client.put(
+        "/api/auth/change_password",
+        json={
+            "current_password": VALID_PASSWORD,
+            "password": "NewPass123!@#x",
+            "retype_password": "NewPass123!@#x",
+        },
+    )
+    assert response.status_code == 401
+
+
+def test_change_password_wrong_current(client, admin_auth_headers):
+    response = client.put(
+        "/api/auth/change_password",
+        headers=admin_auth_headers,
+        json={
+            "current_password": "WrongPass123!@#",
+            "password": "NewPass123!@#x",
+            "retype_password": "NewPass123!@#x",
+        },
+    )
+    assert response.status_code == 400
+    assert response.get_json()["error"] == "invalid_credentials"
+
+
+def test_change_password_success(client, admin_user, admin_auth_headers):
+    new_password = "NewPass123!@#x"
+    response = client.put(
+        "/api/auth/change_password",
+        headers=admin_auth_headers,
+        json={
+            "current_password": VALID_PASSWORD,
+            "password": new_password,
+            "retype_password": new_password,
+        },
+    )
+    assert response.status_code == 200
+    data = response.get_json()
+    assert "message" in data
+
+    old_login = login(client, ADMIN_EMAIL, VALID_PASSWORD)
+    assert old_login.status_code in (400, 401)
+
+    new_login = login(client, ADMIN_EMAIL, new_password)
+    assert new_login.status_code == 200
+    assert new_login.get_json()["access_token"]

@@ -152,7 +152,7 @@ function mapRegistrationError(error) {
     ) {
         return t(
             "registration.error.password_policy",
-            "Password must be at least 12 characters with upper, lower, digit and special character."
+            "Password must be at least 6 characters with upper, lower, digit and special character."
         );
     }
 
