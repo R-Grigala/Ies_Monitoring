@@ -27,9 +27,12 @@ IES Monitoring | Home
                     Open API Docs
                 </a>
                 <a
+                    id="indexViewEventsBtn"
                     href="{{ url_for('seismic_events.events', lang=current_lang) }}"
                     class="btn btn-outline-secondary btn-lg"
                     data-i18n="index.hero.events"
+                    data-events-url="{{ url_for('seismic_events.events', lang=current_lang) }}"
+                    data-login-url="{{ url_for('auth.auth', lang=current_lang) }}"
                 >
                     View events
                 </a>
@@ -133,4 +136,33 @@ IES Monitoring | Home
         </div>
     </div>
 </section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+    const button = document.getElementById("indexViewEventsBtn");
+    if (!button) {
+        return;
+    }
+
+    button.addEventListener("click", (event) => {
+        event.preventDefault();
+
+        const token = localStorage.getItem("access_token");
+        const isAuthenticated = Boolean(token) && !window.isTokenExpired?.(token);
+        const eventsUrl =
+            button.dataset.eventsUrl ||
+            window.I18n?.localizePath?.("/seismic_events") ||
+            "/seismic_events";
+        const loginUrl =
+            button.dataset.loginUrl ||
+            window.getLoginPath?.() ||
+            window.I18n?.localizePath?.("/login") ||
+            "/login";
+
+        window.location.href = isAuthenticated ? eventsUrl : loginUrl;
+    });
+});
+</script>
 {% endblock %}
