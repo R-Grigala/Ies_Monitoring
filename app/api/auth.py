@@ -356,6 +356,8 @@ class ChangePasswordApi(Resource):
                 user.uuid,
                 revoked,
             )
+            # Return a real Flask response (not a (response, code) tuple).
+            # Flask-RESTX re-serializes tuple bodies and breaks JSON for the client.
             response = jsonify(
                 {
                     "message": "Password changed successfully. Please sign in again.",
@@ -363,7 +365,7 @@ class ChangePasswordApi(Resource):
                 }
             )
             unset_jwt_cookies(response)
-            return response, 200
+            return response
         except Exception:
             logger.exception("Change password exception: user_uuid=%s", user.uuid)
             return {
