@@ -1,9 +1,20 @@
 let registerServiceModal = null;
 let apiKeyRevealModal = null;
+let serviceAvailablePermissions = [];
+let servicePermissionsLoadPromise = null;
 
 function t(key, fallback) {
     const i18n = window.I18n;
     return i18n ? i18n.t(key, fallback) : fallback;
+}
+
+function escapeHtml(value) {
+    return String(value ?? "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#39;");
 }
 
 function ensureRegisterServiceModal() {
@@ -32,12 +43,103 @@ function ensureApiKeyRevealModal() {
     return apiKeyRevealModal;
 }
 
+function renderServicePermissions(isLoading = false) {
+    const container = document.getElementById("registerServicePermissions");
+    if (!container) {
+        return;
+    }
+
+    if (isLoading) {
+        container.innerHTML = `<div class="text-muted small py-2 px-1">${escapeHtml(
+            t("services.register.permissions_loading", "Loading permissions...")
+        )}</div>`;
+        return;
+    }
+
+    if (!serviceAvailablePermissions.length) {
+        container.innerHTML = `<div class="text-muted small py-2 px-1">${escapeHtml(
+            t("services.register.permissions_empty", "No permissions available.")
+        )}</div>`;
+        return;
+    }
+
+    container.innerHTML = serviceAvailablePermissions
+        .map((permission) => {
+            const code = permission.code;
+            const name = permission.name || permission.code;
+            const description = permission.description
+                ? `<div class="registration-permission-desc text-muted">${escapeHtml(
+                      permission.description
+                  )}</div>`
+                : "";
+            return `
+                <label class="registration-permission-item" for="svc_perm_${escapeHtml(code)}">
+                    <input
+                        class="form-check-input service-permission-check"
+                        type="checkbox"
+                        value="${escapeHtml(code)}"
+                        id="svc_perm_${escapeHtml(code)}"
+                    >
+                    <span class="registration-permission-copy">
+                        <span class="registration-permission-code">${escapeHtml(code)}</span>
+                        <span class="registration-permission-name">${escapeHtml(name)}</span>
+                        ${description}
+                    </span>
+                </label>
+            `;
+        })
+        .join("");
+}
+
+async function loadServicePermissions({ force = false } = {}) {
+    if (!force && serviceAvailablePermissions.length) {
+        renderServicePermissions(false);
+        return serviceAvailablePermissions;
+    }
+
+    if (servicePermissionsLoadPromise) {
+        return servicePermissionsLoadPromise;
+    }
+
+    renderServicePermissions(true);
+
+    servicePermissionsLoadPromise = (async () => {
+        try {
+            const data = await window.makeApiRequest("/api/permissions/", { method: "GET" });
+            const items = Array.isArray(data.items) ? data.items : [];
+            serviceAvailablePermissions = items.filter(
+                (permission) => permission.is_active !== false
+            );
+        } catch (_error) {
+            serviceAvailablePermissions = [];
+            window.showAlert?.(
+                "alertPlaceholder",
+                "danger",
+                t(
+                    "services.register.permissions_load_error",
+                    "Failed to load permissions."
+                )
+            );
+        } finally {
+            servicePermissionsLoadPromise = null;
+        }
+
+        renderServicePermissions(false);
+        return serviceAvailablePermissions;
+    })();
+
+    return servicePermissionsLoadPromise;
+}
+
 function resetRegisterServiceForm() {
     const form = document.getElementById("registerServiceForm");
     form?.reset();
+    document.querySelectorAll(".service-permission-check").forEach((input) => {
+        input.checked = false;
+    });
 }
 
-function openRegisterServiceModal() {
+async function openRegisterServiceModal() {
     const modal = ensureRegisterServiceModal();
     if (!modal) {
         window.showAlert?.(
@@ -50,6 +152,8 @@ function openRegisterServiceModal() {
 
     resetRegisterServiceForm();
     modal.show();
+    await loadServicePermissions({ force: true });
+    window.I18n?.applyTranslations?.();
 }
 
 function showApiKeyReveal(apiKey) {
