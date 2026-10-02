@@ -314,7 +314,8 @@ def _request(method, path, payload=None) -> dict:
 - `latitude`, `longitude` — `float`-ად გადაყვანადი და დიაპაზონში;
 - `depth` — `None` ან `float`-ად გადაყვანადი;
 - `is_automatic` — თუ მითითებულია, უნდა იყოს `bool`;
-- `area` — მაქს. 20 სიმბოლო; `location_ge` / `location_en` — მაქს. 500;
+- `area` — მაქს. 20 სიმბოლო; 
+- `location_ge` / `location_en` — მაქს. 500;
 - უცნობი გასაღები (მაგ. ბეჭდვის შეცდომა `"lattitude"`) → `ValueError`.
 
 **მინიშნება:** შემავალი dict **არ** შეცვალო (`pop`-ით და ა.შ.), ააწყე ახალი.
