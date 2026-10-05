@@ -234,6 +234,7 @@ Admin seed (`flask populate_db`):
 | `/<lang>/seismic_events` | Seismic events list, map, filters, create/edit modals | `can_event_view` / `can_event_edit` / `can_event_publish` |
 | `/<lang>/seismic_events/<id>` | Event details (summary, publish panel, Overview / Magnitudes / Beachball / Map) | `can_event_view` / `can_event_edit` / `can_event_publish` |
 | `/<lang>/notify` | Recipients admin | `can_recips` |
+| `/<lang>/alert_zones` | Alert zones: draw polygon on map, create, edit, list, delete (from Notify) | `can_recips` |
 | `/<lang>/change_password` | Change password page | Logged-in (JWT; API implemented) |
 | `/<lang>/reset_password/<token>` | Reset password | Public |
 | `/<lang>/forgot` (or auth forgot flow) | Request reset | Public |
@@ -242,6 +243,33 @@ Registration of users happens on `/<lang>/registration` (linked from Accounts �
 Service API keys are shown once after register on the Services page.
 
 UI strings: EN/KA via `app/static/js/i18n.js`.
+
+### Shared UI components
+
+**Page alerts — `window.showAlert(targetId, type, message)`** (`app/static/js/base.js`)
+
+- `type`: Bootstrap alert type — `success`, `danger`, `warning`, `info`.
+- `targetId = "alertPlaceholder"` → **floating alert**. The container lives in `base.html` (`#alertPlaceholder.app-floating-alerts`) and is `position: fixed` at the top centre of the viewport, so the message is visible regardless of scroll position. It is also shown above open modals (`z-index: 1090`).
+  - Icon per type, coloured left border, shadow, short slide-in animation (disabled with `prefers-reduced-motion`).
+  - `success` / `info` auto-hide after **5 s**; `danger` / `warning` stay until the user closes them, so errors are never missed.
+  - A new alert replaces the previous one (no stacking). The empty container does not block clicks on the page.
+- Any other `targetId` (e.g. alert slots inside create/edit modals, the event details page) → **inline alert** rendered inside that element, as before.
+- `message` is inserted as HTML; pass plain text or already-escaped content.
+- Styles: `.app-floating-alerts`, `.app-floating-alert*` in `app/static/css/styles.css`.
+
+**Back button on sub-pages — `.page-back-btn`**
+
+- Pill-shaped button with an arrow icon that slides left on hover; used on sub-pages reached from another page:
+  - `/<lang>/seismic_events/<id>` → "Back to events" (`events.details.back`)
+  - `/<lang>/alert_zones` → "Back to recipients" (`alertZones.back`)
+- Markup — keep the icon and the translated text in separate elements so i18n does not overwrite the icon:
+
+```html
+<a href="..." class="btn btn-sm page-back-btn mb-2">
+    <i class="fas fa-arrow-left page-back-btn-icon" aria-hidden="true"></i>
+    <span data-i18n="...">Back to ...</span>
+</a>
+```
 
 ### Seismic Events UI notes
 

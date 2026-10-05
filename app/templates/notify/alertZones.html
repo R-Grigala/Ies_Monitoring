@@ -1,0 +1,194 @@
+{% extends "base.html" %}
+
+{% block title %}
+    IES Monitoring - Alert Zones
+{% endblock %}
+
+{% block head %}
+<link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+    crossorigin=""
+/>
+<link rel="stylesheet" href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css" crossorigin=""/>
+{% endblock %}
+
+{% block body %}
+<div class="py-4 alert-zones-page">
+    <a
+        href="{{ url_for('notify.notify', lang=current_lang) }}"
+        class="btn btn-sm page-back-btn mb-3"
+    >
+        <i class="fas fa-arrow-left page-back-btn-icon" aria-hidden="true"></i>
+        <span data-i18n="alertZones.back">Back to recipients</span>
+    </a>
+    <div class="d-flex align-items-center gap-3 mb-4">
+        <div class="alert-zones-header-icon" aria-hidden="true">
+            <i class="fas fa-draw-polygon"></i>
+        </div>
+        <div>
+            <h1 class="h3 mb-1" data-i18n="alertZones.title">Alert Zones</h1>
+            <p class="text-muted mb-0" data-i18n="alertZones.subtitle">Draw a polygon on the map and choose who gets notified about earthquakes inside it.</p>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-12 col-lg-8">
+            <div class="card border-0 shadow-sm alert-zones-map-card">
+                <div class="card-header bg-white border-0 d-flex flex-wrap justify-content-between align-items-center gap-2 px-3 pt-3 pb-2">
+                    <div class="d-flex align-items-start gap-2 small text-muted">
+                        <i class="fas fa-info-circle mt-1 text-primary" aria-hidden="true"></i>
+                        <span data-i18n="alertZones.map.hint">Use the polygon tool in the top-left corner of the map. Click to add points and click the first point to finish.</span>
+                    </div>
+                    <div class="d-flex align-items-center gap-3 small text-muted flex-shrink-0">
+                        <span class="d-inline-flex align-items-center gap-1">
+                            <span class="alert-zones-legend-swatch alert-zones-legend-new"></span>
+                            <span data-i18n="alertZones.legend.new">New</span>
+                        </span>
+                        <span class="d-inline-flex align-items-center gap-1">
+                            <span class="alert-zones-legend-swatch alert-zones-legend-enabled"></span>
+                            <span data-i18n="alertZones.status.enabled">Enabled</span>
+                        </span>
+                        <span class="d-inline-flex align-items-center gap-1">
+                            <span class="alert-zones-legend-swatch alert-zones-legend-disabled"></span>
+                            <span data-i18n="alertZones.status.disabled">Disabled</span>
+                        </span>
+                    </div>
+                </div>
+                <div class="card-body p-2 pt-0">
+                    <div id="alertZonesMap" class="alert-zones-map"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12 col-lg-4">
+            <div class="card border-0 shadow-sm mb-4 alert-zones-form-card" id="alertZoneFormCard">
+                <div class="card-body p-4">
+                    <div class="d-flex justify-content-between align-items-center gap-2 mb-3">
+                        <h2 class="h5 mb-0" id="alertZoneFormTitle" data-i18n="alertZones.form.title">New alert zone</h2>
+                        <span class="badge rounded-pill text-bg-light border text-dark alert-zones-polygon-status" id="alertZonePolygonStatus">
+                            <i class="fas fa-exclamation-circle me-1" aria-hidden="true"></i>
+                            <span data-i18n="alertZones.form.no_polygon">No polygon drawn yet</span>
+                        </span>
+                    </div>
+
+                    <form id="alertZoneForm" novalidate>
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold" for="alertZoneName" data-i18n="alertZones.form.name">Name</label>
+                            <input
+                                type="text"
+                                class="form-control"
+                                id="alertZoneName"
+                                maxlength="255"
+                                placeholder="Tbilisi"
+                                data-i18n-placeholder="alertZones.form.name_placeholder"
+                                required
+                            >
+                        </div>
+
+                        <div class="mb-3">
+                            <span class="form-label fw-semibold d-block" data-i18n="alertZones.form.magnitude">ML magnitude range</span>
+                            <div class="row g-2">
+                                <div class="col-6">
+                                    <div class="input-group">
+                                        <span class="input-group-text" data-i18n="alertZones.form.min_short">Min</span>
+                                        <input type="number" class="form-control" id="alertZoneMinMagnitude" min="0" max="10" step="0.1" placeholder="4.0" required>
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="input-group">
+                                        <span class="input-group-text" data-i18n="alertZones.form.max_short">Max</span>
+                                        <input type="number" class="form-control" id="alertZoneMaxMagnitude" min="0" max="10" step="0.1" placeholder="∞">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="form-text" data-i18n="alertZones.form.max_magnitude_hint">Leave Max ML empty for no upper limit.</div>
+                        </div>
+
+                        <div class="mb-3">
+                            <span class="form-label fw-semibold d-block" data-i18n="alertZones.form.channels">Notification channels</span>
+                            <div class="d-flex flex-wrap gap-2">
+                                <input type="checkbox" class="btn-check" id="alertZoneChannelMail" value="mail" name="alertZoneChannels" autocomplete="off">
+                                <label class="btn btn-sm btn-outline-primary" for="alertZoneChannelMail">
+                                    <i class="fas fa-envelope me-1" aria-hidden="true"></i>
+                                    <span data-i18n="alertZones.channel.mail">Email</span>
+                                </label>
+                                <input type="checkbox" class="btn-check" id="alertZoneChannelNumber" value="number" name="alertZoneChannels" autocomplete="off">
+                                <label class="btn btn-sm btn-outline-primary" for="alertZoneChannelNumber">
+                                    <i class="fas fa-sms me-1" aria-hidden="true"></i>
+                                    <span data-i18n="alertZones.channel.number">SMS</span>
+                                </label>
+                                <input type="checkbox" class="btn-check" id="alertZoneChannelPush" value="push_notif" name="alertZoneChannels" autocomplete="off">
+                                <label class="btn btn-sm btn-outline-primary" for="alertZoneChannelPush">
+                                    <i class="fas fa-bell me-1" aria-hidden="true"></i>
+                                    <span data-i18n="alertZones.channel.push_notif">Push</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <span class="form-label fw-semibold d-block" data-i18n="alertZones.form.audience">Recipients</span>
+                            <div class="btn-group w-100" role="group">
+                                <input type="radio" class="btn-check" name="alertZoneAudience" id="alertZoneAudienceExternal" value="external" autocomplete="off" checked>
+                                <label class="btn btn-outline-secondary" for="alertZoneAudienceExternal">
+                                    <i class="fas fa-users me-1" aria-hidden="true"></i>
+                                    <span data-i18n="notify.staff.no">External</span>
+                                </label>
+                                <input type="radio" class="btn-check" name="alertZoneAudience" id="alertZoneIsStaff" value="staff" autocomplete="off">
+                                <label class="btn btn-outline-secondary" for="alertZoneIsStaff">
+                                    <i class="fas fa-user-tie me-1" aria-hidden="true"></i>
+                                    <span data-i18n="notify.staff.yes">Staff</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="mb-4 form-check form-switch">
+                            <input class="form-check-input" type="checkbox" role="switch" id="alertZoneEnabled" checked>
+                            <label class="form-check-label" for="alertZoneEnabled" data-i18n="alertZones.form.enabled">Enabled</label>
+                        </div>
+
+                        <div class="d-flex gap-2">
+                            <button type="button" class="btn btn-outline-secondary flex-fill" id="alertZoneReset">
+                                <i class="fas fa-eraser me-1" id="alertZoneResetIcon" aria-hidden="true"></i>
+                                <span id="alertZoneResetLabel" data-i18n="alertZones.form.reset">Clear</span>
+                            </button>
+                            <button type="submit" class="btn btn-primary flex-fill" id="alertZoneSubmit">
+                                <i class="fas fa-save me-1" aria-hidden="true"></i>
+                                <span id="alertZoneSubmitLabel" data-i18n="alertZones.form.submit">Save zone</span>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <div class="card border-0 shadow-sm">
+                <div class="card-body p-4">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h2 class="h5 mb-0" data-i18n="alertZones.list.title">Existing zones</h2>
+                        <span class="badge rounded-pill text-bg-primary" id="alertZonesTotal">0</span>
+                    </div>
+                    <div id="alertZonesLoading" class="text-center py-4">
+                        <div class="spinner-border spinner-border-sm text-primary" role="status" aria-hidden="true"></div>
+                    </div>
+                    <div id="alertZonesEmpty" class="d-none text-center text-muted py-4">
+                        <i class="fas fa-map-marked-alt fa-2x mb-2 opacity-50" aria-hidden="true"></i>
+                        <p class="small mb-0" data-i18n="alertZones.list.empty">No alert zones yet.</p>
+                    </div>
+                    <ul class="list-unstyled mb-0 alert-zones-list" id="alertZonesList"></ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script
+    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+    crossorigin=""
+></script>
+<script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js" crossorigin=""></script>
+<script src="{{ url_for('static', filename='js/notify/alertZones.js') }}" defer></script>
+{% endblock %}

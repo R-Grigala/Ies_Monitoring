@@ -3,7 +3,7 @@ from flask_restx import fields
 from app.extensions import api
 
 alert_zones_ns = api.namespace(
-    "AlertZones",
+    "Alert Zones",
     description="Alert zone (map polygon) management endpoints",
     path="/api",
 )

@@ -91,7 +91,7 @@ On edit — `POST` (if there was none) or `PUT` (if it existed); deletion via a 
 
 Structure:
 
-1. Back + title + Edit/Delete (`can_event_edit`)
+1. Back button ("Back to events", shared `.page-back-btn` style — see [`09-api-inventory.md`](09-api-inventory.md#shared-ui-components)) + title + Edit/Delete (`can_event_edit`)
 2. **Summary banner** — Origin time, Magnitude, Depth, Lat/Lon, Event ID + OID / IES meta
 3. **Publish panel** (below the summary) — publish status and actions
 4. **Tabs:**

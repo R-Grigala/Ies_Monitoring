@@ -234,6 +234,7 @@ Admin seed (`flask populate_db`):
 | `/<lang>/seismic_events` | Seismic events list, map, filters, create/edit modals | `can_event_view` / `can_event_edit` / `can_event_publish` |
 | `/<lang>/seismic_events/<id>` | Event details (summary, publish panel, Overview / Magnitudes / Beachball / Map) | `can_event_view` / `can_event_edit` / `can_event_publish` |
 | `/<lang>/notify` | Recipients admin | `can_recips` |
+| `/<lang>/alert_zones` | Alert zones: draw polygon on map, create, edit, list, delete (from Notify) | `can_recips` |
 | `/<lang>/change_password` | Change password page | Logged-in (JWT; API implemented) |
 | `/<lang>/reset_password/<token>` | Reset password | Public |
 | `/<lang>/forgot` (or auth forgot flow) | Request reset | Public |
@@ -242,6 +243,33 @@ Registration of users happens on `/<lang>/registration` (linked from Accounts �
 Service API keys are shown once after register on the Services page.
 
 UI strings: EN/KA via `app/static/js/i18n.js`.
+
+### საერთო UI კომპონენტები
+
+**გვერდის შეტყობინებები — `window.showAlert(targetId, type, message)`** (`app/static/js/base.js`)
+
+- `type`: Bootstrap alert-ის ტიპი — `success`, `danger`, `warning`, `info`.
+- `targetId = "alertPlaceholder"` → **მცურავი შეტყობინება**. კონტეინერი არის `base.html`-ში (`#alertPlaceholder.app-floating-alerts`), `position: fixed`-ით ეკრანის ზედა ცენტრში, ამიტომ შეტყობინება ჩანს მიუხედავად იმისა, სად ხარ ჩამოსქროლილი. ღია მოდალის ზემოთაც ჩანს (`z-index: 1090`).
+  - ტიპის მიხედვით ხატულა, ფერადი მარცხენა ზოლი, ჩრდილი და მოკლე ჩამოცურების ანიმაცია (`prefers-reduced-motion`-ისას გამორთულია).
+  - `success` / `info` თავისით ქრება **5 წამში**; `danger` / `warning` რჩება, სანამ მომხმარებელი არ დახურავს — შეცდომა არ გამოგრჩება.
+  - ახალი შეტყობინება წინას ცვლის (არ გროვდება). ცარიელი კონტეინერი გვერდზე კლიკებს არ ბლოკავს.
+- ნებისმიერი სხვა `targetId` (მაგ. create/edit მოდალების შიგნით არსებული ადგილები, ივენთის დეტალების გვერდი) → **inline შეტყობინება** ამავე ელემენტში, როგორც ადრე.
+- `message` ჩაისმება როგორც HTML; გადაეცი ჩვეულებრივი ტექსტი ან უკვე escape-ებული შინაარსი.
+- სტილები: `.app-floating-alerts`, `.app-floating-alert*` — `app/static/css/styles.css`.
+
+**დაბრუნების ღილაკი ქვეგვერდებზე — `.page-back-btn`**
+
+- მომრგვალებული ღილაკი ისრის ხატულით, რომელიც hover-ზე მარცხნივ გადაიწევს; გამოიყენება ქვეგვერდებზე, რომლებზეც სხვა გვერდიდან გადადიხარ:
+  - `/<lang>/seismic_events/<id>` → „მიწისძვრების სიაში დაბრუნება" (`events.details.back`)
+  - `/<lang>/alert_zones` → „მიმღებებზე დაბრუნება" (`alertZones.back`)
+- Markup — ხატულა და თარგმნადი ტექსტი ცალ-ცალკე ელემენტებში უნდა იყოს, რომ i18n-მა ხატულა არ გადააწეროს:
+
+```html
+<a href="..." class="btn btn-sm page-back-btn mb-2">
+    <i class="fas fa-arrow-left page-back-btn-icon" aria-hidden="true"></i>
+    <span data-i18n="...">Back to ...</span>
+</a>
+```
 
 ### Seismic Events UI notes
 

@@ -33,3 +33,15 @@ def notify(lang=None):
     if raw_lang is not None and lang is None:
         return redirect(url_for("notify.notify", lang="en"))
     return render_template("notify.html")
+
+
+@notify_blueprint.route("/alert_zones")
+@notify_blueprint.route("/<lang>/alert_zones")
+def alert_zones(lang=None):
+    raw_lang = lang
+    lang = _normalized_lang(lang)
+    if raw_lang is None:
+        return redirect(url_for("notify.alert_zones", lang=_preferred_lang()))
+    if raw_lang is not None and lang is None:
+        return redirect(url_for("notify.alert_zones", lang="en"))
+    return render_template("alertZones.html")

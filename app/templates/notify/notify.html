@@ -13,7 +13,15 @@
                     <h2 class="h3 mb-2" data-i18n="notify.title">Recipients</h2>
                     <p class="text-muted mb-0" data-i18n="notify.subtitle">Manage notification recipients, emails and phone numbers.</p>
                 </div>
-                <div class="d-flex align-items-center gap-2">
+                <div class="d-flex flex-wrap align-items-center gap-2">
+                    <a
+                        href="{{ url_for('notify.alert_zones', lang=current_lang) }}"
+                        class="btn btn-outline-primary"
+                        id="addAlertZoneButton"
+                    >
+                        <i class="fas fa-plus me-1" aria-hidden="true"></i>
+                        <span data-i18n="alertZones.add">Add Alert Zone</span>
+                    </a>
                     <button
                         type="button"
                         class="btn btn-primary"

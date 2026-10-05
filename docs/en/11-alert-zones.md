@@ -11,7 +11,8 @@ This document describes alert zones: polygons drawn on the map that define for w
 | `alert_zones` model | Implemented |
 | REST API `/api/alert_zones` (CRUD) | Implemented |
 | GeoJSON Polygon validation | Implemented |
-| UI for drawing polygons on the map | Planned |
+| Web UI `/<lang>/alert_zones`: draw polygon, create, list, delete, per-zone "On map" toggle | Implemented |
+| Editing existing zones in the UI | Implemented |
 | Matching events against zones (point-in-polygon) and sending alerts | Planned |
 
 ---
@@ -185,7 +186,19 @@ Other errors: `401` (authentication), `403` (missing permission), `404` (`not_fo
 
 ---
 
-## 6. Security
+## 6. Web UI
+
+- Page: `/<lang>/alert_zones`, opened from the **Add Alert Zone** button on `/<lang>/notify`.
+- Map: Leaflet + Leaflet.draw; only the polygon tool is enabled. Drawing a new polygon replaces the previous unsaved one; it can be edited or removed with the toolbar before saving.
+- Form: name, Min ML / Max ML (empty Max = no upper limit), channels (Email / SMS / Push toggle buttons), recipients (External / Staff), enabled switch. Sends `POST /api/alert_zones` with `polygon.toGeoJSON().geometry`.
+- Saved zones are listed below the form. None are drawn on the map by default; a zone appears only when its **On map** switch is turned on (red; disabled zones grey and dashed). **Delete** removes the zone.
+- Editing: the pencil button on a zone loads it into the form (title becomes "Edit alert zone") and puts its polygon on the map as an editable shape; the saved copy is hidden meanwhile. Vertices are moved with the toolbar's edit tool, or a new polygon can be drawn to replace it. **Save changes** sends `PUT /api/alert_zones/{id}`, **Cancel** leaves edit mode without changes. The selection is not persisted and resets on page reload.
+- Navigation and feedback: "Back to recipients" button (`.page-back-btn`) returns to `/<lang>/notify`; create / update / delete results and validation errors are shown as floating alerts at the top of the viewport (see [`09-api-inventory.md`](09-api-inventory.md#shared-ui-components)).
+- Files: `app/templates/notify/alertZones.html`, `app/static/js/notify/alertZones.js`, route `notify.alert_zones` in `app/views/notify/routes.py`.
+
+---
+
+## 7. Security
 
 - JWT Authentication **or** service API key (`X-API-Key`);
 - Read: `can_recips` or `can_recips_read`;
@@ -194,8 +207,7 @@ Other errors: `401` (authentication), `403` (missing permission), `404` (`not_fo
 
 ---
 
-## 7. Future Extensions (Planned)
+## 8. Future Extensions (Planned)
 
-- Web UI: zone list and drawing / editing polygons on the map;
 - On new events, check zones (ML range + point-in-polygon) and notify the matching recipients;
 - A dedicated permission if needed (e.g. `can_alert_zones`).

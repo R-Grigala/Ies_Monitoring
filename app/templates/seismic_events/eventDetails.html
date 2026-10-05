@@ -23,10 +23,10 @@
         <div>
             <a
                 href="{{ url_for('seismic_events.events', lang=current_lang) }}"
-                class="event-detail-back"
-                data-i18n="events.details.back"
+                class="btn btn-sm page-back-btn mb-2"
             >
-                &larr; Back to events
+                <i class="fas fa-arrow-left page-back-btn-icon" aria-hidden="true"></i>
+                <span data-i18n="events.details.back">Back to events</span>
             </a>
             <h1 class="event-detail-title h3 mb-0" id="eventDetailsTitle" data-i18n="events.details.title">
                 Earthquake details

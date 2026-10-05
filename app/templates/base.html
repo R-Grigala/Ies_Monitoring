@@ -24,9 +24,7 @@
 
 <body class="app-shell" data-current-lang="{{ current_lang }}">
     {% include "navbar.html" %}
-    <div class="alert-surface py-2">
-        <div id="alertPlaceholder" class="container-lg"></div>
-    </div>
+    <div id="alertPlaceholder" class="app-floating-alerts" aria-live="polite" aria-atomic="true"></div>
     <section class="app-content">
         <div class="{% block main_container_class %}container h-100{% endblock %}">
             {% block body %}
