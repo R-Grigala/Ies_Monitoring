@@ -38,4 +38,3 @@ from app.api.publish_events import (
     PublishEventApi,
     UnpublishEventApi,
 )
-from app.api.alert_zones import AlertZonesApi, AlertZoneDetailApi

@@ -19,7 +19,6 @@ Flask-RESTX mounting: `Api` has no URL `prefix`; each namespace uses `path="/api
 | Recipients (`/api/recips`) | Implemented |
 | Seismic Events (`/api/seismic_events`) | Implemented |
 | Publish Events (`/api/publish_events`) | Implemented |
-| Alert Zones (`/api/alert_zones`) | Implemented |
 | Permissions models + seed + runtime checks | Implemented |
 | Permissions REST catalog (list/create/delete) | Implemented |
 | User permission grant/revoke on accounts | Implemented |
@@ -131,20 +130,6 @@ Raw API key is shown only once at registration (`api_key_hash` is stored).
 
 ---
 
-## Alert Zones — `/api/alert_zones`
-
-Details: [`11-alert-zones.md`](11-alert-zones.md).
-
-| Method | Path | Auth | Notes |
-|--------|------|------|--------|
-| GET | `/api/alert_zones` | JWT/API key + `can_recips` **or** `can_recips_read` | List zones |
-| GET | `/api/alert_zones/<id>` | same | Detail |
-| POST | `/api/alert_zones` | JWT/API key + `can_recips` | Create. Required: `name`, `geometry` (GeoJSON Polygon, `[lon, lat]`), `min_magnitude` (ML, 0–10), `notif_channels` (non-empty subset of `mail`, `number`, `push_notif`). Optional: `max_magnitude` (0–10, ≥ `min_magnitude`; null = no upper limit), `enabled` (default true), `notif_is_staff` (default false). Unclosed rings are closed automatically |
-| PUT | `/api/alert_zones/<id>` | `can_recips` | Partial update: only provided fields change |
-| DELETE | `/api/alert_zones/<id>` | `can_recips` | Delete |
-
----
-
 ## Seismic Events — `/api/seismic_events`
 
 Requires JWT or API key with **`can_event_view`**, **`can_event_edit`**, or **`can_event_publish`** for read endpoints. Write endpoints require **`can_event_edit`**. Editors and publishers can also read.
@@ -234,7 +219,6 @@ Admin seed (`flask populate_db`):
 | `/<lang>/seismic_events` | Seismic events list, map, filters, create/edit modals | `can_event_view` / `can_event_edit` / `can_event_publish` |
 | `/<lang>/seismic_events/<id>` | Event details (summary, publish panel, Overview / Magnitudes / Beachball / Map) | `can_event_view` / `can_event_edit` / `can_event_publish` |
 | `/<lang>/notify` | Recipients admin | `can_recips` |
-| `/<lang>/alert_zones` | Alert zones: draw polygon on map, create, edit, list, delete (from Notify) | `can_recips` |
 | `/<lang>/change_password` | Change password page | Logged-in (JWT; API implemented) |
 | `/<lang>/reset_password/<token>` | Reset password | Public |
 | `/<lang>/forgot` (or auth forgot flow) | Request reset | Public |
@@ -261,7 +245,6 @@ UI strings: EN/KA via `app/static/js/i18n.js`.
 
 - Pill-shaped button with an arrow icon that slides left on hover; used on sub-pages reached from another page:
   - `/<lang>/seismic_events/<id>` → "Back to events" (`events.details.back`)
-  - `/<lang>/alert_zones` → "Back to recipients" (`alertZones.back`)
 - Markup — keep the icon and the translated text in separate elements so i18n does not overwrite the icon:
 
 ```html
