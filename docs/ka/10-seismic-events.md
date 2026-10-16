@@ -91,7 +91,7 @@ i18n: EN/KA (`app/static/js/i18n.js`).
 
 სტრუქტურა:
 
-1. Back + სათაური + Edit/Delete (`can_event_edit`)
+1. დაბრუნების ღილაკი („მიწისძვრების სიაში დაბრუნება", საერთო `.page-back-btn` სტილი — იხ. [`09-api-inventory.md`](09-api-inventory.md#საერთო-ui-კომპონენტები)) + სათაური + Edit/Delete (`can_event_edit`)
 2. **Summary banner** — Origin time, Magnitude, Depth, Lat/Lon, Event ID + OID / IES meta
 3. **Publish panel** (summary-ის ქვემოთ) — გამოქვეყნების სტატუსი და მოქმედებები
 4. **Tab-ები:**

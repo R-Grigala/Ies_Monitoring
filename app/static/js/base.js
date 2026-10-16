@@ -1,7 +1,51 @@
+const FLOATING_ALERT_ICONS = {
+    success: "fa-check-circle",
+    danger: "fa-exclamation-circle",
+    warning: "fa-exclamation-triangle",
+    info: "fa-info-circle",
+};
+// Errors and warnings stay until closed so they are never missed.
+const FLOATING_ALERT_AUTO_HIDE_MS = { success: 5000, info: 5000 };
+
+function closeFloatingAlert(element) {
+    if (!element.isConnected) {
+        return;
+    }
+    if (window.bootstrap?.Alert) {
+        window.bootstrap.Alert.getOrCreateInstance(element).close();
+    } else {
+        element.remove();
+    }
+}
+
+function showFloatingAlert(container, type, message) {
+    const wrapper = document.createElement("div");
+    wrapper.className = `alert alert-${type} alert-dismissible fade show app-floating-alert`;
+    wrapper.role = type === "danger" || type === "warning" ? "alert" : "status";
+    wrapper.innerHTML = `
+        <i class="fas ${FLOATING_ALERT_ICONS[type] || FLOATING_ALERT_ICONS.info} app-floating-alert-icon" aria-hidden="true"></i>
+        <div class="app-floating-alert-message">${message}</div>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    `;
+
+    container.innerHTML = "";
+    container.appendChild(wrapper);
+
+    const delay = FLOATING_ALERT_AUTO_HIDE_MS[type];
+    if (delay) {
+        setTimeout(() => closeFloatingAlert(wrapper), delay);
+    }
+}
+
 function showAlert(targetId, type, message) {
     const container = document.getElementById(targetId);
     if (!container) {
         window.alert(message);
+        return;
+    }
+
+    if (container.classList.contains("app-floating-alerts")) {
+        showFloatingAlert(container, type, message);
         return;
     }
 

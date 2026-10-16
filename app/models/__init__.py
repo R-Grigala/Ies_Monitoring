@@ -12,7 +12,6 @@ from app.models.magnitudes import Magnitude
 from app.models.event_magnitudes import EventMagnitude
 from app.models.event_beachball import EventBeachball
 from app.models.published_events import PublishedEvent
-from app.models.alert_zones import AlertZone
 
 __all__ = [
     "User",
@@ -29,5 +28,4 @@ __all__ = [
     "EventMagnitude",
     "EventBeachball",
     "PublishedEvent",
-    "AlertZone",
 ]

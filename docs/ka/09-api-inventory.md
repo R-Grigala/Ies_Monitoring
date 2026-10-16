@@ -19,7 +19,6 @@ Flask-RESTX mounting: `Api` has no URL `prefix`; each namespace uses `path="/api
 | Recipients (`/api/recips`) | Implemented |
 | Seismic Events (`/api/seismic_events`) | Implemented |
 | Publish Events (`/api/publish_events`) | Implemented |
-| Alert Zones (`/api/alert_zones`) | Implemented |
 | Permissions models + seed + runtime checks | Implemented |
 | Permissions REST catalog (list/create/delete) | Implemented |
 | User permission grant/revoke on accounts | Implemented |
@@ -131,20 +130,6 @@ Raw API key is shown only once at registration (`api_key_hash` is stored).
 
 ---
 
-## Alert Zones — `/api/alert_zones`
-
-დეტალური აღწერა: [`11-alert-zones.md`](11-alert-zones.md).
-
-| Method | Path | Auth | Notes |
-|--------|------|------|--------|
-| GET | `/api/alert_zones` | JWT/API key + `can_recips` **or** `can_recips_read` | List zones |
-| GET | `/api/alert_zones/<id>` | same | Detail |
-| POST | `/api/alert_zones` | JWT/API key + `can_recips` | Create. Required: `name`, `geometry` (GeoJSON Polygon, `[lon, lat]`), `min_magnitude` (ML, 0–10), `notif_channels` (non-empty subset of `mail`, `number`, `push_notif`). Optional: `max_magnitude` (0–10, ≥ `min_magnitude`; null = no upper limit), `enabled` (default true), `notif_is_staff` (default false). Unclosed rings are closed automatically |
-| PUT | `/api/alert_zones/<id>` | `can_recips` | Partial update: only provided fields change |
-| DELETE | `/api/alert_zones/<id>` | `can_recips` | Delete |
-
----
-
 ## Seismic Events — `/api/seismic_events`
 
 Requires JWT or API key with **`can_event_view`**, **`can_event_edit`**, or **`can_event_publish`** for read endpoints. Write endpoints require **`can_event_edit`**. Editors and publishers can also read.
@@ -242,6 +227,32 @@ Registration of users happens on `/<lang>/registration` (linked from Accounts �
 Service API keys are shown once after register on the Services page.
 
 UI strings: EN/KA via `app/static/js/i18n.js`.
+
+### საერთო UI კომპონენტები
+
+**გვერდის შეტყობინებები — `window.showAlert(targetId, type, message)`** (`app/static/js/base.js`)
+
+- `type`: Bootstrap alert-ის ტიპი — `success`, `danger`, `warning`, `info`.
+- `targetId = "alertPlaceholder"` → **მცურავი შეტყობინება**. კონტეინერი არის `base.html`-ში (`#alertPlaceholder.app-floating-alerts`), `position: fixed`-ით ეკრანის ზედა ცენტრში, ამიტომ შეტყობინება ჩანს მიუხედავად იმისა, სად ხარ ჩამოსქროლილი. ღია მოდალის ზემოთაც ჩანს (`z-index: 1090`).
+  - ტიპის მიხედვით ხატულა, ფერადი მარცხენა ზოლი, ჩრდილი და მოკლე ჩამოცურების ანიმაცია (`prefers-reduced-motion`-ისას გამორთულია).
+  - `success` / `info` თავისით ქრება **5 წამში**; `danger` / `warning` რჩება, სანამ მომხმარებელი არ დახურავს — შეცდომა არ გამოგრჩება.
+  - ახალი შეტყობინება წინას ცვლის (არ გროვდება). ცარიელი კონტეინერი გვერდზე კლიკებს არ ბლოკავს.
+- ნებისმიერი სხვა `targetId` (მაგ. create/edit მოდალების შიგნით არსებული ადგილები, ივენთის დეტალების გვერდი) → **inline შეტყობინება** ამავე ელემენტში, როგორც ადრე.
+- `message` ჩაისმება როგორც HTML; გადაეცი ჩვეულებრივი ტექსტი ან უკვე escape-ებული შინაარსი.
+- სტილები: `.app-floating-alerts`, `.app-floating-alert*` — `app/static/css/styles.css`.
+
+**დაბრუნების ღილაკი ქვეგვერდებზე — `.page-back-btn`**
+
+- მომრგვალებული ღილაკი ისრის ხატულით, რომელიც hover-ზე მარცხნივ გადაიწევს; გამოიყენება ქვეგვერდებზე, რომლებზეც სხვა გვერდიდან გადადიხარ:
+  - `/<lang>/seismic_events/<id>` → „მიწისძვრების სიაში დაბრუნება" (`events.details.back`)
+- Markup — ხატულა და თარგმნადი ტექსტი ცალ-ცალკე ელემენტებში უნდა იყოს, რომ i18n-მა ხატულა არ გადააწეროს:
+
+```html
+<a href="..." class="btn btn-sm page-back-btn mb-2">
+    <i class="fas fa-arrow-left page-back-btn-icon" aria-hidden="true"></i>
+    <span data-i18n="...">Back to ...</span>
+</a>
+```
 
 ### Seismic Events UI notes
 

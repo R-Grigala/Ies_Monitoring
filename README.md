@@ -41,8 +41,6 @@ Documentation is available in English (`docs/en/`) and Georgian (`docs/ka/`). Bo
 | Backend Setup | [en](docs/en/08-backend-setup.md) | [ka](docs/ka/08-backend-setup.md) |
 | API Inventory (Implemented) | [en](docs/en/09-api-inventory.md) | [ka](docs/ka/09-api-inventory.md) |
 | Seismic Events (UI + API) | [en](docs/en/10-seismic-events.md) | [ka](docs/ka/10-seismic-events.md) |
-| Alert Zones (API) | [en](docs/en/11-alert-zones.md) | [ka](docs/ka/11-alert-zones.md) |
-
 ## Current Backend Status
 
 **Implemented**
@@ -51,7 +49,6 @@ Documentation is available in English (`docs/en/`) and Georgian (`docs/ka/`). Bo
 - Accounts admin UI/API (`/api/accounts/...`)
 - Service accounts + API keys UI/API (`/api/services`, `/services`)
 - Recipients UI/API (`/api/recips`, `/notify`)
-- Alert zones API (`/api/alert_zones`): map polygons with ML magnitude range and notification target
 - Permissions catalog REST (`/api/permissions`) + user grant/revoke on accounts
 - Permissions seed + runtime checks (`can_users`, `can_permissions`, `can_recips`, `can_recips_read`, `can_event_view`, `can_event_edit`, `can_event_publish`)
 - JWT + service `X-API-Key` auth
