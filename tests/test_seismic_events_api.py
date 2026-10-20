@@ -70,7 +70,7 @@ def test_create_list_update_delete_seismic_event(client, admin_auth_headers, app
     assert list_response.get_json()["total"] >= 1
 
     update_response = client.put(
-        f"/api/seismic_events/{event_id}",
+        f"/api/seismic_events/event_id={event_id}",
         headers=admin_auth_headers,
         json={"location_en": "Tbilisi region", "depth": 12.0, "is_automatic": True},
     )
@@ -81,7 +81,7 @@ def test_create_list_update_delete_seismic_event(client, admin_auth_headers, app
     assert updated["is_automatic"] is True
 
     delete_response = client.delete(
-        f"/api/seismic_events/{event_id}",
+        f"/api/seismic_events/event_id={event_id}",
         headers=admin_auth_headers,
     )
     assert delete_response.status_code == 200
@@ -173,7 +173,7 @@ def test_event_magnitude_and_beachball_crud(client, admin_auth_headers, app):
     assert beachball["beachball_path"] == expected_path
     assert beachball_fs_path(event_id).is_file()
 
-    get_event = client.get(f"/api/seismic_events/{event_id}", headers=admin_auth_headers)
+    get_event = client.get(f"/api/seismic_events/event_id={event_id}", headers=admin_auth_headers)
     assert get_event.status_code == 200
     detail = get_event.get_json()
     assert len(detail["magnitudes"]) == 1
@@ -241,7 +241,7 @@ def test_filter_seismic_events(client, admin_auth_headers, app):
             "longitude": 44.8,
             "depth": 5.0,
             "seiscomp_oid": "Origin/filter-test-1",
-            "iesdata_id": "IES-2026-0001",
+            "iesdata_id": 20260001,
             "location_en": "Near Tbilisi",
             "area": "Georgia",
         },
@@ -258,7 +258,7 @@ def test_filter_seismic_events(client, admin_auth_headers, app):
             "longitude": 43.2,
             "depth": 25.0,
             "seiscomp_oid": "Origin/filter-test-2",
-            "iesdata_id": "IES-2026-0099",
+            "iesdata_id": 20260099,
             "location_en": "Near Kutaisi",
             "area": "Imereti",
         },
@@ -289,7 +289,7 @@ def test_filter_seismic_events(client, admin_auth_headers, app):
     by_ies = client.post(
         "/api/seismic_events/filter",
         headers=admin_auth_headers,
-        json={"iesdata_id": "2026-0001"},
+        json={"iesdata_id": 20260001},
     )
     assert by_ies.status_code == 200
     assert by_ies.get_json()["total"] == 1
@@ -379,44 +379,42 @@ def test_get_lookup_by_exact_ids(client, admin_auth_headers):
         admin_auth_headers,
         origin_time="2026-08-01T00:00:00",
         seiscomp_oid="ies2026abc",
-        iesdata_id="539870",
+        iesdata_id=539870,
     )
     newer = _create_event(
         client,
         admin_auth_headers,
         origin_time="2026-08-02T00:00:00",
         seiscomp_oid="ies2026abc123",
-        iesdata_id="5398701",
+        iesdata_id=5398701,
     )
 
     by_oid = client.get(
-        "/api/seismic_events/seiscomp_oid",
+        "/api/seismic_events/seiscomp_oid=ies2026abc",
         headers=admin_auth_headers,
-        query_string={"seiscomp_oid": "ies2026abc"},
     )
     assert by_oid.status_code == 200
     assert by_oid.get_json()["id"] == older["id"]
     assert by_oid.get_json()["seiscomp_oid"] == "ies2026abc"
 
     by_ies = client.get(
-        "/api/seismic_events/iesdata_id",
+        "/api/seismic_events/iesdata_id=539870",
         headers=admin_auth_headers,
-        query_string={"iesdata_id": "539870"},
     )
     assert by_ies.status_code == 200
     assert by_ies.get_json()["id"] == older["id"]
+    assert by_ies.get_json()["iesdata_id"] == 539870
 
     by_id = client.get(
-        f"/api/seismic_events/{newer['id']}",
+        f"/api/seismic_events/event_id={newer['id']}",
         headers=admin_auth_headers,
     )
     assert by_id.status_code == 200
     assert by_id.get_json()["id"] == newer["id"]
 
     missing = client.get(
-        "/api/seismic_events/seiscomp_oid",
+        "/api/seismic_events/seiscomp_oid=does-not-exist",
         headers=admin_auth_headers,
-        query_string={"seiscomp_oid": "does-not-exist"},
     )
     assert missing.status_code == 404
 
@@ -445,3 +443,29 @@ def test_get_list_is_bounded(client, admin_auth_headers):
         query_string={"limit": 500},
     )
     assert too_large.status_code == 400
+
+
+def test_iesdata_id_is_positive_integer(client, admin_auth_headers):
+    created = _create_event(client, admin_auth_headers, iesdata_id="539870")
+    assert created["iesdata_id"] == 539870
+
+    for bad in ("IES-2026-0001", "5.5", 5.5, 0, -3, True):
+        response = client.post(
+            "/api/seismic_events/",
+            headers=admin_auth_headers,
+            json={
+                "origin_time": "2026-08-05T12:30:00",
+                "latitude": 41.7,
+                "longitude": 44.8,
+                "iesdata_id": bad,
+            },
+        )
+        assert response.status_code == 400, bad
+
+    updated = client.put(
+        f"/api/seismic_events/event_id={created['id']}",
+        headers=admin_auth_headers,
+        json={"iesdata_id": 539871},
+    )
+    assert updated.status_code == 200
+    assert updated.get_json()["event"]["iesdata_id"] == 539871

@@ -22,8 +22,6 @@ from app.api.nsmodels.seismic_events import (
     seismic_event_create_parser,
     seismic_event_update_parser,
     seismic_event_get_parser,
-    seiscomp_oid_parser,
-    iesdata_id_parser,
     seismic_event_filter_parser,
     event_magnitude_create_parser,
     event_magnitude_update_parser,
@@ -179,7 +177,13 @@ def _apply_event_fields(event, payload, *, creating=False):
     elif creating:
         event.depth = None
 
-    for field in ("iesdata_id", "seiscomp_oid", "location_ge", "location_en", "area"):
+    if creating or "iesdata_id" in payload:
+        if payload.get("iesdata_id") is not None:
+            event.iesdata_id = payload.get("iesdata_id")
+        elif creating:
+            event.iesdata_id = None
+
+    for field in ("seiscomp_oid", "location_ge", "location_en", "area"):
         if creating or field in payload:
             if payload.get(field) is not None:
                 event.__setattr__(field, _optional_str(payload.get(field)))
@@ -273,7 +277,7 @@ def _build_filtered_events_query(payload):
     """Build a SeismicEvent query from optional filter args. Returns (query, error_tuple)."""
     event_id = payload.get("event_id")
     event_query = _optional_str(payload.get("event_query"))
-    iesdata_id = _optional_str(payload.get("iesdata_id"))
+    iesdata_id = payload.get("iesdata_id")
     seiscomp_oid = _optional_str(payload.get("seiscomp_oid"))
     location = _optional_str(payload.get("location"))
     area = _optional_str(payload.get("area"))
@@ -313,12 +317,12 @@ def _build_filtered_events_query(payload):
         query = query.filter(
             or_(
                 cast(SeismicEvent.id, String).ilike(pattern),
-                SeismicEvent.iesdata_id.ilike(pattern),
+                cast(SeismicEvent.iesdata_id, String).ilike(pattern),
             )
         )
 
     if iesdata_id is not None:
-        query = query.filter(SeismicEvent.iesdata_id.ilike(f"%{iesdata_id}%"))
+        query = query.filter(SeismicEvent.iesdata_id == iesdata_id)
 
     if seiscomp_oid is not None:
         query = query.filter(SeismicEvent.seiscomp_oid.ilike(f"%{seiscomp_oid}%"))
@@ -469,47 +473,44 @@ class SeismicEventsApi(Resource):
         ), 201
 
 
-@seismic_events_ns.route("/seismic_events/seiscomp_oid")
+@seismic_events_ns.route("/seismic_events/seiscomp_oid=<string:seiscomp_oid>")
 class SeismicEventBySeiscompApi(Resource):
-    @seismic_events_ns.doc(security=JWT_OR_API_KEY, parser=seiscomp_oid_parser)
+    @seismic_events_ns.doc(security=JWT_OR_API_KEY)
     @seismic_events_ns.response(200, "Success", seismic_event_model)
     @seismic_events_ns.response(400, "Validation Error", error_model)
     @seismic_events_ns.response(401, "Unauthorized", error_model)
     @seismic_events_ns.response(403, "Forbidden", error_model)
     @seismic_events_ns.response(404, "Not Found", error_model)
-    def get(self):
-        """Get one event by exact seiscomp_oid. Same body as GET /seismic_events/<id>."""
+    def get(self, seiscomp_oid):
+        """GET /api/seismic_events/seiscomp_oid=ies2026nrtc"""
         denied = _require_can_event_view()
         if denied:
             return denied
 
-        seiscomp_oid = _optional_str(seiscomp_oid_parser.parse_args().get("seiscomp_oid"))
+        seiscomp_oid = _optional_str(seiscomp_oid)
         if not seiscomp_oid:
             return {"error": "validation_error", "message": "seiscomp_oid cannot be empty."}, 400
         return _event_detail_or_404(_lookup_event(None, seiscomp_oid, None))
 
 
-@seismic_events_ns.route("/seismic_events/iesdata_id")
+@seismic_events_ns.route("/seismic_events/iesdata_id=<int:iesdata_id>")
 class SeismicEventByIesdataApi(Resource):
-    @seismic_events_ns.doc(security=JWT_OR_API_KEY, parser=iesdata_id_parser)
+    @seismic_events_ns.doc(security=JWT_OR_API_KEY)
     @seismic_events_ns.response(200, "Success", seismic_event_model)
     @seismic_events_ns.response(400, "Validation Error", error_model)
     @seismic_events_ns.response(401, "Unauthorized", error_model)
     @seismic_events_ns.response(403, "Forbidden", error_model)
     @seismic_events_ns.response(404, "Not Found", error_model)
-    def get(self):
-        """Get one event by exact iesdata_id. Same body as GET /seismic_events/<id>."""
+    def get(self, iesdata_id):
+        """GET /api/seismic_events/iesdata_id=539870"""
         denied = _require_can_event_view()
         if denied:
             return denied
 
-        iesdata_id = _optional_str(iesdata_id_parser.parse_args().get("iesdata_id"))
-        if not iesdata_id:
-            return {"error": "validation_error", "message": "iesdata_id cannot be empty."}, 400
         return _event_detail_or_404(_lookup_event(None, None, iesdata_id))
 
 
-@seismic_events_ns.route("/seismic_events/<int:event_id>")
+@seismic_events_ns.route("/seismic_events/event_id=<int:event_id>")
 class SeismicEventDetailApi(Resource):
     @seismic_events_ns.doc(security=JWT_OR_API_KEY)
     @seismic_events_ns.response(200, "Success", seismic_event_model)
@@ -517,7 +518,7 @@ class SeismicEventDetailApi(Resource):
     @seismic_events_ns.response(403, "Forbidden", error_model)
     @seismic_events_ns.response(404, "Not Found", error_model)
     def get(self, event_id):
-        """Get one event by numeric id (requires can_event_view or can_event_edit)."""
+        """GET /api/seismic_events/event_id=12"""
         denied = _require_can_event_view()
         if denied:
             return denied

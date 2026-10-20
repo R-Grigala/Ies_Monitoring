@@ -259,6 +259,17 @@ async function submitCreateEventForm(formEvent) {
         return;
     }
 
+    const iesdataIdText = document.getElementById("createEventIesdataId")?.value.trim() || "";
+    const iesdataId = iesdataIdText ? Number(iesdataIdText) : null;
+    if (iesdataIdText && (!/^\d+$/.test(iesdataIdText) || iesdataId < 1)) {
+        window.showAlert(
+            CREATE_EVENT_ALERT_ID,
+            "danger",
+            t("events.error.iesdata_id_invalid", "IES data ID must be a positive integer.")
+        );
+        return;
+    }
+
     if (!(await window.requireEventsAuth?.("add an earthquake"))) {
         return;
     }
@@ -275,7 +286,7 @@ async function submitCreateEventForm(formEvent) {
             location_ge: document.getElementById("createEventLocationGe")?.value.trim() || null,
             location_en: document.getElementById("createEventLocationEn")?.value.trim() || null,
             area: document.getElementById("createEventArea")?.value.trim() || null,
-            iesdata_id: document.getElementById("createEventIesdataId")?.value.trim() || null,
+            iesdata_id: iesdataId,
             seiscomp_oid: document.getElementById("createEventSeiscompOid")?.value.trim() || null,
         };
 
@@ -311,7 +322,7 @@ async function submitCreateEventForm(formEvent) {
                 );
             }
 
-            created = await window.makeApiRequest(`/api/seismic_events/${created.id}`, {
+            created = await window.makeApiRequest(`/api/seismic_events/event_id=${created.id}`, {
                 method: "GET",
             });
 

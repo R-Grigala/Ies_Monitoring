@@ -30,6 +30,24 @@ def parse_datetime(value):
         ) from err
 
 
+def parse_iesdata_id(value):
+    """Accept a positive integer or a string of digits; reject bool, float, and text."""
+    if value is None or value == "":
+        return None
+    if isinstance(value, bool) or isinstance(value, float):
+        raise ValueError("iesdata_id must be a positive integer, e.g. 539870")
+    if isinstance(value, int):
+        number = value
+    else:
+        text = str(value).strip()
+        if not (text.isascii() and text.isdigit()):
+            raise ValueError("iesdata_id must be a positive integer, e.g. 539870")
+        number = int(text)
+    if number < 1:
+        raise ValueError("iesdata_id must be a positive integer, e.g. 539870")
+    return number
+
+
 magnitude_catalog_model = seismic_events_ns.model(
     "MagnitudeCatalogItem",
     {
@@ -72,7 +90,7 @@ seismic_event_model = seismic_events_ns.model(
     "SeismicEvent",
     {
         "id": fields.Integer(required=True, example=1),
-        "iesdata_id": fields.String(required=False, example="54331"),
+        "iesdata_id": fields.Integer(required=False, example=539870),
         "seiscomp_oid": fields.String(required=False, example="ies2026nrtc"),
         "origin_time": fields.String(required=True, example="2026-08-05T12:30:00"),
         "latitude": fields.Float(required=True, example=41.7151),
@@ -159,7 +177,7 @@ seismic_event_create_parser.add_argument(
 seismic_event_create_parser.add_argument("latitude", type=float, required=True, help="Latitude")
 seismic_event_create_parser.add_argument("longitude", type=float, required=True, help="Longitude")
 seismic_event_create_parser.add_argument("depth", type=float, required=False, help="Depth in km")
-seismic_event_create_parser.add_argument("iesdata_id", type=str, required=False, help="External IES data id")
+seismic_event_create_parser.add_argument("iesdata_id", type=parse_iesdata_id, required=False, help="IES data id (positive integer)")
 seismic_event_create_parser.add_argument(
     "seiscomp_oid",
     type=str,
@@ -187,7 +205,7 @@ seismic_event_update_parser.add_argument(
 seismic_event_update_parser.add_argument("latitude", type=float, required=False, help="Latitude")
 seismic_event_update_parser.add_argument("longitude", type=float, required=False, help="Longitude")
 seismic_event_update_parser.add_argument("depth", type=float, required=False, help="Depth in km")
-seismic_event_update_parser.add_argument("iesdata_id", type=str, required=False, help="External IES data id")
+seismic_event_update_parser.add_argument("iesdata_id", type=parse_iesdata_id, required=False, help="IES data id (positive integer)")
 seismic_event_update_parser.add_argument(
     "seiscomp_oid",
     type=str,
@@ -273,24 +291,6 @@ seismic_event_get_parser.add_argument(
     help="Page size (default 100, max 200)",
 )
 
-seiscomp_oid_parser = reqparse.RequestParser()
-seiscomp_oid_parser.add_argument(
-    "seiscomp_oid",
-    type=str,
-    required=True,
-    location="args",
-    help="Exact SeisComP public id",
-)
-
-iesdata_id_parser = reqparse.RequestParser()
-iesdata_id_parser.add_argument(
-    "iesdata_id",
-    type=str,
-    required=True,
-    location="args",
-    help="Exact IES data id",
-)
-
 seismic_event_filter_parser = reqparse.RequestParser()
 seismic_event_filter_parser.add_argument(
     "event_id",
@@ -306,9 +306,9 @@ seismic_event_filter_parser.add_argument(
 )
 seismic_event_filter_parser.add_argument(
     "iesdata_id",
-    type=str,
+    type=parse_iesdata_id,
     required=False,
-    help="Substring match against IES data id",
+    help="Exact IES data id",
 )
 seismic_event_filter_parser.add_argument(
     "seiscomp_oid",

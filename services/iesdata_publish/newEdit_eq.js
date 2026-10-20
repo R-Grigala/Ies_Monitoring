@@ -38,7 +38,7 @@ function buildMonitoringEventPayload() {
     latitude: parseFloat($("#eqLatitude").val()),
     longitude: parseFloat($("#eqLongitude").val()),
     depth: parseFloat($("#eqDepth").val()),
-    iesdata_id: String(eq_id),
+    iesdata_id: parseInt(eq_id, 10),
     location_ge: $("#eqRegion_ge").val() || "",
     location_en: $("#eqRegion_en").val() || "",
     is_automatic: isAutomatic,
@@ -47,10 +47,9 @@ function buildMonitoringEventPayload() {
 
 function findMonitoringEventByIesdataId(done, fail) {
   $.ajax({
-    url: MONITORING_API_BASE + "/seismic_events/iesdata_id",
+    url: MONITORING_API_BASE + "/seismic_events/iesdata_id=" + parseInt(eq_id, 10),
     method: "GET",
     headers: monitoringHeaders(),
-    data: { iesdata_id: String(eq_id) },
     success: function (response) {
       done(response || null);
     },
@@ -185,7 +184,7 @@ function syncAndPublishViaMonitoring() {
           }
           var eventId = existing.id;
           $.ajax({
-            url: MONITORING_API_BASE + "/seismic_events/" + eventId,
+            url: MONITORING_API_BASE + "/seismic_events/event_id=" + eventId,
             method: "PUT",
             headers: monitoringHeaders(),
             data: JSON.stringify(payload),

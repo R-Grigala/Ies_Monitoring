@@ -208,7 +208,7 @@ def populate_db_core():
     sample_event = SeismicEvent.query.filter_by(seiscomp_oid=sample_oid).first()
     if not sample_event:
         sample_event = SeismicEvent(
-            iesdata_id="539870",
+            iesdata_id=539870,
             seiscomp_oid=sample_oid,
             origin_time=datetime(2026, 8, 6, 12, 0, 0, tzinfo=timezone.utc),
             latitude=41.7151,
