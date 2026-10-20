@@ -42,7 +42,7 @@ class ApiError(RuntimeError):
         self.status = status  # HTTP სტატუსი (ქსელის შეცდომისას None)
 
 
-def _request(method: str, path: str, payload: dict | None = None) -> dict:
+def _request(method: str, path: str, payload: dict | None = None, params: dict | None = None) -> dict:
     """უგზავნის მოთხოვნას API-ს და აბრუნებს პასუხის JSON-ს; შეცდომაზე ApiError."""
     if not API_KEY:
         raise ApiError("API_KEY is not set.")
@@ -53,6 +53,7 @@ def _request(method: str, path: str, payload: dict | None = None) -> dict:
             method,
             f"{BASE_URL}{path}",
             json=payload,
+            params=params,
             headers={"X-API-Key": API_KEY},
             timeout=TIMEOUT,
         )
@@ -142,20 +143,23 @@ def _validate_event(event: dict) -> None:
         raise ValueError("is_automatic must be a bool.")
 
 def find_event_by_oid(seiscomp_oid) -> dict | None:
-    """ეძებს მიწისძვრას seiscomp_oid-ით; აბრუნებს მიწისძვრას ან None-ს."""
-    data = _request(
-        "POST",
-        "/api/seismic_events/filter",
-        {"seiscomp_oid": seiscomp_oid},
-    )
+    """ეძებს მიწისძვრას ზუსტი seiscomp_oid-ით; აბრუნებს მიწისძვრას ან None-ს.
 
-    # API ნაწილობრივ დამთხვევასაც აბრუნებს ("abc" იპოვის "abc123"-საც),
-    # ამიტომ ვიღებთ მხოლოდ ზუსტ დამთხვევას
-    for item in data.get("items", []):
-        if item.get("seiscomp_oid") == seiscomp_oid:
-            return item
-
-    return None
+    GET /api/seismic_events/seiscomp_oid?seiscomp_oid=... ერთ ჩანაწერს კითხულობს.
+    """
+    try:
+        event = _request(
+            "GET",
+            "/api/seismic_events/seiscomp_oid",
+            params={"seiscomp_oid": seiscomp_oid},
+        )
+    except ApiError as exc:
+        if exc.status == 404:
+            return None
+        raise
+    if not isinstance(event, dict) or event.get("seiscomp_oid") != seiscomp_oid:
+        return None
+    return event
 
 
 def add_event(event: dict) -> dict:

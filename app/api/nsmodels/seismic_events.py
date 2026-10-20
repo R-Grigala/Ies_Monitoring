@@ -95,6 +95,7 @@ seismic_event_list_response_model = seismic_events_ns.model(
     {
         "items": fields.List(fields.Nested(seismic_event_model), required=True),
         "total": fields.Integer(required=True, example=1),
+        "limit": fields.Integer(required=False, example=100),
     },
 )
 
@@ -262,6 +263,33 @@ def parse_magnitude_filters(value):
         raise ValueError("magnitudes must be a list of filter objects")
     return value
 
+
+seismic_event_get_parser = reqparse.RequestParser()
+seismic_event_get_parser.add_argument(
+    "limit",
+    type=int,
+    required=False,
+    location="args",
+    help="Page size (default 100, max 200)",
+)
+
+seiscomp_oid_parser = reqparse.RequestParser()
+seiscomp_oid_parser.add_argument(
+    "seiscomp_oid",
+    type=str,
+    required=True,
+    location="args",
+    help="Exact SeisComP public id",
+)
+
+iesdata_id_parser = reqparse.RequestParser()
+iesdata_id_parser.add_argument(
+    "iesdata_id",
+    type=str,
+    required=True,
+    location="args",
+    help="Exact IES data id",
+)
 
 seismic_event_filter_parser = reqparse.RequestParser()
 seismic_event_filter_parser.add_argument(

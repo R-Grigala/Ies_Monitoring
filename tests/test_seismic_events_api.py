@@ -359,3 +359,89 @@ def test_filter_seismic_events(client, admin_auth_headers, app):
         json={"magnitude_min": 6, "magnitude_max": 3},
     )
     assert invalid_range.status_code == 400
+
+
+def _create_event(client, headers, **extra):
+    payload = {
+        "origin_time": "2026-08-05T12:30:00",
+        "latitude": 41.7,
+        "longitude": 44.8,
+    }
+    payload.update(extra)
+    response = client.post("/api/seismic_events/", headers=headers, json=payload)
+    assert response.status_code == 201
+    return response.get_json()["event"]
+
+
+def test_get_lookup_by_exact_ids(client, admin_auth_headers):
+    older = _create_event(
+        client,
+        admin_auth_headers,
+        origin_time="2026-08-01T00:00:00",
+        seiscomp_oid="ies2026abc",
+        iesdata_id="539870",
+    )
+    newer = _create_event(
+        client,
+        admin_auth_headers,
+        origin_time="2026-08-02T00:00:00",
+        seiscomp_oid="ies2026abc123",
+        iesdata_id="5398701",
+    )
+
+    by_oid = client.get(
+        "/api/seismic_events/seiscomp_oid",
+        headers=admin_auth_headers,
+        query_string={"seiscomp_oid": "ies2026abc"},
+    )
+    assert by_oid.status_code == 200
+    assert by_oid.get_json()["id"] == older["id"]
+    assert by_oid.get_json()["seiscomp_oid"] == "ies2026abc"
+
+    by_ies = client.get(
+        "/api/seismic_events/iesdata_id",
+        headers=admin_auth_headers,
+        query_string={"iesdata_id": "539870"},
+    )
+    assert by_ies.status_code == 200
+    assert by_ies.get_json()["id"] == older["id"]
+
+    by_id = client.get(
+        f"/api/seismic_events/{newer['id']}",
+        headers=admin_auth_headers,
+    )
+    assert by_id.status_code == 200
+    assert by_id.get_json()["id"] == newer["id"]
+
+    missing = client.get(
+        "/api/seismic_events/seiscomp_oid",
+        headers=admin_auth_headers,
+        query_string={"seiscomp_oid": "does-not-exist"},
+    )
+    assert missing.status_code == 404
+
+
+def test_get_list_is_bounded(client, admin_auth_headers):
+    _create_event(client, admin_auth_headers, origin_time="2026-01-01T00:00:00", seiscomp_oid="page-1")
+    _create_event(client, admin_auth_headers, origin_time="2026-01-02T00:00:00", seiscomp_oid="page-2")
+    _create_event(client, admin_auth_headers, origin_time="2026-01-03T00:00:00", seiscomp_oid="page-3")
+
+    page = client.get(
+        "/api/seismic_events/",
+        headers=admin_auth_headers,
+        query_string={"limit": 2},
+    )
+    assert page.status_code == 200
+    payload = page.get_json()
+    assert payload["total"] == 3
+    assert payload["limit"] == 2
+    assert "offset" not in payload
+    assert len(payload["items"]) == 2
+    assert payload["items"][0]["seiscomp_oid"] == "page-3"
+
+    too_large = client.get(
+        "/api/seismic_events/",
+        headers=admin_auth_headers,
+        query_string={"limit": 500},
+    )
+    assert too_large.status_code == 400

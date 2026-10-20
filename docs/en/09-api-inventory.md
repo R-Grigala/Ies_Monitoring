@@ -136,10 +136,12 @@ Requires JWT or API key with **`can_event_view`**, **`can_event_edit`**, or **`c
 
 | Method | Path | Auth | Notes |
 |--------|------|------|--------|
-| GET | `/api/seismic_events/` | `can_event_view` / `can_event_edit` / `can_event_publish` | List events with nested magnitudes + beachball; payload includes `is_published`, `published_at` |
+| GET | `/api/seismic_events/` | `can_event_view` / `can_event_edit` / `can_event_publish` | Newest page only. Query: `limit` (default 100, max 200). Response: `items`, `total`, `limit` |
 | POST | `/api/seismic_events/filter` | `can_event_view` / `can_event_edit` / `can_event_publish` | Filter by body fields: `event_id` (exact), `event_query` (substring on id or iesdata_id), `iesdata_id`, `seiscomp_oid`, `location`, `area`, `magnitude` (code), `magnitude_min`, `magnitude_max`, `magnitudes` (list of `{magnitude, magnitude_min, magnitude_max}` for AND), `depth_min`, `depth_max`, `date_from`, `date_to`. All optional; AND combined. `iesdata_id`, `seiscomp_oid`, `location`, `area` are substring matches |
 | POST | `/api/seismic_events/` | `can_event_edit` | Create. Required: `origin_time`, `latitude`, `longitude`. Optional: `depth`, `iesdata_id`, `seiscomp_oid`, `location_ge`, `location_en`, `area`, `is_automatic` (default false). **UI also requires `depth`.** |
-| GET | `/api/seismic_events/<id>` | `can_event_view` / `can_event_edit` / `can_event_publish` | Detail (includes `is_published`, `published_at`) |
+| GET | `/api/seismic_events/<id>` | `can_event_view` / `can_event_edit` / `can_event_publish` | One event by numeric id (includes `is_published`, `published_at`) |
+| GET | `/api/seismic_events/seiscomp_oid?seiscomp_oid=` | `can_event_view` / `can_event_edit` / `can_event_publish` | One event by exact `seiscomp_oid`. Same body as `GET /<id>`. 404 if missing |
+| GET | `/api/seismic_events/iesdata_id?iesdata_id=` | `can_event_view` / `can_event_edit` / `can_event_publish` | One event by exact `iesdata_id`. Same body as `GET /<id>`. 404 if missing |
 | PUT | `/api/seismic_events/<id>` | `can_event_edit` | Update fields |
 | DELETE | `/api/seismic_events/<id>` | `can_event_edit` | Delete event + cascade magnitudes/beachball |
 | GET | `/api/seismic_events/magnitude_types` | `can_event_view` / `can_event_edit` / `can_event_publish` | Magnitude catalog (ML, MW, …) |

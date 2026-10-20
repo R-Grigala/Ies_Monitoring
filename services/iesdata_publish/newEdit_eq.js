@@ -47,22 +47,18 @@ function buildMonitoringEventPayload() {
 
 function findMonitoringEventByIesdataId(done, fail) {
   $.ajax({
-    url: MONITORING_API_BASE + "/seismic_events/filter",
-    method: "POST",
+    url: MONITORING_API_BASE + "/seismic_events/iesdata_id",
+    method: "GET",
     headers: monitoringHeaders(),
-    data: JSON.stringify({ iesdata_id: String(eq_id) }),
+    data: { iesdata_id: String(eq_id) },
     success: function (response) {
-      var items = (response && response.items) || [];
-      var match = null;
-      for (var i = 0; i < items.length; i++) {
-        if (String(items[i].iesdata_id) === String(eq_id)) {
-          match = items[i];
-          break;
-        }
-      }
-      done(match);
+      done(response || null);
     },
     error: function (jqXHR, exception) {
+      if (jqXHR && jqXHR.status === 404) {
+        done(null);
+        return;
+      }
       console.log("monitoring lookup failed:", exception, jqXHR && jqXHR.responseText);
       if (fail) fail(jqXHR, exception);
     },

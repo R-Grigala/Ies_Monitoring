@@ -42,7 +42,7 @@ The client **does not filter** the full list in the browser. Apply / Reset call 
 
 | State | Request |
 |-------|---------|
-| Empty filter / Reset | `GET /api/seismic_events/` |
+| Empty filter / Reset | `GET /api/seismic_events/?limit=100` (newest page; `total` is the full count) |
 | Active filter | `POST /api/seismic_events/filter` |
 
 Filter fields and API mapping:

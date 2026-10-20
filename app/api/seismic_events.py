@@ -3,6 +3,7 @@ import logging
 from flask_restx import Resource, marshal
 from sqlalchemy import String, and_, cast, exists, or_
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import selectinload
 
 from app.extensions import db
 from app.api.nsmodels.seismic_events import (
@@ -20,6 +21,9 @@ from app.api.nsmodels.seismic_events import (
     error_model,
     seismic_event_create_parser,
     seismic_event_update_parser,
+    seismic_event_get_parser,
+    seiscomp_oid_parser,
+    iesdata_id_parser,
     seismic_event_filter_parser,
     event_magnitude_create_parser,
     event_magnitude_update_parser,
@@ -30,6 +34,30 @@ from app.utils.auth_utils import require_permissions
 from app.utils.gen_beachball_img import delete_beachball_image, sync_beachball_image
 
 logger = logging.getLogger("app.seismic_events")
+
+LIST_DEFAULT_LIMIT = 100
+LIST_MAX_LIMIT = 200
+
+
+def _event_load_options():
+    """Load magnitudes, beachball, and publish row in the same query as the event."""
+    return (
+        selectinload(SeismicEvent.event_magnitudes).selectinload(EventMagnitude.magnitude),
+        selectinload(SeismicEvent.beachball),
+        selectinload(SeismicEvent.published_event),
+    )
+
+
+def _lookup_event(event_id, seiscomp_oid, iesdata_id):
+    """Exact match on the given keys. Uses the unique indexes and reads one row."""
+    query = SeismicEvent.query.options(*_event_load_options())
+    if event_id is not None:
+        query = query.filter(SeismicEvent.id == event_id)
+    if seiscomp_oid is not None:
+        query = query.filter(SeismicEvent.seiscomp_oid == seiscomp_oid)
+    if iesdata_id is not None:
+        query = query.filter(SeismicEvent.iesdata_id == iesdata_id)
+    return query.limit(1).first()
 
 
 def _require_can_event_view():
@@ -77,10 +105,16 @@ def _validate_beachball_mechanism_payload(payload):
 
 
 def _get_event_or_404(event_id):
-    event = SeismicEvent.query.filter_by(id=event_id).first()
+    event = _lookup_event(event_id, None, None)
     if not event:
         return None, ({"error": "not_found", "message": "Seismic event not found."}, 404)
     return event, None
+
+
+def _event_detail_or_404(event):
+    if event is None:
+        return {"error": "not_found", "message": "Seismic event not found."}, 404
+    return marshal(event.to_dict(), seismic_event_model), 200
 
 
 def _optional_str(value):
@@ -363,18 +397,38 @@ class MagnitudeCatalogApi(Resource):
 
 @seismic_events_ns.route("/seismic_events/")
 class SeismicEventsApi(Resource):
-    @seismic_events_ns.doc(security=JWT_OR_API_KEY)
+    @seismic_events_ns.doc(security=JWT_OR_API_KEY, parser=seismic_event_get_parser)
     @seismic_events_ns.response(200, "Success", seismic_event_list_response_model)
+    @seismic_events_ns.response(400, "Validation Error", error_model)
     @seismic_events_ns.response(401, "Unauthorized", error_model)
     @seismic_events_ns.response(403, "Forbidden", error_model)
     def get(self):
-        """List seismic events (requires can_event_view or can_event_edit)."""
+        """Return the newest page of events. Query parameter is limit only."""
         denied = _require_can_event_view()
         if denied:
             return denied
 
-        items = SeismicEvent.query.order_by(SeismicEvent.origin_time.desc()).all()
-        payload = {"items": [item.to_dict() for item in items], "total": len(items)}
+        limit = seismic_event_get_parser.parse_args().get("limit")
+        if limit is None:
+            limit = LIST_DEFAULT_LIMIT
+        if limit < 1 or limit > LIST_MAX_LIMIT:
+            return {
+                "error": "validation_error",
+                "message": f"limit must be between 1 and {LIST_MAX_LIMIT}.",
+            }, 400
+
+        total = SeismicEvent.query.order_by(None).count()
+        items = (
+            SeismicEvent.query.options(*_event_load_options())
+            .order_by(SeismicEvent.origin_time.desc(), SeismicEvent.id.desc())
+            .limit(limit)
+            .all()
+        )
+        payload = {
+            "items": [item.to_dict() for item in items],
+            "total": total,
+            "limit": limit,
+        }
         return marshal(payload, seismic_event_list_response_model), 200
 
     @seismic_events_ns.doc(security=JWT_OR_API_KEY)
@@ -415,6 +469,46 @@ class SeismicEventsApi(Resource):
         ), 201
 
 
+@seismic_events_ns.route("/seismic_events/seiscomp_oid")
+class SeismicEventBySeiscompApi(Resource):
+    @seismic_events_ns.doc(security=JWT_OR_API_KEY, parser=seiscomp_oid_parser)
+    @seismic_events_ns.response(200, "Success", seismic_event_model)
+    @seismic_events_ns.response(400, "Validation Error", error_model)
+    @seismic_events_ns.response(401, "Unauthorized", error_model)
+    @seismic_events_ns.response(403, "Forbidden", error_model)
+    @seismic_events_ns.response(404, "Not Found", error_model)
+    def get(self):
+        """Get one event by exact seiscomp_oid. Same body as GET /seismic_events/<id>."""
+        denied = _require_can_event_view()
+        if denied:
+            return denied
+
+        seiscomp_oid = _optional_str(seiscomp_oid_parser.parse_args().get("seiscomp_oid"))
+        if not seiscomp_oid:
+            return {"error": "validation_error", "message": "seiscomp_oid cannot be empty."}, 400
+        return _event_detail_or_404(_lookup_event(None, seiscomp_oid, None))
+
+
+@seismic_events_ns.route("/seismic_events/iesdata_id")
+class SeismicEventByIesdataApi(Resource):
+    @seismic_events_ns.doc(security=JWT_OR_API_KEY, parser=iesdata_id_parser)
+    @seismic_events_ns.response(200, "Success", seismic_event_model)
+    @seismic_events_ns.response(400, "Validation Error", error_model)
+    @seismic_events_ns.response(401, "Unauthorized", error_model)
+    @seismic_events_ns.response(403, "Forbidden", error_model)
+    @seismic_events_ns.response(404, "Not Found", error_model)
+    def get(self):
+        """Get one event by exact iesdata_id. Same body as GET /seismic_events/<id>."""
+        denied = _require_can_event_view()
+        if denied:
+            return denied
+
+        iesdata_id = _optional_str(iesdata_id_parser.parse_args().get("iesdata_id"))
+        if not iesdata_id:
+            return {"error": "validation_error", "message": "iesdata_id cannot be empty."}, 400
+        return _event_detail_or_404(_lookup_event(None, None, iesdata_id))
+
+
 @seismic_events_ns.route("/seismic_events/<int:event_id>")
 class SeismicEventDetailApi(Resource):
     @seismic_events_ns.doc(security=JWT_OR_API_KEY)
@@ -423,7 +517,7 @@ class SeismicEventDetailApi(Resource):
     @seismic_events_ns.response(403, "Forbidden", error_model)
     @seismic_events_ns.response(404, "Not Found", error_model)
     def get(self, event_id):
-        """Get a seismic event by id (requires can_event_view or can_event_edit)."""
+        """Get one event by numeric id (requires can_event_view or can_event_edit)."""
         denied = _require_can_event_view()
         if denied:
             return denied

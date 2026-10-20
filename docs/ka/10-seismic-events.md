@@ -42,7 +42,7 @@ i18n: EN/KA (`app/static/js/i18n.js`).
 
 | მდგომარეობა | Request |
 |-------------|---------|
-| ცარიელი ფილტრი / Reset | `GET /api/seismic_events/` |
+| ცარიელი ფილტრი / Reset | `GET /api/seismic_events/?limit=100` (უახლესი გვერდი; `total` სრული რაოდენობაა) |
 | აქტიური ფილტრი | `POST /api/seismic_events/filter` |
 
 ფილტრის ველები და API mapping:
