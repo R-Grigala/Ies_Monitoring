@@ -626,7 +626,7 @@ function renderActions(event, permissions = {}) {
         }
 
         try {
-            await window.makeApiRequest(`/api/seismic_events/${event.id}`, {
+            await window.makeApiRequest(`/api/seismic_events/event_id=${event.id}`, {
                 method: "DELETE",
             });
             goToEventsList();
@@ -696,7 +696,7 @@ async function loadEventDetails() {
             return;
         }
 
-        const event = await window.makeApiRequest(`/api/seismic_events/${eventId}`, {
+        const event = await window.makeApiRequest(`/api/seismic_events/event_id=${eventId}`, {
             method: "GET",
         });
 

@@ -58,7 +58,7 @@ print("Event:", result["id"], "created" if result["created"] else "updated")
 | `longitude`    | **კი**      | `44.88`                  | -180 … 180                                          |
 | `magnitudes`   | **კი**      | `{"ML": 4.1, "MW": 3.9}` | მინიმუმ ერთი; ტიპი → მნიშვნელობა                    |
 | `depth`        | არა         | `8`                      | კმ; შეიძლება `None`                                 |
-| `iesdata_id`   | არა         | `None`                   | უნიკალური, მაქს. 100 სიმბოლო                        |
+| `iesdata_id`   | არა         | `None`                   | უნიკალური, დადებითი მთელი რიცხვი (მაგ. `539870`)     |
 | `location_ge`  | არა         | `"თბილისიდან 20 კმ"`     | მაქს. 500 სიმბოლო                                   |
 | `location_en`  | არა         | `"20 km from Tbilisi"`   | მაქს. 500 სიმბოლო                                   |
 | `area`         | არა         | `"local"`                | მაქს. **20** სიმბოლო                                |

@@ -315,11 +315,16 @@ function renderEvents(events) {
         })
         .join("");
 
-    const loadedTemplate = t("events.loaded", "Loaded {count} earthquakes.");
-    eventsStatus.textContent = loadedTemplate.replace(
-        "{count}",
-        String(sortedEvents.length)
-    );
+    const total = Number.isFinite(Number(window.eventsListTotal))
+        ? Number(window.eventsListTotal)
+        : sortedEvents.length;
+    const loadedTemplate =
+        total > sortedEvents.length
+            ? t("events.loaded_partial", "Loaded {count} of {total} earthquakes.")
+            : t("events.loaded", "Loaded {count} earthquakes.");
+    eventsStatus.textContent = loadedTemplate
+        .replace("{count}", String(sortedEvents.length))
+        .replace("{total}", String(total));
 }
 
 function renderEventsAndMap(events) {
@@ -341,7 +346,7 @@ async function applyEventsFilter(filterState) {
     try {
         let data;
         if (!filterState || window.isEmptyEventsFilter?.(filterState)) {
-            data = await window.makeApiRequest("/api/seismic_events/", {
+            data = await window.makeApiRequest("/api/seismic_events/?limit=100", {
                 method: "GET",
             });
         } else {
@@ -357,6 +362,7 @@ async function applyEventsFilter(filterState) {
         }
 
         allEvents = Array.isArray(data.items) ? data.items : [];
+        window.eventsListTotal = Number.isFinite(Number(data.total)) ? Number(data.total) : allEvents.length;
         window.updateAreaFilterOptions?.(allEvents);
         renderEventsAndMap(allEvents);
     } catch (error) {

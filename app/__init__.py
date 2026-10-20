@@ -134,13 +134,20 @@ def register_i18n_helpers(app):
         return response
 
 # Custom error handler for 404
+def _is_api_request():
+    return request.path == "/api" or request.path.startswith("/api/")
+
+
 def register_error_handlers(app):
     @app.errorhandler(404)
     def page_not_found(e):
-        # You can return a JSON response or render a custom HTML template
+        if _is_api_request():
+            return {"error": "not_found", "message": "The requested API URL was not found."}, 404
         return render_template("404.html"), 404
 
     @app.errorhandler(500)
     def server_error(error):
         app.logger.exception('An exception occurred during a request.')
+        if _is_api_request():
+            return {"error": "server_error", "message": "Internal server error."}, 500
         return render_template("500.html"), 500

@@ -1,6 +1,7 @@
 import math
 import os
 from datetime import datetime
+from urllib.parse import quote
 
 import requests
 from dotenv import load_dotenv
@@ -17,15 +18,14 @@ REQUIRED = ("seiscomp_oid", "origin_time", "latitude", "longitude")
 
 # ტექსტური ველები და მათი მაქსიმალური სიგრძე
 MAX_LEN = {
-    "seiscomp_oid": 100,
-    "iesdata_id": 100,
+    "seiscomp_oid": 20,
     "area": 20,
     "location_ge": 500,
     "location_en": 500,
 }
 
 # დასაშვები გასაღებების სრული სია; სხვა ნებისმიერი (მაგ. ბეჭდვის შეცდომა) უარყოფილია
-ALLOWED_KEYS = {*REQUIRED, *MAX_LEN, "depth", "magnitudes", "is_automatic"}
+ALLOWED_KEYS = {*REQUIRED, *MAX_LEN, "iesdata_id", "depth", "magnitudes", "is_automatic"}
 
 # HTTP სტატუსები, რომლებზეც API-ის message-ის ნაცვლად ჩვენი ტექსტი ჩანს
 HTTP_ERRORS = {
@@ -42,7 +42,7 @@ class ApiError(RuntimeError):
         self.status = status  # HTTP სტატუსი (ქსელის შეცდომისას None)
 
 
-def _request(method: str, path: str, payload: dict | None = None) -> dict:
+def _request(method: str, path: str, payload: dict | None = None, params: dict | None = None) -> dict:
     """უგზავნის მოთხოვნას API-ს და აბრუნებს პასუხის JSON-ს; შეცდომაზე ApiError."""
     if not API_KEY:
         raise ApiError("API_KEY is not set.")
@@ -53,6 +53,7 @@ def _request(method: str, path: str, payload: dict | None = None) -> dict:
             method,
             f"{BASE_URL}{path}",
             json=payload,
+            params=params,
             headers={"X-API-Key": API_KEY},
             timeout=TIMEOUT,
         )
@@ -114,6 +115,13 @@ def _validate_event(event: dict) -> None:
         if value is not None and (not isinstance(value, str) or len(value) > max_len):
             raise ValueError(f"{key} must be a string of at most {max_len} characters.")
 
+    # iesdata_id: თუ მითითებულია, უნდა იყოს დადებითი მთელი რიცხვი (არა "539870" და არა True)
+    iesdata_id = event.get("iesdata_id")
+    if iesdata_id is not None and (
+        isinstance(iesdata_id, bool) or not isinstance(iesdata_id, int) or iesdata_id < 1
+    ):
+        raise ValueError("iesdata_id must be a positive integer.")
+
     # მაგნიტუდები: არაცარიელი dict, ყველა მნიშვნელობა რიცხვი
     magnitudes = event.get("magnitudes")
     if not isinstance(magnitudes, dict) or not magnitudes:
@@ -142,20 +150,22 @@ def _validate_event(event: dict) -> None:
         raise ValueError("is_automatic must be a bool.")
 
 def find_event_by_oid(seiscomp_oid) -> dict | None:
-    """ეძებს მიწისძვრას seiscomp_oid-ით; აბრუნებს მიწისძვრას ან None-ს."""
-    data = _request(
-        "POST",
-        "/api/seismic_events/filter",
-        {"seiscomp_oid": seiscomp_oid},
-    )
+    """ეძებს მიწისძვრას ზუსტი seiscomp_oid-ით; აბრუნებს მიწისძვრას ან None-ს.
 
-    # API ნაწილობრივ დამთხვევასაც აბრუნებს ("abc" იპოვის "abc123"-საც),
-    # ამიტომ ვიღებთ მხოლოდ ზუსტ დამთხვევას
-    for item in data.get("items", []):
-        if item.get("seiscomp_oid") == seiscomp_oid:
-            return item
-
-    return None
+    GET /api/seismic_events/seiscomp_oid=ies2026nrtc ერთ ჩანაწერს კითხულობს.
+    """
+    try:
+        event = _request(
+            "GET",
+            f"/api/seismic_events/seiscomp_oid={quote(seiscomp_oid, safe='/')}",
+        )
+    except ApiError as exc:
+        if exc.status == 404:
+            return None
+        raise
+    if not isinstance(event, dict) or event.get("seiscomp_oid") != seiscomp_oid:
+        return None
+    return event
 
 
 def add_event(event: dict) -> dict:
@@ -212,7 +222,7 @@ def add_event(event: dict) -> dict:
             try:
                 _request(
                     "DELETE",
-                    f"/api/seismic_events/{event_id}",
+                    f"/api/seismic_events/event_id={event_id}",
                 )
             except ApiError as delete_exc:
                 # წაშლაც ვერ მოხერხდა: მომხმარებელმა უნდა იცოდეს, რომ ხელით უნდა წაშალოს
@@ -236,7 +246,7 @@ def add_event(event: dict) -> dict:
 
         _request(
             "PUT",
-            f"/api/seismic_events/{event_id}",
+            f"/api/seismic_events/event_id={event_id}",
             event_payload,
         )
 

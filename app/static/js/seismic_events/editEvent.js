@@ -152,7 +152,7 @@ async function loadEditMagnitudeTypes() {
 }
 
 async function refreshEventMagnitudes(eventId) {
-    const event = await window.makeApiRequest(`/api/seismic_events/${eventId}`, {
+    const event = await window.makeApiRequest(`/api/seismic_events/event_id=${eventId}`, {
         method: "GET",
     });
     renderMagnitudesSummary(event.magnitudes);
@@ -375,7 +375,7 @@ async function deleteEventBeachball() {
             method: "DELETE",
         });
         fillBeachballForm(null);
-        const event = await window.makeApiRequest(`/api/seismic_events/${eventId}`, {
+        const event = await window.makeApiRequest(`/api/seismic_events/event_id=${eventId}`, {
             method: "GET",
         });
         window.onEventUpdated?.(event);
@@ -427,7 +427,7 @@ function fillEventForm(event) {
     document.getElementById("editEventLocationGe").value = event.location_ge || "";
     document.getElementById("editEventLocationEn").value = event.location_en || "";
     setAreaValue(event.area || "");
-    document.getElementById("editEventIesdataId").value = event.iesdata_id || "";
+    document.getElementById("editEventIesdataId").value = event.iesdata_id ?? "";
     document.getElementById("editEventSeiscompOid").value = event.seiscomp_oid || "";
     renderMagnitudesSummary(event.magnitudes);
     fillBeachballForm(event.beachball);
@@ -447,7 +447,7 @@ async function openEditEventModal(eventId) {
     clearEditEventAlert();
 
     try {
-        const event = await window.makeApiRequest(`/api/seismic_events/${eventId}`, {
+        const event = await window.makeApiRequest(`/api/seismic_events/event_id=${eventId}`, {
             method: "GET",
         });
         fillEventForm(event);
@@ -482,6 +482,17 @@ async function submitEditEventForm(formEvent) {
         return;
     }
 
+    const iesdataIdText = document.getElementById("editEventIesdataId").value.trim();
+    const iesdataId = iesdataIdText ? Number(iesdataIdText) : null;
+    if (iesdataIdText && (!/^\d+$/.test(iesdataIdText) || iesdataId < 1)) {
+        window.showAlert(
+            EDIT_EVENT_ALERT_ID,
+            "danger",
+            t("events.error.iesdata_id_invalid", "IES data ID must be a positive integer.")
+        );
+        return;
+    }
+
     const beachballPayload = readBeachballPayload();
     if (isBeachballMechanismIncomplete(beachballPayload)) {
         window.showAlert(
@@ -507,11 +518,11 @@ async function submitEditEventForm(formEvent) {
             location_ge: document.getElementById("editEventLocationGe").value.trim() || null,
             location_en: document.getElementById("editEventLocationEn").value.trim() || null,
             area: document.getElementById("editEventArea").value.trim() || null,
-            iesdata_id: document.getElementById("editEventIesdataId").value.trim() || null,
+            iesdata_id: iesdataId,
             seiscomp_oid: document.getElementById("editEventSeiscompOid").value.trim() || null,
         };
 
-        const data = await window.makeApiRequest(`/api/seismic_events/${eventId}`, {
+        const data = await window.makeApiRequest(`/api/seismic_events/event_id=${eventId}`, {
             method: "PUT",
             body: JSON.stringify(payload),
         });
@@ -528,7 +539,7 @@ async function submitEditEventForm(formEvent) {
                 );
         }
 
-        const refreshed = await window.makeApiRequest(`/api/seismic_events/${eventId}`, {
+        const refreshed = await window.makeApiRequest(`/api/seismic_events/event_id=${eventId}`, {
             method: "GET",
         });
         window.onEventUpdated?.(refreshed);
@@ -574,7 +585,7 @@ async function deleteEventFromModal() {
     deleteButton.disabled = true;
 
     try {
-        const data = await window.makeApiRequest(`/api/seismic_events/${eventId}`, {
+        const data = await window.makeApiRequest(`/api/seismic_events/event_id=${eventId}`, {
             method: "DELETE",
         });
         window.onEventDeleted?.(eventId);

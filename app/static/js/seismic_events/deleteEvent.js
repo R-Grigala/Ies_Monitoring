@@ -23,7 +23,7 @@ async function deleteEvent(eventId) {
     }
 
     try {
-        const data = await window.makeApiRequest(`/api/seismic_events/${eventId}`, {
+        const data = await window.makeApiRequest(`/api/seismic_events/event_id=${eventId}`, {
             method: "DELETE",
         });
         window.onEventDeleted?.(eventId);
