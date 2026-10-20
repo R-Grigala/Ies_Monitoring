@@ -469,3 +469,125 @@ def test_iesdata_id_is_positive_integer(client, admin_auth_headers):
     )
     assert updated.status_code == 200
     assert updated.get_json()["event"]["iesdata_id"] == 539871
+
+
+def test_seiscomp_oid_lookup_allows_slash(client, admin_auth_headers):
+    created = _create_event(client, admin_auth_headers, seiscomp_oid="Origin/ies2026x")
+    response = client.get(
+        "/api/seismic_events/seiscomp_oid=Origin/ies2026x",
+        headers=admin_auth_headers,
+    )
+    assert response.status_code == 200
+    assert response.get_json()["id"] == created["id"]
+
+
+def test_unmatched_api_urls_return_json_404(client, admin_auth_headers):
+    for path in (
+        "/api/seismic_events/event_id=abc",
+        "/api/seismic_events/iesdata_id=abc",
+        "/api/seismic_events/seiscomp_oid=",
+        "/api/does-not-exist",
+    ):
+        response = client.get(path, headers=admin_auth_headers)
+        assert response.status_code == 404, path
+        assert response.get_json()["error"] == "not_found", path
+
+
+def test_event_numeric_fields_are_validated(client, admin_auth_headers):
+    base = {"origin_time": "2026-08-05T12:30:00", "latitude": 41.7, "longitude": 44.8}
+    for bad in (
+        {"latitude": 91},
+        {"latitude": "nan"},
+        {"longitude": -181},
+        {"longitude": "inf"},
+        {"depth": "abc"},
+        {"latitude": True},
+        {"seiscomp_oid": "x" * 21},
+    ):
+        response = client.post(
+            "/api/seismic_events/", headers=admin_auth_headers, json={**base, **bad}
+        )
+        assert response.status_code == 400, bad
+
+    event = _create_event(client, admin_auth_headers)
+    _seed_magnitude("ML", "Local")
+    bad_value = client.post(
+        f"/api/seismic_events/{event['id']}/magnitudes",
+        headers=admin_auth_headers,
+        json={"magnitude_code": "ML", "value": "nan"},
+    )
+    assert bad_value.status_code == 400
+
+    bad_dip = client.post(
+        f"/api/seismic_events/{event['id']}/beachball",
+        headers=admin_auth_headers,
+        json={"strike": 10, "dip": 120, "rake": 0},
+    )
+    assert bad_dip.status_code == 400
+
+
+def test_origin_time_with_offset_is_stored_as_utc(client, admin_auth_headers):
+    event = _create_event(client, admin_auth_headers, origin_time="2026-08-05T16:30:00+04:00")
+    assert event["origin_time"].startswith("2026-08-05T12:30:00")
+
+
+def test_update_is_partial_and_null_clears_optional_fields(client, admin_auth_headers):
+    event = _create_event(
+        client,
+        admin_auth_headers,
+        seiscomp_oid="ies2026clr",
+        iesdata_id=777,
+        depth=12.5,
+        location_en="Somewhere",
+    )
+    url = f"/api/seismic_events/event_id={event['id']}"
+
+    only_ge = client.put(url, headers=admin_auth_headers, json={"location_ge": "სადღაც"})
+    assert only_ge.status_code == 200
+    kept = only_ge.get_json()["event"]
+    assert kept["seiscomp_oid"] == "ies2026clr"
+    assert kept["iesdata_id"] == 777
+    assert kept["depth"] == 12.5
+    assert kept["location_en"] == "Somewhere"
+
+    cleared = client.put(
+        url,
+        headers=admin_auth_headers,
+        json={"seiscomp_oid": None, "iesdata_id": None, "depth": None, "location_en": None},
+    )
+    assert cleared.status_code == 200
+    body = cleared.get_json()["event"]
+    assert body["seiscomp_oid"] is None
+    assert body["iesdata_id"] is None
+    assert body["depth"] is None
+    assert body["location_en"] is None
+    assert body["location_ge"] == "სადღაც"
+
+    required_null = client.put(url, headers=admin_auth_headers, json={"latitude": None})
+    assert required_null.status_code == 400
+
+
+def test_filter_is_bounded_and_validates_magnitudes(client, admin_auth_headers):
+    for day in (1, 2, 3):
+        _create_event(client, admin_auth_headers, origin_time=f"2026-02-0{day}T00:00:00")
+
+    page = client.post(
+        "/api/seismic_events/filter", headers=admin_auth_headers, json={"limit": 2}
+    )
+    assert page.status_code == 200
+    payload = page.get_json()
+    assert payload["total"] == 3
+    assert payload["limit"] == 2
+    assert [item["origin_time"][:10] for item in payload["items"]] == ["2026-02-03", "2026-02-02"]
+
+    too_large = client.post(
+        "/api/seismic_events/filter", headers=admin_auth_headers, json={"limit": 201}
+    )
+    assert too_large.status_code == 400
+
+    bad_magnitude = client.post(
+        "/api/seismic_events/filter",
+        headers=admin_auth_headers,
+        json={"magnitudes": [{"magnitude_min": "abc", "magnitude_max": 3}]},
+    )
+    assert bad_magnitude.status_code == 400

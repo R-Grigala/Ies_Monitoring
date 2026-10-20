@@ -26,6 +26,7 @@ from app.api.nsmodels.seismic_events import (
     event_magnitude_create_parser,
     event_magnitude_update_parser,
     event_beachball_parser,
+    parse_number,
 )
 from app.models import SeismicEvent, Magnitude, EventMagnitude, EventBeachball
 from app.utils.auth_utils import require_permissions
@@ -156,44 +157,42 @@ def _resolve_magnitude(magnitude_id=None, magnitude_code=None):
     )
 
 
+REQUIRED_EVENT_FIELDS = ("origin_time", "latitude", "longitude")
+OPTIONAL_TEXT_FIELDS = ("seiscomp_oid", "location_ge", "location_en", "area")
+
+
 def _apply_event_fields(event, payload, *, creating=False):
-    if creating or payload.get("origin_time") is not None:
-        if payload.get("origin_time") is None:
-            return {"error": "validation_error", "message": "origin_time is required."}, 400
-        event.origin_time = payload.get("origin_time")
+    """
+    Copy parsed fields onto the event.
 
-    if creating or payload.get("latitude") is not None:
-        if payload.get("latitude") is None:
-            return {"error": "validation_error", "message": "latitude is required."}, 400
-        event.latitude = float(payload.get("latitude"))
-
-    if creating or payload.get("longitude") is not None:
-        if payload.get("longitude") is None:
-            return {"error": "validation_error", "message": "longitude is required."}, 400
-        event.longitude = float(payload.get("longitude"))
-
-    if "depth" in payload and payload.get("depth") is not None:
-        event.depth = float(payload.get("depth"))
-    elif creating:
-        event.depth = None
-
-    if creating or "iesdata_id" in payload:
-        if payload.get("iesdata_id") is not None:
-            event.iesdata_id = payload.get("iesdata_id")
-        elif creating:
-            event.iesdata_id = None
-
-    for field in ("seiscomp_oid", "location_ge", "location_en", "area"):
+    Create sets every field. Update (payload holds only the keys the client sent)
+    changes the sent keys; null clears an optional field and is rejected for required ones.
+    """
+    for field in REQUIRED_EVENT_FIELDS:
         if creating or field in payload:
-            if payload.get(field) is not None:
-                event.__setattr__(field, _optional_str(payload.get(field)))
-            elif creating:
-                event.__setattr__(field, None)
+            if payload.get(field) is None:
+                return {"error": "validation_error", "message": f"{field} is required."}, 400
+            setattr(event, field, payload[field])
+
+    for field in ("depth", "iesdata_id"):
+        if creating or field in payload:
+            setattr(event, field, payload.get(field))
+
+    for field in OPTIONAL_TEXT_FIELDS:
+        if creating or field in payload:
+            value = _optional_str(payload.get(field))
+            max_length = SeismicEvent.__table__.c[field].type.length
+            if value is not None and max_length and len(value) > max_length:
+                return {
+                    "error": "validation_error",
+                    "message": f"{field} must be at most {max_length} characters.",
+                }, 400
+            setattr(event, field, value)
 
     if creating:
-        event.is_automatic = bool(payload.get("is_automatic", False))
-    elif "is_automatic" in payload and payload.get("is_automatic") is not None:
-        event.is_automatic = bool(payload.get("is_automatic"))
+        event.is_automatic = bool(payload.get("is_automatic") or False)
+    elif payload.get("is_automatic") is not None:
+        event.is_automatic = bool(payload["is_automatic"])
 
     return None
 
@@ -212,13 +211,24 @@ def _normalize_magnitude_criteria(payload):
                     },
                     400,
                 )
+            try:
+                magnitude_min = parse_number(item.get("magnitude_min", item.get("min")))
+                magnitude_max = parse_number(item.get("magnitude_max", item.get("max")))
+            except ValueError:
+                return None, (
+                    {
+                        "error": "validation_error",
+                        "message": "magnitude_min and magnitude_max must be numbers.",
+                    },
+                    400,
+                )
             criteria.append(
                 {
                     "code": _optional_str(
                         item.get("magnitude") or item.get("magnitude_code") or item.get("code")
                     ),
-                    "min": item.get("magnitude_min", item.get("min")),
-                    "max": item.get("magnitude_max", item.get("max")),
+                    "min": magnitude_min,
+                    "max": magnitude_max,
                 }
             )
         return criteria, None
@@ -354,7 +364,35 @@ def _build_filtered_events_query(payload):
         if magnitude_apply_error:
             return None, magnitude_apply_error
 
-    return query.order_by(SeismicEvent.origin_time.desc()), None
+    return query, None
+
+
+def _validated_limit(limit):
+    """Returns (limit, error_tuple)."""
+    if limit is None:
+        return LIST_DEFAULT_LIMIT, None
+    if limit < 1 or limit > LIST_MAX_LIMIT:
+        return None, (
+            {
+                "error": "validation_error",
+                "message": f"limit must be between 1 and {LIST_MAX_LIMIT}.",
+            },
+            400,
+        )
+    return limit, None
+
+
+def _newest_events_page(query, limit):
+    """Count all matches, then load only the newest `limit` rows with their relations."""
+    total = query.order_by(None).count()
+    items = (
+        query.options(*_event_load_options())
+        .order_by(SeismicEvent.origin_time.desc(), SeismicEvent.id.desc())
+        .limit(limit)
+        .all()
+    )
+    payload = {"items": [item.to_dict() for item in items], "total": total, "limit": limit}
+    return marshal(payload, seismic_event_list_response_model), 200
 
 
 @seismic_events_ns.route("/seismic_events/filter")
@@ -367,19 +405,23 @@ class SeismicEventsFilterApi(Resource):
     @seismic_events_ns.response(403, "Forbidden", error_model)
     @seismic_events_ns.response(404, "Not Found", error_model)
     def post(self):
-        """Filter seismic events (requires can_event_view or can_event_edit). All body fields are optional."""
+        """Filter seismic events, newest first (requires can_event_view or can_event_edit).
+
+        All body fields are optional. Returns at most `limit` items (default 100, max 200);
+        `total` is the number of all matching events.
+        """
         denied = _require_can_event_view()
         if denied:
             return denied
 
         payload = seismic_event_filter_parser.parse_args()
+        limit, error = _validated_limit(payload.get("limit"))
+        if error:
+            return error
         query, error = _build_filtered_events_query(payload)
         if error:
             return error
-
-        items = query.all()
-        response = {"items": [item.to_dict() for item in items], "total": len(items)}
-        return marshal(response, seismic_event_list_response_model), 200
+        return _newest_events_page(query, limit)
 
 
 @seismic_events_ns.route("/seismic_events/magnitude_types")
@@ -412,28 +454,10 @@ class SeismicEventsApi(Resource):
         if denied:
             return denied
 
-        limit = seismic_event_get_parser.parse_args().get("limit")
-        if limit is None:
-            limit = LIST_DEFAULT_LIMIT
-        if limit < 1 or limit > LIST_MAX_LIMIT:
-            return {
-                "error": "validation_error",
-                "message": f"limit must be between 1 and {LIST_MAX_LIMIT}.",
-            }, 400
-
-        total = SeismicEvent.query.order_by(None).count()
-        items = (
-            SeismicEvent.query.options(*_event_load_options())
-            .order_by(SeismicEvent.origin_time.desc(), SeismicEvent.id.desc())
-            .limit(limit)
-            .all()
-        )
-        payload = {
-            "items": [item.to_dict() for item in items],
-            "total": total,
-            "limit": limit,
-        }
-        return marshal(payload, seismic_event_list_response_model), 200
+        limit, error = _validated_limit(seismic_event_get_parser.parse_args().get("limit"))
+        if error:
+            return error
+        return _newest_events_page(SeismicEvent.query, limit)
 
     @seismic_events_ns.doc(security=JWT_OR_API_KEY)
     @seismic_events_ns.expect(seismic_event_create_parser)
@@ -473,31 +497,26 @@ class SeismicEventsApi(Resource):
         ), 201
 
 
-@seismic_events_ns.route("/seismic_events/seiscomp_oid=<string:seiscomp_oid>")
+@seismic_events_ns.route("/seismic_events/seiscomp_oid=<path:seiscomp_oid>")
 class SeismicEventBySeiscompApi(Resource):
     @seismic_events_ns.doc(security=JWT_OR_API_KEY)
     @seismic_events_ns.response(200, "Success", seismic_event_model)
-    @seismic_events_ns.response(400, "Validation Error", error_model)
     @seismic_events_ns.response(401, "Unauthorized", error_model)
     @seismic_events_ns.response(403, "Forbidden", error_model)
     @seismic_events_ns.response(404, "Not Found", error_model)
     def get(self, seiscomp_oid):
-        """GET /api/seismic_events/seiscomp_oid=ies2026nrtc"""
+        """GET /api/seismic_events/seiscomp_oid=ies2026nrtc (exact match; `/` is allowed)"""
         denied = _require_can_event_view()
         if denied:
             return denied
 
-        seiscomp_oid = _optional_str(seiscomp_oid)
-        if not seiscomp_oid:
-            return {"error": "validation_error", "message": "seiscomp_oid cannot be empty."}, 400
-        return _event_detail_or_404(_lookup_event(None, seiscomp_oid, None))
+        return _event_detail_or_404(_lookup_event(None, seiscomp_oid.strip(), None))
 
 
 @seismic_events_ns.route("/seismic_events/iesdata_id=<int:iesdata_id>")
 class SeismicEventByIesdataApi(Resource):
     @seismic_events_ns.doc(security=JWT_OR_API_KEY)
     @seismic_events_ns.response(200, "Success", seismic_event_model)
-    @seismic_events_ns.response(400, "Validation Error", error_model)
     @seismic_events_ns.response(401, "Unauthorized", error_model)
     @seismic_events_ns.response(403, "Forbidden", error_model)
     @seismic_events_ns.response(404, "Not Found", error_model)
@@ -523,10 +542,7 @@ class SeismicEventDetailApi(Resource):
         if denied:
             return denied
 
-        event, error = _get_event_or_404(event_id)
-        if error:
-            return error
-        return marshal(event.to_dict(), seismic_event_model), 200
+        return _event_detail_or_404(_lookup_event(event_id, None, None))
 
     @seismic_events_ns.doc(security=JWT_OR_API_KEY)
     @seismic_events_ns.expect(seismic_event_update_parser)
@@ -547,15 +563,9 @@ class SeismicEventDetailApi(Resource):
             return error
 
         payload = seismic_event_update_parser.parse_args()
-        # RequestParser always returns declared keys; treat only provided non-None as updates
-        # except empty strings for optional text fields which clear via _optional_str when key present.
-        update_payload = {}
-        for key, value in payload.items():
-            if value is not None:
-                update_payload[key] = value
-
-        apply_error = _apply_event_fields(event, update_payload, creating=False)
+        apply_error = _apply_event_fields(event, payload, creating=False)
         if apply_error:
+            db.session.rollback()
             return apply_error
 
         try:
@@ -592,8 +602,8 @@ class SeismicEventDetailApi(Resource):
             return error
 
         event_id_value = event.id
-        delete_beachball_image(event_id_value)
         event.delete()
+        delete_beachball_image(event_id_value)
         logger.info("Seismic event deleted: event_id=%s", event_id_value)
         return marshal({"message": "Seismic event deleted successfully."}, message_response_model), 200
 
@@ -633,7 +643,7 @@ class EventMagnitudesApi(Resource):
         item = EventMagnitude(
             event_id=event.id,
             magnitude_id=magnitude.id,
-            value=float(value),
+            value=value,
         )
         try:
             item.create()
@@ -679,9 +689,6 @@ class EventMagnitudeDetailApi(Resource):
             return {"error": "not_found", "message": "Event magnitude not found."}, 404
 
         payload = event_magnitude_update_parser.parse_args()
-        if payload.get("value") is not None:
-            item.value = float(payload.get("value"))
-
         if payload.get("magnitude_id") is not None or payload.get("magnitude_code") is not None:
             magnitude, mag_error = _resolve_magnitude(
                 magnitude_id=payload.get("magnitude_id"),
@@ -690,6 +697,9 @@ class EventMagnitudeDetailApi(Resource):
             if mag_error:
                 return mag_error
             item.magnitude_id = magnitude.id
+
+        if payload.get("value") is not None:
+            item.value = payload["value"]
 
         try:
             item.save()
@@ -885,7 +895,7 @@ class EventBeachballApi(Resource):
             return {"error": "not_found", "message": "Beachball not found for this event."}, 404
 
         beachball_id = event.beachball.id
-        delete_beachball_image(event.id)
         event.beachball.delete()
+        delete_beachball_image(event.id)
         logger.info("Beachball deleted: event_id=%s beachball_id=%s", event.id, beachball_id)
         return marshal({"message": "Beachball deleted successfully."}, message_response_model), 200

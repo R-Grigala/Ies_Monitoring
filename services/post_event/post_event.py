@@ -1,6 +1,7 @@
 import math
 import os
 from datetime import datetime
+from urllib.parse import quote
 
 import requests
 from dotenv import load_dotenv
@@ -17,7 +18,7 @@ REQUIRED = ("seiscomp_oid", "origin_time", "latitude", "longitude")
 
 # ტექსტური ველები და მათი მაქსიმალური სიგრძე
 MAX_LEN = {
-    "seiscomp_oid": 100,
+    "seiscomp_oid": 20,
     "area": 20,
     "location_ge": 500,
     "location_en": 500,
@@ -156,7 +157,7 @@ def find_event_by_oid(seiscomp_oid) -> dict | None:
     try:
         event = _request(
             "GET",
-            f"/api/seismic_events/seiscomp_oid={seiscomp_oid}",
+            f"/api/seismic_events/seiscomp_oid={quote(seiscomp_oid, safe='/')}",
         )
     except ApiError as exc:
         if exc.status == 404:

@@ -1,4 +1,5 @@
-from datetime import datetime
+import math
+from datetime import datetime, timezone
 
 from flask_restx import fields, inputs, reqparse
 
@@ -14,20 +15,63 @@ JWT_OR_API_KEY = ["JsonWebToken", "ApiKeyAuth"]
 
 
 def parse_datetime(value):
-    """Parse ISO-like datetime strings for request parsers."""
+    """Parse ISO 8601 into naive UTC (the DB stores origin_time as naive UTC)."""
     if value is None or value == "":
         return None
     if isinstance(value, datetime):
-        return value
-    text = str(value).strip()
-    if text.endswith("Z"):
-        text = text[:-1] + "+00:00"
-    try:
-        return datetime.fromisoformat(text)
-    except ValueError as err:
-        raise ValueError(
-            "Invalid datetime format. Use ISO 8601, e.g. 2026-08-05T12:30:00"
-        ) from err
+        parsed = value
+    else:
+        text = str(value).strip()
+        if text.endswith("Z"):
+            text = text[:-1] + "+00:00"
+        try:
+            parsed = datetime.fromisoformat(text)
+        except ValueError as err:
+            raise ValueError(
+                "Invalid datetime format. Use ISO 8601, e.g. 2026-08-05T12:30:00"
+            ) from err
+    if parsed.tzinfo is not None:
+        parsed = parsed.astimezone(timezone.utc).replace(tzinfo=None)
+    return parsed
+
+
+def _number_parser(name, minimum=None, maximum=None):
+    """Finite float parser; rejects bool, NaN, and Infinity (NaN is stored as NULL)."""
+    # reqparse prefixes the argument help text, so the message omits the field name.
+    if minimum is not None and maximum is not None:
+        message = f"must be a number between {minimum:g} and {maximum:g}"
+    else:
+        message = "must be a finite number"
+
+    def parse(value):
+        if value is None or value == "":
+            return None
+        if isinstance(value, bool):
+            raise ValueError(message)
+        try:
+            number = float(value)
+        except (TypeError, ValueError) as err:
+            raise ValueError(message) from err
+        if not math.isfinite(number):
+            raise ValueError(message)
+        if minimum is not None and number < minimum:
+            raise ValueError(message)
+        if maximum is not None and number > maximum:
+            raise ValueError(message)
+        return number
+
+    parse.__name__ = f"parse_{name}"
+    return parse
+
+
+parse_latitude = _number_parser("latitude", -90, 90)
+parse_longitude = _number_parser("longitude", -180, 180)
+parse_depth = _number_parser("depth", -10, 800)
+parse_magnitude_value = _number_parser("value", -2, 10)
+parse_strike = _number_parser("strike", 0, 360)
+parse_dip = _number_parser("dip", 0, 90)
+parse_rake = _number_parser("rake", -180, 180)
+parse_number = _number_parser("value")
 
 
 def parse_iesdata_id(value):
@@ -174,9 +218,9 @@ seismic_event_create_parser.add_argument(
     required=True,
     help="Origin time ISO 8601, e.g. 2026-08-05T12:30:00",
 )
-seismic_event_create_parser.add_argument("latitude", type=float, required=True, help="Latitude")
-seismic_event_create_parser.add_argument("longitude", type=float, required=True, help="Longitude")
-seismic_event_create_parser.add_argument("depth", type=float, required=False, help="Depth in km")
+seismic_event_create_parser.add_argument("latitude", type=parse_latitude, required=True, help="Latitude")
+seismic_event_create_parser.add_argument("longitude", type=parse_longitude, required=True, help="Longitude")
+seismic_event_create_parser.add_argument("depth", type=parse_depth, required=False, help="Depth in km")
 seismic_event_create_parser.add_argument("iesdata_id", type=parse_iesdata_id, required=False, help="IES data id (positive integer)")
 seismic_event_create_parser.add_argument(
     "seiscomp_oid",
@@ -202,9 +246,9 @@ seismic_event_update_parser.add_argument(
     required=False,
     help="Origin time ISO 8601, e.g. 2026-08-05T12:30:00",
 )
-seismic_event_update_parser.add_argument("latitude", type=float, required=False, help="Latitude")
-seismic_event_update_parser.add_argument("longitude", type=float, required=False, help="Longitude")
-seismic_event_update_parser.add_argument("depth", type=float, required=False, help="Depth in km")
+seismic_event_update_parser.add_argument("latitude", type=parse_latitude, required=False, help="Latitude")
+seismic_event_update_parser.add_argument("longitude", type=parse_longitude, required=False, help="Longitude")
+seismic_event_update_parser.add_argument("depth", type=parse_depth, required=False, help="Depth in km")
 seismic_event_update_parser.add_argument("iesdata_id", type=parse_iesdata_id, required=False, help="IES data id (positive integer)")
 seismic_event_update_parser.add_argument(
     "seiscomp_oid",
@@ -221,11 +265,14 @@ seismic_event_update_parser.add_argument(
     required=False,
     help="Whether the event was created automatically",
 )
+# PUT is a partial update: omitted keys stay unchanged, explicit null clears optional fields.
+for _argument in seismic_event_update_parser.args:
+    _argument.store_missing = False
 
 event_magnitude_create_parser = reqparse.RequestParser()
 event_magnitude_create_parser.add_argument(
     "value",
-    type=float,
+    type=parse_magnitude_value,
     required=True,
     help="Magnitude value, e.g. 4.2",
 )
@@ -245,7 +292,7 @@ event_magnitude_create_parser.add_argument(
 event_magnitude_update_parser = reqparse.RequestParser()
 event_magnitude_update_parser.add_argument(
     "value",
-    type=float,
+    type=parse_magnitude_value,
     required=False,
     help="Magnitude value, e.g. 4.2",
 )
@@ -263,9 +310,9 @@ event_magnitude_update_parser.add_argument(
 )
 
 event_beachball_parser = reqparse.RequestParser()
-event_beachball_parser.add_argument("rake", type=float, required=False, help="Rake angle")
-event_beachball_parser.add_argument("dip", type=float, required=False, help="Dip angle")
-event_beachball_parser.add_argument("strike", type=float, required=False, help="Strike angle")
+event_beachball_parser.add_argument("rake", type=parse_rake, required=False, help="Rake angle")
+event_beachball_parser.add_argument("dip", type=parse_dip, required=False, help="Dip angle")
+event_beachball_parser.add_argument("strike", type=parse_strike, required=False, help="Strike angle")
 event_beachball_parser.add_argument(
     "beachball_path",
     type=str,
@@ -336,13 +383,13 @@ seismic_event_filter_parser.add_argument(
 )
 seismic_event_filter_parser.add_argument(
     "magnitude_min",
-    type=float,
+    type=parse_number,
     required=False,
     help="Minimum magnitude value (inclusive)",
 )
 seismic_event_filter_parser.add_argument(
     "magnitude_max",
-    type=float,
+    type=parse_number,
     required=False,
     help="Maximum magnitude value (inclusive)",
 )
@@ -355,13 +402,13 @@ seismic_event_filter_parser.add_argument(
 )
 seismic_event_filter_parser.add_argument(
     "depth_min",
-    type=float,
+    type=parse_number,
     required=False,
     help="Minimum depth in km (inclusive)",
 )
 seismic_event_filter_parser.add_argument(
     "depth_max",
-    type=float,
+    type=parse_number,
     required=False,
     help="Maximum depth in km (inclusive)",
 )
@@ -376,4 +423,10 @@ seismic_event_filter_parser.add_argument(
     type=parse_datetime,
     required=False,
     help="Origin time to (ISO 8601, inclusive)",
+)
+seismic_event_filter_parser.add_argument(
+    "limit",
+    type=int,
+    required=False,
+    help="Max events to return, newest first (default 100, max 200)",
 )
