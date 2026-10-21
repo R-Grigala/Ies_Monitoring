@@ -252,6 +252,150 @@
     border-bottom-width: 1px;
 }
 
+.accounts-header-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.accounts-user-text {
+    min-width: 0;
+}
+
+.accounts-uuid {
+    max-width: 16rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.accounts-cell-email {
+    word-break: break-word;
+}
+
+/* Phones: each account becomes a card with labelled dates and full-width actions. */
+@media (max-width: 767.98px) {
+    .accounts-header-actions {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .accounts-header-actions #addAccountButton {
+        grid-column: 1 / -1;
+        order: -1;
+    }
+
+    .accounts-header-actions .btn {
+        width: 100%;
+    }
+
+    .accounts-table thead {
+        display: none;
+    }
+
+    .accounts-table,
+    .accounts-table tbody {
+        display: block;
+        width: 100%;
+    }
+
+    .accounts-table tbody {
+        display: flex;
+        flex-direction: column;
+        gap: 0.65rem;
+    }
+
+    .accounts-table tbody tr {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        grid-template-areas:
+            "user status"
+            "email email"
+            "created updated"
+            "actions actions";
+        gap: 0.6rem 0.75rem;
+        padding: 0.85rem;
+        border: 1px solid var(--bs-border-color);
+        border-radius: 0.85rem;
+        background: #fff;
+    }
+
+    .accounts-table.table-hover > tbody > tr:hover > * {
+        --bs-table-bg-state: transparent;
+    }
+
+    .accounts-table tbody td {
+        display: block;
+        padding: 0;
+        border: 0;
+        min-width: 0;
+        text-align: left;
+        background: transparent;
+    }
+
+    .accounts-table td.accounts-cell-user { grid-area: user; }
+
+    .accounts-table td.accounts-cell-status {
+        grid-area: status;
+        justify-self: end;
+        align-self: start;
+    }
+
+    .accounts-table td.accounts-cell-email {
+        grid-area: email;
+        font-size: 0.88rem;
+    }
+
+    .accounts-table td.accounts-cell-date {
+        font-size: 0.8rem;
+        white-space: normal;
+    }
+
+    .accounts-table td.accounts-cell-date:nth-of-type(4) { grid-area: created; }
+    .accounts-table td.accounts-cell-date:nth-of-type(5) { grid-area: updated; }
+
+    .accounts-table td.accounts-cell-date::before {
+        content: attr(data-label);
+        display: block;
+        font-size: 0.68rem;
+        font-weight: 600;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        color: var(--bs-secondary-color);
+    }
+
+    .accounts-table td.accounts-cell-email,
+    .accounts-table td.accounts-cell-date {
+        padding-top: 0.6rem;
+        border-top: 1px dashed #e4e7ec;
+    }
+
+    .accounts-table td.accounts-cell-actions {
+        grid-area: actions;
+        text-align: left;
+    }
+
+    .accounts-table td.accounts-cell-actions > div {
+        display: flex !important;
+        width: 100%;
+    }
+
+    .accounts-table td.accounts-cell-actions .btn {
+        flex: 1;
+        padding-top: 0.45rem;
+        padding-bottom: 0.45rem;
+    }
+
+    .accounts-uuid {
+        max-width: 100%;
+    }
+
+    .accounts-avatar {
+        flex-shrink: 0;
+    }
+}
+
 #editAccountModal .modal-content {
     border-radius: 1rem;
 }
