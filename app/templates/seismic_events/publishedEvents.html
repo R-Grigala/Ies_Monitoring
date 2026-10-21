@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+
+{% block title %}
+    IES Monitoring | Published Earthquakes
+{% endblock %}
+
+{% block main_container_class %}container-lg py-3 py-md-4{% endblock %}
+
+{% block body %}
+<section class="published-hero mb-3 mb-md-4">
+    <div class="d-flex justify-content-between align-items-end gap-3">
+        <div class="published-hero-text">
+            <p class="index-kicker text-uppercase mb-1" data-i18n="published.kicker">Seismic monitoring</p>
+            <h1 class="h3 fw-bold mb-1" data-i18n="published.title">Published Earthquakes</h1>
+            <p class="text-muted mb-0" data-i18n="published.subtitle">
+                Earthquakes reviewed and published by the seismic monitoring team.
+            </p>
+        </div>
+        <div class="published-count" aria-live="polite">
+            <span class="published-count-value" id="publishedCount">–</span>
+            <span class="published-count-label" data-i18n="published.count_label">earthquakes</span>
+        </div>
+    </div>
+</section>
+
+<div class="card border-0 shadow-sm published-card">
+    <div class="card-body p-0">
+        <div class="table-responsive published-table-scroll">
+            <table class="table align-middle mb-0 published-table">
+                <thead>
+                    <tr>
+                        <th class="published-col-type" data-i18n="published.table.type">A/C</th>
+                        <th class="published-col-time" data-i18n="published.table.time">Origin time (UTC)</th>
+                        <th class="published-col-mag" data-i18n="published.table.magnitude">Magnitude</th>
+                        <th class="published-col-fm" data-i18n="published.table.fm">FM</th>
+                        <th class="published-col-depth" data-i18n="events.table.depth_km">Depth (km)</th>
+                        <th class="published-col-location" data-i18n="events.table.location">Location</th>
+                    </tr>
+                </thead>
+                <tbody id="publishedTableBody">
+                    <tr class="published-placeholder-row">
+                        <td colspan="6" id="publishedStatus" data-i18n="events.loading">Loading...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <div class="card-footer bg-white border-0 published-legend">
+        <span><span class="published-type published-type-a">A</span> <span data-i18n="published.legend.automatic">Automatic</span></span>
+        <span><span class="published-type published-type-c">C</span> <span data-i18n="published.legend.calculated">Calculated (reviewed)</span></span>
+        <span class="text-muted" data-i18n="published.legend.fm">FM — focal mechanism (beachball)</span>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/seismic_events/publishedEvents.js') }}" defer></script>
+{% endblock %}

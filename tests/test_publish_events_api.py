@@ -45,7 +45,11 @@ def test_list_published_events_is_public(client, admin_auth_headers, app):
     with app.app_context():
         _seed_magnitude("ML")
         assert client.get("/api/publish_events/").status_code == 200
-        assert client.get("/api/publish_events/").get_json() == {"items": [], "total": 0}
+        assert client.get("/api/publish_events/").get_json() == {
+            "items": [],
+            "total": 0,
+            "limit": 100,
+        }
 
     event_id = _create_event_with_ml(client, admin_auth_headers, is_automatic=True)
     with patch("app.api.publish_events.publish_eq", return_value="ok-publish"):
@@ -66,6 +70,25 @@ def test_list_published_events_is_public(client, admin_auth_headers, app):
     assert data["items"][0]["event"]["is_published"] is True
     assert data["items"][0]["published_at"] is not None
     assert "wp_response" not in data["items"][0]
+
+    assert client.get("/api/publish_events/", query_string={"limit": 201}).status_code == 400
+
+
+def test_published_events_page_is_public(client):
+    redirect = client.get("/published_events")
+    assert redirect.status_code == 302
+    assert redirect.headers["Location"].endswith("/en/published_events")
+
+    page = client.get("/ka/published_events")
+    assert page.status_code == 200
+    assert b"publishedTableBody" in page.data
+    assert b"publishedEvents.js" in page.data
+
+
+def test_index_view_events_links_to_published_page(client):
+    page = client.get("/en/")
+    assert page.status_code == 200
+    assert b'href="/en/published_events"' in page.data
 
 
 def test_publish_requires_permission(client, user_auth_headers, admin_auth_headers, app):

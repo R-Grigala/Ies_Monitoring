@@ -1,4 +1,4 @@
-from flask_restx import fields
+from flask_restx import fields, reqparse
 
 from app.extensions import api
 from app.api.nsmodels.seismic_events import seismic_event_model
@@ -37,7 +37,17 @@ published_events_list_response_model = publish_events_ns.model(
     {
         "items": fields.List(fields.Nested(published_event_item_model), required=True),
         "total": fields.Integer(required=True, example=1),
+        "limit": fields.Integer(required=False, example=100),
     },
+)
+
+published_events_get_parser = reqparse.RequestParser()
+published_events_get_parser.add_argument(
+    "limit",
+    type=int,
+    required=False,
+    location="args",
+    help="Page size (default 100, max 200)",
 )
 
 publish_event_response_model = publish_events_ns.model(
