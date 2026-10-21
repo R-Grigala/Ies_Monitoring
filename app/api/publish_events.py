@@ -3,15 +3,18 @@ from datetime import datetime, timezone
 
 from flask import current_app
 from flask_restx import Resource, marshal
+from sqlalchemy.orm import selectinload
 
 from app.api.nsmodels.publish_events import (
     publish_events_ns,
     JWT_OR_API_KEY,
     publish_event_response_model,
     published_events_list_response_model,
+    published_events_get_parser,
     error_model,
 )
-from app.models import SeismicEvent, PublishedEvent
+from app.api.seismic_events import LIST_DEFAULT_LIMIT, LIST_MAX_LIMIT
+from app.models import SeismicEvent, PublishedEvent, EventMagnitude
 from app.utils.auth_utils import require_permissions
 from app.utils.wp_publish_client import publish_eq, unpublish_eq
 
@@ -83,14 +86,37 @@ def _published_item_payload(row):
 class PublishedEventsListApi(Resource):
     @publish_events_ns.doc(security=[])
     @publish_events_ns.response(200, "Success", published_events_list_response_model)
+    @publish_events_ns.expect(published_events_get_parser)
+    @publish_events_ns.response(400, "Validation Error", error_model)
     def get(self):
-        """List all published seismic events (public, no auth required)."""
+        """List published seismic events, newest first (public, no auth required).
+
+        Query parameter: limit (default 100, max 200). `total` counts all published events.
+        """
+        limit = published_events_get_parser.parse_args().get("limit")
+        if limit is None:
+            limit = LIST_DEFAULT_LIMIT
+        if limit < 1 or limit > LIST_MAX_LIMIT:
+            return {
+                "error": "validation_error",
+                "message": f"limit must be between 1 and {LIST_MAX_LIMIT}.",
+            }, 400
+
+        total = PublishedEvent.query.count()
         rows = (
-            PublishedEvent.query.order_by(PublishedEvent.published_at.desc()).all()
+            PublishedEvent.query.options(
+                selectinload(PublishedEvent.event)
+                .selectinload(SeismicEvent.event_magnitudes)
+                .selectinload(EventMagnitude.magnitude),
+                selectinload(PublishedEvent.event).selectinload(SeismicEvent.beachball),
+            )
+            .order_by(PublishedEvent.published_at.desc(), PublishedEvent.id.desc())
+            .limit(limit)
+            .all()
         )
         items = [_published_item_payload(row) for row in rows]
         return marshal(
-            {"items": items, "total": len(items)},
+            {"items": items, "total": total, "limit": limit},
             published_events_list_response_model,
         ), 200
 

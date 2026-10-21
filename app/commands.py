@@ -2,7 +2,7 @@ from flask.cli import with_appcontext
 from flask import current_app
 import click
 
-from datetime import datetime, timezone
+from datetime import datetime
 
 from app.extensions import db
 from app.models import (
@@ -12,7 +12,9 @@ from app.models import (
     Magnitude,
     SeismicEvent,
     EventMagnitude,
+    EventBeachball,
 )
+from app.utils.gen_beachball_img import sync_beachball_image
 
 # --- Core logic (გამოსაყენებელი როგორც CLI-დან, ისე ტესტებიდან) ---
 
@@ -204,18 +206,18 @@ def populate_db_core():
             click.echo(f"Permission already assigned to admin user: {permission.code}")
 
     click.echo("Ensuring sample seismic event exists...")
-    sample_oid = "ies2024oeem"
+    sample_oid = "ies2026rudf"
     sample_event = SeismicEvent.query.filter_by(seiscomp_oid=sample_oid).first()
     if not sample_event:
         sample_event = SeismicEvent(
-            iesdata_id=539870,
+            iesdata_id=588683,
             seiscomp_oid=sample_oid,
-            origin_time=datetime(2026, 8, 6, 12, 0, 0, tzinfo=timezone.utc),
-            latitude=41.7151,
-            longitude=44.8271,
-            depth=10.5,
-            location_ge="თბილისის მახლობლად",
-            location_en="Near Tbilisi",
+            origin_time=datetime(2026, 9, 8, 4, 52, 15),
+            latitude=41.607,
+            longitude=43.5676,
+            depth=15.3,
+            location_ge="ქალაქი ახალქალაქი - ჩრდილო-აღმოსავლეთი - 20კმ. სოფელი ბეჟანო.",
+            location_en="City Akhalkalaki - North-East - 20km. Village Bejano.",
             area="local",
             is_automatic=False,
         )
@@ -224,21 +226,36 @@ def populate_db_core():
     else:
         click.echo(f"Sample seismic event already exists: {sample_oid}")
 
-    ml_magnitude = Magnitude.query.filter_by(code="ML").first()
-    if ml_magnitude and sample_event:
-        existing_ml = EventMagnitude.query.filter_by(
+    for code, value in (("ML", 4.23), ("MW", 3.97)):
+        magnitude = Magnitude.query.filter_by(code=code).first()
+        if not magnitude:
+            continue
+        existing = EventMagnitude.query.filter_by(
             event_id=sample_event.id,
-            magnitude_id=ml_magnitude.id,
+            magnitude_id=magnitude.id,
         ).first()
-        if not existing_ml:
+        if not existing:
             EventMagnitude(
                 event_id=sample_event.id,
-                magnitude_id=ml_magnitude.id,
-                value=5.33,
+                magnitude_id=magnitude.id,
+                value=value,
             ).create()
-            click.echo("Assigned sample ML magnitude 5.33 to test event.")
+            click.echo(f"Assigned sample {code} magnitude {value} to test event.")
         else:
-            click.echo("Sample ML magnitude already assigned to test event.")
+            click.echo(f"Sample {code} magnitude already assigned to test event.")
+
+    if not sample_event.beachball:
+        beachball = EventBeachball(event_id=sample_event.id, strike=55.0, dip=80.0, rake=12.0)
+        try:
+            beachball.beachball_path = sync_beachball_image(
+                sample_event.id, beachball.strike, beachball.dip, beachball.rake
+            )
+        except Exception as err:
+            click.echo(f"Beachball image generation failed, saving angles only: {err}")
+        beachball.create()
+        click.echo("Created sample beachball (strike 55, dip 80, rake 12).")
+    else:
+        click.echo("Sample beachball already exists.")
 
     User.save()
 

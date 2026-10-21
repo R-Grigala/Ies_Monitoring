@@ -75,7 +75,10 @@ function renderAccountsTable(items) {
     const totalBadge = document.getElementById("accountsTotal");
     tbody.innerHTML = "";
 
-    totalBadge.textContent = `${items.length} / ${accountsData.length}`;
+    totalBadge.textContent =
+        items.length === accountsData.length
+            ? String(accountsData.length)
+            : `${items.length} / ${accountsData.length}`;
 
     if (!items.length) {
         setVisibleState("empty");
@@ -102,20 +105,20 @@ function renderAccountsTable(items) {
             `;
 
         row.innerHTML = `
-            <td>
+            <td class="accounts-cell-user">
                 <div class="d-flex align-items-center gap-3">
                     <div class="accounts-avatar">${escapeHtml(getInitials(user.first_name, user.last_name))}</div>
-                    <div>
+                    <div class="accounts-user-text">
                         <div class="fw-semibold">${escapeHtml(getFullName(user))}</div>
-                        <div class="small text-muted">${escapeHtml(user.uuid)}</div>
+                        <div class="small text-muted accounts-uuid" title="${escapeHtml(user.uuid)}">${escapeHtml(user.uuid)}</div>
                     </div>
                 </div>
             </td>
-            <td class="text-break">${escapeHtml(user.email || "—")}</td>
-            <td><span class="badge ${statusClass}">${statusLabel}</span></td>
-            <td class="text-nowrap">${formatDate(user.created_at)}</td>
-            <td class="text-nowrap">${formatDate(user.updated_at)}</td>
-            <td class="text-end">
+            <td class="accounts-cell-email">${escapeHtml(user.email || "—")}</td>
+            <td class="accounts-cell-status"><span class="badge ${statusClass}">${statusLabel}</span></td>
+            <td class="text-nowrap accounts-cell-date" data-label="${escapeHtml(t("accounts.table.created", "Created"))}">${formatDate(user.created_at)}</td>
+            <td class="text-nowrap accounts-cell-date" data-label="${escapeHtml(t("accounts.table.updated", "Updated"))}">${formatDate(user.updated_at)}</td>
+            <td class="text-end accounts-cell-actions">
                 <div class="d-inline-flex gap-2">
                     <button
                         type="button"

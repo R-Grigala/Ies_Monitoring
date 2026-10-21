@@ -161,7 +161,7 @@ Publish/unpublish require JWT or API key with **`can_event_publish`**. List is p
 
 | Method | Path | Auth | Notes |
 |--------|------|------|--------|
-| GET | `/api/publish_events/` | Public (no auth) | List all published events (`items` + `total`), newest `published_at` first; each item includes nested seismic `event` |
+| GET | `/api/publish_events/` | Public (no auth) | List published events, newest `published_at` first. Query: `limit` (default 100, max 200). Response: `items`, `total` (all published), `limit`; each item includes nested seismic `event`. Used by the public page `/<lang>/published_events` |
 | POST | `/api/publish_events/publish/<id>` | `can_event_publish` | Publish/update on WordPress (no body). WP `id` = our event id; `type` = `A`/`M` from `is_automatic`; `description_*` and `region_*` both from `location_*`; mag prefers ML. Upserts `published_events` |
 | POST | `/api/publish_events/unpublish/<id>` | `can_event_publish` | Unpublish from WordPress and delete `published_events` row |
 

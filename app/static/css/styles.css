@@ -252,6 +252,150 @@
     border-bottom-width: 1px;
 }
 
+.accounts-header-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.accounts-user-text {
+    min-width: 0;
+}
+
+.accounts-uuid {
+    max-width: 16rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.accounts-cell-email {
+    word-break: break-word;
+}
+
+/* Phones: each account becomes a card with labelled dates and full-width actions. */
+@media (max-width: 767.98px) {
+    .accounts-header-actions {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .accounts-header-actions #addAccountButton {
+        grid-column: 1 / -1;
+        order: -1;
+    }
+
+    .accounts-header-actions .btn {
+        width: 100%;
+    }
+
+    .accounts-table thead {
+        display: none;
+    }
+
+    .accounts-table,
+    .accounts-table tbody {
+        display: block;
+        width: 100%;
+    }
+
+    .accounts-table tbody {
+        display: flex;
+        flex-direction: column;
+        gap: 0.65rem;
+    }
+
+    .accounts-table tbody tr {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        grid-template-areas:
+            "user status"
+            "email email"
+            "created updated"
+            "actions actions";
+        gap: 0.6rem 0.75rem;
+        padding: 0.85rem;
+        border: 1px solid var(--bs-border-color);
+        border-radius: 0.85rem;
+        background: #fff;
+    }
+
+    .accounts-table.table-hover > tbody > tr:hover > * {
+        --bs-table-bg-state: transparent;
+    }
+
+    .accounts-table tbody td {
+        display: block;
+        padding: 0;
+        border: 0;
+        min-width: 0;
+        text-align: left;
+        background: transparent;
+    }
+
+    .accounts-table td.accounts-cell-user { grid-area: user; }
+
+    .accounts-table td.accounts-cell-status {
+        grid-area: status;
+        justify-self: end;
+        align-self: start;
+    }
+
+    .accounts-table td.accounts-cell-email {
+        grid-area: email;
+        font-size: 0.88rem;
+    }
+
+    .accounts-table td.accounts-cell-date {
+        font-size: 0.8rem;
+        white-space: normal;
+    }
+
+    .accounts-table td.accounts-cell-date:nth-of-type(4) { grid-area: created; }
+    .accounts-table td.accounts-cell-date:nth-of-type(5) { grid-area: updated; }
+
+    .accounts-table td.accounts-cell-date::before {
+        content: attr(data-label);
+        display: block;
+        font-size: 0.68rem;
+        font-weight: 600;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        color: var(--bs-secondary-color);
+    }
+
+    .accounts-table td.accounts-cell-email,
+    .accounts-table td.accounts-cell-date {
+        padding-top: 0.6rem;
+        border-top: 1px dashed #e4e7ec;
+    }
+
+    .accounts-table td.accounts-cell-actions {
+        grid-area: actions;
+        text-align: left;
+    }
+
+    .accounts-table td.accounts-cell-actions > div {
+        display: flex !important;
+        width: 100%;
+    }
+
+    .accounts-table td.accounts-cell-actions .btn {
+        flex: 1;
+        padding-top: 0.45rem;
+        padding-bottom: 0.45rem;
+    }
+
+    .accounts-uuid {
+        max-width: 100%;
+    }
+
+    .accounts-avatar {
+        flex-shrink: 0;
+    }
+}
+
 #editAccountModal .modal-content {
     border-radius: 1rem;
 }
@@ -499,6 +643,374 @@
 
 .events-col-location {
     width: auto;
+}
+
+/* Published earthquakes (public page) */
+.published-count {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 0.4rem;
+    padding: 0.55rem 1rem;
+    border-radius: 0.8rem;
+    background: rgba(var(--bs-primary-rgb), 0.08);
+    color: var(--bs-primary);
+    align-self: flex-start;
+}
+
+.published-count-value {
+    font-size: 1.5rem;
+    font-weight: 700;
+    line-height: 1;
+}
+
+.published-count-label {
+    font-size: 0.8rem;
+    font-weight: 500;
+}
+
+.published-card {
+    border-radius: 0.9rem;
+    overflow: hidden;
+}
+
+.published-table-scroll {
+    max-height: min(70vh, 720px);
+    overflow: auto;
+}
+
+.published-table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    background: #f8f9fb;
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--bs-secondary-color);
+    padding: 0.75rem 0.9rem;
+    border-bottom: 1px solid var(--bs-border-color);
+    white-space: nowrap;
+}
+
+.published-table tbody td {
+    padding: 0.8rem 0.9rem;
+    border-bottom-color: #eef0f3;
+    font-size: 0.88rem;
+}
+
+.published-table tbody tr:last-child td {
+    border-bottom: 0;
+}
+
+.published-table tbody tr:not(.published-placeholder-row):hover {
+    background-color: #f5f8fc;
+}
+
+.published-table th,
+.published-table td {
+    text-align: center;
+    white-space: nowrap;
+}
+
+.published-col-type { width: 7%; }
+.published-col-time { width: 12%; }
+.published-col-mag { width: 10%; }
+.published-col-fm { width: 9%; }
+.published-col-depth { width: 10%; }
+
+.published-table .published-col-location {
+    width: 52%;
+    min-width: 16rem;
+    white-space: normal;
+}
+
+.published-type {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.75rem;
+    height: 1.75rem;
+    border-radius: 50%;
+    font-size: 0.78rem;
+    font-weight: 700;
+}
+
+.published-type-a {
+    background: #fff4d6;
+    color: #9a6700;
+}
+
+.published-type-c {
+    background: #dcf5e7;
+    color: #146c43;
+}
+
+.published-date {
+    font-weight: 600;
+    color: var(--bs-body-color);
+}
+
+.published-time {
+    font-family: var(--bs-font-monospace);
+    font-size: 0.8rem;
+    color: var(--bs-secondary-color);
+}
+
+.published-mag {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-width: 3.4rem;
+    padding: 0.3rem 0.5rem;
+    border-radius: 0.6rem;
+    line-height: 1.1;
+}
+
+.published-mag-value {
+    font-size: 1.05rem;
+    font-weight: 700;
+}
+
+.published-mag-code {
+    font-size: 0.65rem;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    opacity: 0.8;
+}
+
+.published-mag-minor {
+    background: #e7f1ff;
+    color: #0b5ed7;
+}
+
+.published-mag-moderate {
+    background: #fff4d6;
+    color: #9a6700;
+}
+
+.published-mag-strong {
+    background: #ffe5d0;
+    color: #c2410c;
+}
+
+.published-mag-major {
+    background: #fde2e4;
+    color: #b42318;
+}
+
+.published-beachball {
+    display: inline-block;
+    border-radius: 50%;
+    transition: transform 0.15s ease;
+}
+
+.published-beachball:hover,
+.published-beachball:focus-visible {
+    transform: scale(1.6);
+}
+
+.published-beachball img {
+    width: 44px;
+    height: 44px;
+    object-fit: contain;
+    display: block;
+}
+
+.published-depth {
+    font-weight: 600;
+}
+
+.published-location {
+    font-weight: 500;
+    color: var(--bs-body-color);
+}
+
+.published-coords {
+    margin-top: 0.15rem;
+    font-size: 0.76rem;
+    color: var(--bs-secondary-color);
+}
+
+.published-placeholder-row td {
+    padding: 2.5rem 1rem;
+    text-align: center;
+    color: var(--bs-secondary-color);
+}
+
+.published-placeholder-row .fa-solid {
+    font-size: 1.6rem;
+    opacity: 0.5;
+}
+
+.published-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem 1.25rem;
+    align-items: center;
+    justify-content: center;
+    padding: 0.75rem 1rem;
+    font-size: 0.78rem;
+    border-top: 1px solid #eef0f3 !important;
+}
+
+.published-legend .published-type {
+    width: 1.35rem;
+    height: 1.35rem;
+    font-size: 0.68rem;
+}
+
+.published-depth-meta {
+    display: none;
+}
+
+/* Phones: each earthquake becomes its own card instead of a wide table row. */
+@media (max-width: 767.98px) {
+    .published-hero h1 {
+        font-size: 1.35rem;
+    }
+
+    .published-hero-text p.text-muted {
+        font-size: 0.85rem;
+    }
+
+    .published-count {
+        flex-direction: column;
+        align-items: center;
+        gap: 0.1rem;
+        padding: 0.5rem 0.75rem;
+        flex-shrink: 0;
+    }
+
+    .published-count-value {
+        font-size: 1.3rem;
+    }
+
+    .published-count-label {
+        font-size: 0.7rem;
+    }
+
+    .published-card {
+        background: transparent;
+        box-shadow: none !important;
+        overflow: visible;
+    }
+
+    .published-table-scroll {
+        max-height: none;
+        overflow: visible;
+    }
+
+    .published-table thead {
+        display: none;
+    }
+
+    .published-table,
+    .published-table tbody {
+        display: block;
+        width: 100%;
+        background: transparent;
+    }
+
+    .published-table tbody {
+        display: flex;
+        flex-direction: column;
+        gap: 0.65rem;
+    }
+
+    .published-table tbody tr {
+        display: block;
+        background: #fff;
+        border-radius: 0.85rem;
+        box-shadow: 0 1px 3px rgba(16, 24, 40, 0.08);
+    }
+
+    .published-table tbody tr:not(.published-placeholder-row) {
+        display: grid;
+        grid-template-columns: auto 1fr auto auto;
+        grid-template-areas:
+            "type time mag fm"
+            "loc loc loc loc";
+        align-items: center;
+        gap: 0.6rem 0.75rem;
+        padding: 0.85rem 0.95rem;
+    }
+
+    .published-table tbody tr:not(.published-placeholder-row):hover {
+        background: #fff;
+    }
+
+    .published-table tbody tr td {
+        display: block;
+        width: auto;
+        padding: 0;
+        border: 0;
+        min-width: 0;
+        background: transparent;
+    }
+
+    .published-table tbody tr:not(.published-placeholder-row) td {
+        width: auto;
+        min-width: 0;
+        text-align: left;
+    }
+
+    .published-table td.published-col-type { grid-area: type; }
+    .published-table td.published-col-time { grid-area: time; }
+    .published-table td.published-col-mag { grid-area: mag; }
+    .published-table td.published-col-fm { grid-area: fm; }
+
+    .published-table td.published-col-depth {
+        display: none;
+    }
+
+    .published-table td.published-col-location {
+        grid-area: loc;
+        white-space: normal;
+        padding-top: 0.6rem;
+        border-top: 1px dashed #e4e7ec;
+    }
+
+    .published-table td.published-col-location .published-location {
+        line-height: 1.35;
+    }
+
+    .published-coords,
+    .published-depth-meta {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.3rem;
+        margin-top: 0.35rem;
+        margin-right: 0.9rem;
+        font-size: 0.76rem;
+        color: var(--bs-secondary-color);
+    }
+
+    .published-depth-meta strong {
+        color: var(--bs-body-color);
+    }
+
+    .published-beachball img {
+        width: 48px;
+        height: 48px;
+    }
+
+    .published-beachball:hover,
+    .published-beachball:focus-visible {
+        transform: none;
+    }
+
+    .published-placeholder-row td {
+        text-align: center;
+    }
+
+    .published-legend {
+        margin-top: 0.75rem;
+        border-radius: 0.85rem;
+        border-top: 0 !important;
+        box-shadow: 0 1px 3px rgba(16, 24, 40, 0.08);
+    }
 }
 
 .events-actions {

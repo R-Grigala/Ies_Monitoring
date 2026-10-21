@@ -35,6 +35,18 @@ def events(lang=None):
     return render_template("events.html")
 
 
+@seismic_events_blueprint.route("/published_events")
+@seismic_events_blueprint.route("/<lang>/published_events")
+def published_events(lang=None):
+    raw_lang = lang
+    lang = _normalized_lang(lang)
+    if raw_lang is None:
+        return redirect(url_for("seismic_events.published_events", lang=_preferred_lang()))
+    if lang is None:
+        return redirect(url_for("seismic_events.published_events", lang="en"))
+    return render_template("publishedEvents.html")
+
+
 @seismic_events_blueprint.route("/seismic_events/<int:event_id>")
 @seismic_events_blueprint.route("/<lang>/seismic_events/<int:event_id>")
 def event_details(event_id, lang=None):
