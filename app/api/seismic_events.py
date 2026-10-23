@@ -127,6 +127,22 @@ def _optional_str(value):
     return text or None
 
 
+# K (energy class) is a logarithm of energy, not a magnitude scale; typical values are 5-17.
+MAGNITUDE_VALUE_RANGES = {"K": (0, 20)}
+DEFAULT_MAGNITUDE_VALUE_RANGE = (-2, 10)
+
+
+def _magnitude_value_error(magnitude, value):
+    code = (magnitude.code or "").upper()
+    minimum, maximum = MAGNITUDE_VALUE_RANGES.get(code, DEFAULT_MAGNITUDE_VALUE_RANGE)
+    if minimum <= value <= maximum:
+        return None
+    return {
+        "error": "validation_error",
+        "message": f"{code} value must be a number between {minimum:g} and {maximum:g}.",
+    }, 400
+
+
 def _resolve_magnitude(magnitude_id=None, magnitude_code=None):
     if magnitude_id is not None:
         magnitude = Magnitude.query.filter_by(id=magnitude_id).first()
@@ -713,6 +729,9 @@ class EventMagnitudesApi(Resource):
         value = payload.get("value")
         if value is None:
             return {"error": "validation_error", "message": "value is required."}, 400
+        range_error = _magnitude_value_error(magnitude, value)
+        if range_error:
+            return range_error
 
         item = EventMagnitude(
             event_id=event.id,
@@ -771,10 +790,16 @@ class EventMagnitudeDetailApi(Resource):
             )
             if mag_error:
                 return mag_error
-            item.magnitude_id = magnitude.id
+        else:
+            magnitude = item.magnitude
 
-        if payload.get("value") is not None:
-            item.value = payload["value"]
+        value = payload["value"] if payload.get("value") is not None else item.value
+        range_error = _magnitude_value_error(magnitude, value)
+        if range_error:
+            return range_error
+
+        item.magnitude_id = magnitude.id
+        item.value = value
         item.event.mark_updated_by(resolve_actor())
 
         try:

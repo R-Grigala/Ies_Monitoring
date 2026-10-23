@@ -67,7 +67,8 @@ def _number_parser(name, minimum=None, maximum=None):
 parse_latitude = _number_parser("latitude", -90, 90)
 parse_longitude = _number_parser("longitude", -180, 180)
 parse_depth = _number_parser("depth", -10, 800)
-parse_magnitude_value = _number_parser("value", -2, 10)
+# The allowed range depends on the magnitude type, so it is checked in the API once the type is known.
+parse_magnitude_value = _number_parser("value")
 parse_strike = _number_parser("strike", 0, 360)
 parse_dip = _number_parser("dip", 0, 90)
 parse_rake = _number_parser("rake", -180, 180)

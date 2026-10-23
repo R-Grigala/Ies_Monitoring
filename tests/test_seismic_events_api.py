@@ -787,3 +787,33 @@ def test_upgrade_db_adds_missing_columns_without_losing_rows(tmp_path):
         assert event.to_dict()["created_by"] is None
         db.session.remove()
         db.drop_all()
+
+
+def test_magnitude_value_range_depends_on_type(client, admin_auth_headers, app):
+    with app.app_context():
+        _seed_magnitude("ML", "Local Magnitude")
+        _seed_magnitude("K", "Energy Class")
+    event = _create_event(client, admin_auth_headers)
+    url = f"/api/seismic_events/{event['id']}/magnitudes"
+
+    energy = client.post(url, headers=admin_auth_headers, json={"magnitude_code": "K", "value": 10.3})
+    assert energy.status_code == 201
+
+    too_big = client.post(url, headers=admin_auth_headers, json={"magnitude_code": "ML", "value": 10.3})
+    assert too_big.status_code == 400
+    assert "ML value must be a number between -2 and 10" in too_big.get_json()["message"]
+
+    local = client.post(url, headers=admin_auth_headers, json={"magnitude_code": "ML", "value": 4.1})
+    assert local.status_code == 201
+    local_id = local.get_json()["event_magnitude"]["id"]
+    rejected = client.put(
+        f"/api/seismic_events/magnitudes/{local_id}", headers=admin_auth_headers, json={"value": 12}
+    )
+    assert rejected.status_code == 400
+
+    energy_id = energy.get_json()["event_magnitude"]["id"]
+    updated = client.put(
+        f"/api/seismic_events/magnitudes/{energy_id}", headers=admin_auth_headers, json={"value": 15.5}
+    )
+    assert updated.status_code == 200
+    assert updated.get_json()["event_magnitude"]["value"] == 15.5
