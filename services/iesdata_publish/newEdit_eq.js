@@ -64,36 +64,106 @@ function findMonitoringEventByIesdataId(done, fail) {
   });
 }
 
-function ensureMonitoringMagnitude(eventId, done, fail) {
-  var mags = choose_mag();
-  if (!mags || mags["mag"] === undefined || mags["mag"] === null || mags["mag"] === "") {
+// Iesdata-ს ამ მიწისძვრის ყველა მაგნიტუდა: [{ code: "ml", value: "3.4" }, ...]
+// იკითხება eqMagnitudesTable ცხრილიდან, ისევე როგორც updateEqMagnitudesArrayFromTable():
+// მაგნიტუდის რიგები იწყება მე-2 ინდექსიდან, ბოლო რიგი "დამატების" რიგია;
+// row.id მაგნიტუდის ტიპია, მნიშვნელობა კი #eqMag<ტიპი>Value ველშია.
+function collectIesdataMagnitudes() {
+  var table = document.getElementById("eqMagnitudesTable");
+  if (!table) return [];
+  var items = [];
+  for (var i = 2; i < table.rows.length - 1; i++) {
+    var code = table.rows[i].id;
+    var input = document.getElementById("eqMag" + code + "Value");
+    if (code && input && input.value !== "") {
+      items.push({ code: code, value: input.value });
+    }
+  }
+  return items;
+}
+
+function validMonitoringMagnitudes() {
+  var seen = {};
+  return collectIesdataMagnitudes()
+    .map(function (item) {
+      return { code: String(item.code || "").trim().toUpperCase(), value: parseFloat(item.value) };
+    })
+    .filter(function (item) {
+      // Monitoring keeps one value per magnitude type, so the first one wins.
+      if (!item.code || isNaN(item.value) || seen[item.code]) return false;
+      seen[item.code] = true;
+      return true;
+    });
+}
+
+// Adds the magnitude types the event doesn't have yet and updates changed values.
+// Magnitudes that exist only on Monitoring are left untouched.
+function ensureMonitoringMagnitudes(eventId, done, fail) {
+  var wanted = validMonitoringMagnitudes();
+  if (!wanted.length) {
     done(eventId);
     return;
   }
   $.ajax({
-    url: MONITORING_API_BASE + "/seismic_events/" + eventId + "/magnitudes",
-    method: "POST",
+    url: MONITORING_API_BASE + "/seismic_events/event_id=" + eventId,
+    method: "GET",
     headers: monitoringHeaders(),
-    data: JSON.stringify({
-      magnitude_code: mags["mag_type"] || "ML",
-      value: parseFloat(mags["mag"]),
-    }),
-    success: function () {
-      done(eventId);
+    success: function (event) {
+      var existingByCode = {};
+      ((event && event.magnitudes) || []).forEach(function (item) {
+        if (item.magnitude && item.magnitude.code) {
+          existingByCode[item.magnitude.code.toUpperCase()] = item;
+        }
+      });
+
+      var index = 0;
+      function next() {
+        if (index >= wanted.length) {
+          done(eventId);
+          return;
+        }
+        var item = wanted[index++];
+        var existing = existingByCode[item.code];
+        if (existing && existing.value === item.value) {
+          next();
+          return;
+        }
+        $.ajax({
+          url: existing
+            ? MONITORING_API_BASE + "/seismic_events/magnitudes/" + existing.id
+            : MONITORING_API_BASE + "/seismic_events/" + eventId + "/magnitudes",
+          method: existing ? "PUT" : "POST",
+          headers: monitoringHeaders(),
+          data: JSON.stringify(
+            existing ? { value: item.value } : { magnitude_code: item.code, value: item.value }
+          ),
+          success: next,
+          error: function (jqXHR, exception) {
+            // 404: this type is not in Monitoring's magnitude catalog; keep the others.
+            if (!existing && jqXHR && jqXHR.status === 404) {
+              console.log("monitoring magnitude " + item.code + " skipped:", jqXHR.responseText);
+              next();
+              return;
+            }
+            console.log(
+              "monitoring magnitude " + item.code + " failed:",
+              exception,
+              jqXHR && jqXHR.responseText
+            );
+            if (fail) fail(jqXHR, exception);
+          },
+        });
+      }
+      next();
     },
     error: function (jqXHR, exception) {
-      // 409 = magnitude type already on event — still publishable
-      if (jqXHR && jqXHR.status === 409) {
-        done(eventId);
-        return;
-      }
-      console.log("monitoring magnitude failed:", exception, jqXHR && jqXHR.responseText);
+      console.log("monitoring event reload failed:", exception, jqXHR && jqXHR.responseText);
       if (fail) fail(jqXHR, exception);
     },
   });
 }
 
-function ensureMonitoringBeachball(eventId, done) {
+function ensureMonitoringBeachball(eventId, hasBeachball, done) {
   var strike = moment_tensor && moment_tensor["strike1"];
   var dip = moment_tensor && moment_tensor["dip1"];
   var rake = moment_tensor && moment_tensor["rake1"];
@@ -118,25 +188,14 @@ function ensureMonitoringBeachball(eventId, done) {
   };
   $.ajax({
     url: MONITORING_API_BASE + "/seismic_events/" + eventId + "/beachball",
-    method: "POST",
+    method: hasBeachball ? "PUT" : "POST",
     headers: monitoringHeaders(),
     data: JSON.stringify(payload),
     success: function () {
       done(eventId);
     },
     error: function (jqXHR) {
-      if (jqXHR && jqXHR.status === 409) {
-        $.ajax({
-          url: MONITORING_API_BASE + "/seismic_events/" + eventId + "/beachball",
-          method: "PUT",
-          headers: monitoringHeaders(),
-          data: JSON.stringify(payload),
-          complete: function () {
-            done(eventId);
-          },
-        });
-        return;
-      }
+      // A failed beachball must not block publishing the earthquake itself.
       console.log("monitoring beachball failed:", jqXHR && jqXHR.responseText);
       done(eventId);
     },
@@ -159,46 +218,49 @@ function publishMonitoringEvent(eventId) {
 
 function syncAndPublishViaMonitoring() {
   var payload = buildMonitoringEventPayload();
-  $.ajax({
-    url: MONITORING_API_BASE + "/seismic_events/",
-    method: "POST",
-    headers: monitoringHeaders(),
-    data: JSON.stringify(payload),
-    success: function (response) {
-      var eventId = response && response.event && response.event.id;
-      if (!eventId) {
-        console.log("monitoring create: missing event id", response);
-        return;
-      }
-      ensureMonitoringMagnitude(eventId, function (id) {
-        ensureMonitoringBeachball(id, publishMonitoringEvent);
+
+  function syncDetailsAndPublish(eventId, hasBeachball) {
+    ensureMonitoringMagnitudes(eventId, function (id) {
+      ensureMonitoringBeachball(id, hasBeachball, publishMonitoringEvent);
+    });
+  }
+
+  // Look up first, so an existing earthquake is updated instead of failing a create with 409.
+  findMonitoringEventByIesdataId(function (existing) {
+    if (existing && existing.id) {
+      $.ajax({
+        url: MONITORING_API_BASE + "/seismic_events/event_id=" + existing.id,
+        method: "PUT",
+        headers: monitoringHeaders(),
+        data: JSON.stringify(payload),
+        success: function () {
+          syncDetailsAndPublish(existing.id, Boolean(existing.beachball));
+        },
+        error: function (jqXHR, exception) {
+          // Don't publish stale data when the update was rejected.
+          console.log("monitoring update failed:", exception, jqXHR && jqXHR.responseText);
+        },
       });
-    },
-    error: function (jqXHR, exception) {
-      // Already in our DB — look up by iesdata_id, update, then publish.
-      if (jqXHR && jqXHR.status === 409) {
-        findMonitoringEventByIesdataId(function (existing) {
-          if (!existing || !existing.id) {
-            console.log("monitoring: conflict but event not found for iesdata_id=", eq_id);
-            return;
-          }
-          var eventId = existing.id;
-          $.ajax({
-            url: MONITORING_API_BASE + "/seismic_events/event_id=" + eventId,
-            method: "PUT",
-            headers: monitoringHeaders(),
-            data: JSON.stringify(payload),
-            complete: function () {
-              ensureMonitoringMagnitude(eventId, function (id) {
-                ensureMonitoringBeachball(id, publishMonitoringEvent);
-              });
-            },
-          });
-        });
-        return;
-      }
-      console.log("monitoring create failed:", exception, jqXHR && jqXHR.responseText);
-    },
+      return;
+    }
+
+    $.ajax({
+      url: MONITORING_API_BASE + "/seismic_events/",
+      method: "POST",
+      headers: monitoringHeaders(),
+      data: JSON.stringify(payload),
+      success: function (response) {
+        var eventId = response && response.event && response.event.id;
+        if (!eventId) {
+          console.log("monitoring create: missing event id", response);
+          return;
+        }
+        syncDetailsAndPublish(eventId, false);
+      },
+      error: function (jqXHR, exception) {
+        console.log("monitoring create failed:", exception, jqXHR && jqXHR.responseText);
+      },
+    });
   });
 }
 
