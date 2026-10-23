@@ -89,7 +89,7 @@ class PublishedEventsListApi(Resource):
     @publish_events_ns.expect(published_events_get_parser)
     @publish_events_ns.response(400, "Validation Error", error_model)
     def get(self):
-        """List published seismic events, newest first (public, no auth required).
+        """List published seismic events by earthquake time, newest first (public, no auth required).
 
         Query parameter: limit (default 100, max 200). `total` counts all published events.
         """
@@ -110,7 +110,8 @@ class PublishedEventsListApi(Resource):
                 .selectinload(EventMagnitude.magnitude),
                 selectinload(PublishedEvent.event).selectinload(SeismicEvent.beachball),
             )
-            .order_by(PublishedEvent.published_at.desc(), PublishedEvent.id.desc())
+            .join(SeismicEvent, SeismicEvent.id == PublishedEvent.event_id)
+            .order_by(SeismicEvent.origin_time.desc(), SeismicEvent.id.desc())
             .limit(limit)
             .all()
         )
