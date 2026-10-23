@@ -1,7 +1,7 @@
 from flask_restx import fields, reqparse
 
 from app.extensions import api
-from app.api.nsmodels.seismic_events import seismic_event_model
+from app.api.nsmodels.seismic_events import seismic_event_model, seismic_event_public_model
 
 publish_events_ns = api.namespace(
     "Publish Events",
@@ -28,7 +28,7 @@ published_event_item_model = publish_events_ns.model(
         "id": fields.Integer(required=True, example=1),
         "event_id": fields.Integer(required=True, example=1),
         "published_at": fields.String(required=False, example="2026-08-05T12:35:00"),
-        "event": fields.Nested(seismic_event_model, required=True),
+        "event": fields.Nested(seismic_event_public_model, required=True),
     },
 )
 

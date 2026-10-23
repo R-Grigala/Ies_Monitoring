@@ -13,12 +13,12 @@ def _seed_magnitude(code="ML", description="Local Magnitude"):
     return magnitude
 
 
-def _create_event_with_ml(client, headers, *, is_automatic=False):
+def _create_event_with_ml(client, headers, *, is_automatic=False, origin_time="2026-08-05T12:30:00"):
     create_response = client.post(
         "/api/seismic_events/",
         headers=headers,
         json={
-            "origin_time": "2026-08-05T12:30:00",
+            "origin_time": origin_time,
             "latitude": 41.7151,
             "longitude": 44.8271,
             "depth": 10.5,
@@ -232,3 +232,23 @@ def test_publish_permission_only_user_can_publish(client, permissions, admin_aut
             headers=headers,
         )
     assert response.status_code == 200
+
+
+def test_published_list_is_ordered_by_earthquake_time_and_hides_audit(client, admin_auth_headers, app):
+    with app.app_context():
+        _seed_magnitude("ML")
+    newer = _create_event_with_ml(client, admin_auth_headers, origin_time="2026-09-01T10:00:00")
+    older = _create_event_with_ml(client, admin_auth_headers, origin_time="2026-07-01T10:00:00")
+
+    # Publish the newer earthquake first, so publish order and earthquake order differ.
+    with patch("app.api.publish_events.publish_eq", return_value="ok"):
+        for event_id in (newer, older):
+            response = client.post(
+                f"/api/publish_events/publish/{event_id}", headers=admin_auth_headers
+            )
+            assert response.status_code == 200
+
+    items = client.get("/api/publish_events/").get_json()["items"]
+    assert [item["event_id"] for item in items] == [newer, older]
+    for field in ("created_by", "updated_by", "updated_at"):
+        assert field not in items[0]["event"]

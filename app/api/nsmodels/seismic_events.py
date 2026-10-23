@@ -163,6 +163,13 @@ seismic_event_model = seismic_events_ns.model(
     },
 )
 
+# For unauthenticated endpoints: who created or edited an event is internal.
+EVENT_AUDIT_FIELDS = ("created_by", "updated_at", "updated_by")
+seismic_event_public_model = seismic_events_ns.model(
+    "SeismicEventPublic",
+    {name: field for name, field in seismic_event_model.items() if name not in EVENT_AUDIT_FIELDS},
+)
+
 seismic_event_list_response_model = seismic_events_ns.model(
     "SeismicEventListResponse",
     {
