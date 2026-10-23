@@ -13,36 +13,31 @@ BASE_DIR = path.abspath(path.dirname(__file__) + sep + pardir)
 load_dotenv(dotenv_path=path.join(BASE_DIR, ".env"), override=True)
 
 
-def _database_uri(uri_key, mysql_database_key, sqlite_name):
-    """
-    Pick the database URI: an explicit `<uri_key>` wins, then MySQL built from the
-    MYSQL_* parts (database name from `mysql_database_key`), then a local SQLite file.
-    """
-    explicit = os.getenv(uri_key)
-    if explicit:
-        return explicit
-
-    host = os.getenv("MYSQL_HOST")
-    database = os.getenv(mysql_database_key)
-    if host and database:
-        # URL.create escapes special characters in the password.
-        return URL.create(
-            "mysql+pymysql",
-            username=os.getenv("MYSQL_USER"),
-            password=os.getenv("MYSQL_PASSWORD"),
-            host=host,
-            port=int(os.getenv("MYSQL_PORT", "3306")),
-            database=database,
-            query={"charset": "utf8mb4"},
-        ).render_as_string(hide_password=False)
-
-    return "sqlite:///" + path.join(BASE_DIR, sqlite_name)
+def _mysql_uri(database):
+    # URL.create escapes special characters in the password.
+    return URL.create(
+        "mysql+pymysql",
+        username=Config.MYSQL_USER,
+        password=Config.MYSQL_PASSWORD,
+        host=Config.MYSQL_HOST,
+        port=Config.MYSQL_PORT,
+        database=database,
+        query={"charset": "utf8mb4"},
+    ).render_as_string(hide_password=False)
 
 
 class Config:
     BASE_DIR = BASE_DIR
     TEMPLATES_FOLDERS = path.join(BASE_DIR, "app", "templates")
     APP_ENV = (os.getenv("APP_ENV") or os.getenv("FLASK_ENV") or "development").lower()
+
+    # MySQL credentials. The password has no default: keep it only in .env.
+    MYSQL_HOST = os.getenv("MYSQL_HOST", "localhost")
+    MYSQL_PORT = int(os.getenv("MYSQL_PORT", "3306"))
+    MYSQL_DATABASE = os.getenv("MYSQL_DATABASE", "ies_monitoring")
+    DEV_MYSQL_DATABASE = os.getenv("DEV_MYSQL_DATABASE", "ies_monitoring_dev")
+    MYSQL_USER = os.getenv("MYSQL_USER", "ies_monitoring")
+    MYSQL_PASSWORD = os.getenv("MYSQL_PASSWORD", "")
 
     # Reconnect after MySQL drops idle connections (wait_timeout).
     SQLALCHEMY_ENGINE_OPTIONS = {"pool_pre_ping": True, "pool_recycle": 3600}
@@ -103,14 +98,14 @@ class Config:
 class DevelopmentConfig(Config):
     DEBUG = True
     JWT_COOKIE_SECURE = False
-    SQLALCHEMY_DATABASE_URI = _database_uri("DEV_DATABASE_URI", "DEV_MYSQL_DATABASE", "dev.db")
+    SQLALCHEMY_DATABASE_URI = os.getenv("DEV_DATABASE_URI") or _mysql_uri(Config.DEV_MYSQL_DATABASE)
 
 
 class ProductionConfig(Config):
     DEBUG = False
     JWT_COOKIE_SECURE = True
     APP_ENV = "production"
-    SQLALCHEMY_DATABASE_URI = _database_uri("PROD_DATABASE_URI", "MYSQL_DATABASE", "prod.db")
+    SQLALCHEMY_DATABASE_URI = os.getenv("PROD_DATABASE_URI") or _mysql_uri(Config.MYSQL_DATABASE)
 
 
 class TestingConfig(Config):
