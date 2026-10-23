@@ -2,7 +2,7 @@ from flask import Flask, g, redirect, render_template, request, url_for
 from flask_cors import CORS
 
 from app.config import get_config
-from app.commands import init_db, populate_db
+from app.commands import init_db, populate_db, upgrade_db
 from app.views import (
     auth_blueprint,
     accounts_blueprint,
@@ -24,7 +24,7 @@ BLUEPRINTS = [
     permissions_blueprint,
     seismic_events_blueprint,
 ]
-COMMANDS = [init_db, populate_db]
+COMMANDS = [init_db, populate_db, upgrade_db]
 SUPPORTED_LANGS = {"en", "ka"}
 DEFAULT_LANG = "en"
 

@@ -56,6 +56,8 @@ class Config:
         "https://ies-staging.iliauni.edu.ge/wp-admin/admin-ajax.php",
     )
     WP_PUBLISH_CODE = os.getenv("WP_PUBLISH_CODE", "")
+    # Browser key: restrict it to this site's HTTP referrers in Google Cloud Console.
+    GOOGLE_MAPS_API_KEY = os.getenv("GOOGLE_MAPS_API_KEY", "")
     WP_SSL_VERIFY = os.getenv("WP_SSL_VERIFY", "true").strip().lower() in {
         "1",
         "true",

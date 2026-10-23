@@ -42,7 +42,7 @@ The client **does not filter** the full list in the browser. Apply / Reset call 
 
 | State | Request |
 |-------|---------|
-| Empty filter / Reset | `GET /api/seismic_events/?limit=100` (newest page; `total` is the full count) |
+| Empty filter / Reset | `GET /api/seismic_events/?limit=20&offset=0&sort=time&order=desc` (20 per page; `total` is the full count; page N uses `offset=(N-1)*20`; column headers set `sort`/`order`) |
 | Active filter | `POST /api/seismic_events/filter` |
 
 Filter fields and API mapping:
@@ -129,6 +129,18 @@ Delete → back to the list.
 | `is_automatic` | optional (default false) | not changed from the UI on create |
 
 Event JSON also contains `is_published` and `published_at` (from the `published_events` relationship).
+
+An update without `is_automatic` in the body turns the event into calculated (`is_automatic=false`). The UI edit form never sends it, so any manual edit makes the event C; ingestion services send it explicitly.
+
+### 3.1.1 Change history
+
+The server records who created the event and who changed it last:
+
+- `created_by` — `{kind, name}`, set on `POST`.
+- `updated_by` and `updated_at` — set on event `PUT` and on any magnitude or beachball create/update/delete.
+- `kind` is `user` (JWT, the user's full name) or `service` (API key, the service name). The legacy global `API_KEY` has no identity, so the field stays `null`.
+
+A user or service that appears in this history cannot be hard-deleted (API returns 409).
 
 ### 3.2 Filter
 

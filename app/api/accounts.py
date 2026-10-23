@@ -22,7 +22,7 @@ from app.api.nsmodels import (
     error_model,
 )
 from app.api.nsmodels.accounts import JWT_OR_API_KEY
-from app.models import User, Permission, UserPermission, RefreshToken
+from app.models import User, Permission, UserPermission, RefreshToken, SeismicEvent
 from app.utils.auth_utils import require_permissions, resolve_actor
 from app.utils.validators import normalize_email
 
@@ -139,6 +139,15 @@ def _user_delete_blockers(user):
     ).count()
     if permission_refs:
         blockers.append(f"{permission_refs} permission record(s) reference this account")
+
+    event_refs = SeismicEvent.query.filter(
+        or_(
+            SeismicEvent.created_by_user_id == user.id,
+            SeismicEvent.updated_by_user_id == user.id,
+        )
+    ).count()
+    if event_refs:
+        blockers.append(f"{event_refs} seismic event(s) created or last updated by this account")
 
     permission_grant_refs = UserPermission.query.filter(
         or_(

@@ -39,6 +39,14 @@ flask --app run init_db --confirm-text RESET_DB
 flask --app run populate_db
 ```
 
+`init_db` wipes the database. To bring an existing database up to the current models without losing data (for example after new audit columns were added), run:
+
+```bash
+flask --app run upgrade_db
+```
+
+It creates missing tables and adds missing nullable columns; it never changes or drops existing ones. Back up a production database before running it.
+
 `populate_db` creates/activates the permissions:
 
 - `can_users`

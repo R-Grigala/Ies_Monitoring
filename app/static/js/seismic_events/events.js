@@ -229,8 +229,212 @@ function syncActionColumnVisibility() {
     eventsActionHeader.classList.remove("d-none");
 }
 
+function eventTypeBadge(event) {
+    const automatic = Boolean(event.is_automatic);
+    const letter = automatic ? "A" : "C";
+    const label = automatic
+        ? t("events.type.automatic", "Automatic")
+        : t("events.type.calculated", "Calculated (reviewed)");
+    return `<span class="published-type published-type-${letter.toLowerCase()}" title="${escapeHtml(
+        label
+    )}" aria-label="${escapeHtml(label)}">${letter}</span>`;
+}
+
+function publishedBadge(event) {
+    if (!event.is_published) {
+        return `<span class="events-pub events-pub-no">
+          <i class="fa-regular fa-circle" aria-hidden="true"></i>${escapeHtml(t("events.published.no", "No"))}
+        </span>`;
+    }
+    const title = event.published_at
+        ? t("events.published.at", "Published: {time}").replace(
+              "{time}",
+              formatOriginTime(event.published_at)
+          )
+        : "";
+    return `<span class="events-pub events-pub-yes"${title ? ` title="${escapeHtml(title)}"` : ""}>
+          <i class="fa-solid fa-circle-check" aria-hidden="true"></i>${escapeHtml(t("events.published.yes", "Yes"))}
+        </span>`;
+}
+
+function depthCell(depth) {
+    const value = Number(depth);
+    if (depth === null || depth === undefined || depth === "" || !Number.isFinite(value)) {
+        return `<span class="text-muted">-</span>`;
+    }
+    return `<span class="events-depth">${escapeHtml(value.toFixed(1))}</span>`;
+}
+
+function timeCell(value) {
+    const match = String(value || "").match(/^(\d{4}-\d{2}-\d{2})[T\s](\d{2}:\d{2}:\d{2})/);
+    if (!match) {
+        return `<span class="events-time">${escapeHtml(formatOriginTime(value))}</span>`;
+    }
+    return `
+          <span class="events-date">${match[1]}</span>
+          <span class="events-time">${match[2]} <span class="events-utc">UTC</span></span>`;
+}
+
+function magnitudeLevel(value) {
+    if (value >= 5) return "major";
+    if (value >= 4) return "strong";
+    if (value >= 3) return "moderate";
+    return "minor";
+}
+
+function magnitudeCell(event) {
+    const magnitude = getEventMagnitude(event);
+    if (!magnitude || Number.isNaN(magnitude.value)) {
+        return `<span class="text-muted">-</span>`;
+    }
+    const code = magnitude.code
+        ? `<span class="events-mag-code">${escapeHtml(magnitude.code)}</span>`
+        : "";
+    return `<span class="events-mag-badge events-mag-${magnitudeLevel(magnitude.value)}"><span class="events-mag-value">${escapeHtml(
+        magnitude.value.toFixed(1)
+    )}</span>${code}</span>`;
+}
+
+const PAGE_SIZE = 20;
+const SORT_KEYS = new Set(["time", "magnitude", "depth", "type", "published"]);
+let sortState = { key: "time", dir: "desc" };
+let currentPage = 1;
+let latestEventId = null;
+let selectedEventId = null;
+
+function isDefaultSort() {
+    return sortState.key === "time" && sortState.dir === "desc";
+}
+
+function totalPages() {
+    return Math.max(1, Math.ceil((Number(window.eventsListTotal) || 0) / PAGE_SIZE));
+}
+
+function syncSortHeaders() {
+    document.querySelectorAll(".events-table th[data-sort-key]").forEach((th) => {
+        const active = th.dataset.sortKey === sortState.key;
+        th.classList.toggle("is-sorted", active);
+        th.setAttribute(
+            "aria-sort",
+            active ? (sortState.dir === "asc" ? "ascending" : "descending") : "none"
+        );
+        const icon = th.querySelector(".fa-solid");
+        if (icon) {
+            icon.className = `fa-solid ${
+                active ? (sortState.dir === "asc" ? "fa-sort-up" : "fa-sort-down") : "fa-sort"
+            }`;
+        }
+    });
+}
+
+function setSort(key) {
+    if (!SORT_KEYS.has(key)) {
+        return;
+    }
+    sortState =
+        sortState.key === key
+            ? { key, dir: sortState.dir === "asc" ? "desc" : "asc" }
+            : { key, dir: "desc" };
+    applyEventsFilter(window.getActiveEventsFilter?.() || null, { page: 1 });
+}
+
+// Page numbers to show: first, last, and the current page with one neighbour each side.
+function visiblePages(current, last) {
+    const pages = new Set([1, last, current - 1, current, current + 1]);
+    const sorted = [...pages].filter((page) => page >= 1 && page <= last).sort((a, b) => a - b);
+    const items = [];
+    sorted.forEach((page, index) => {
+        if (index > 0 && page - sorted[index - 1] > 1) {
+            items.push(null);
+        }
+        items.push(page);
+    });
+    return items;
+}
+
+function renderPagination() {
+    const nav = document.getElementById("eventsPagination");
+    if (!nav) {
+        return;
+    }
+    const last = totalPages();
+    if (last <= 1) {
+        nav.innerHTML = "";
+        nav.classList.add("d-none");
+        return;
+    }
+    nav.classList.remove("d-none");
+
+    const pageItem = (page, label, { disabled = false, active = false, aria = "" } = {}) => `
+        <li class="page-item${disabled ? " disabled" : ""}${active ? " active" : ""}">
+          <button type="button" class="page-link" data-page="${page}"${
+              disabled ? " disabled" : ""
+          }${active ? ' aria-current="page"' : ""}${aria ? ` aria-label="${escapeHtml(aria)}"` : ""}>${label}</button>
+        </li>`;
+
+    const items = [
+        pageItem(currentPage - 1, '<i class="fa-solid fa-chevron-left" aria-hidden="true"></i>', {
+            disabled: currentPage === 1,
+            aria: t("events.page.prev", "Previous page"),
+        }),
+        ...visiblePages(currentPage, last).map((page) =>
+            page === null
+                ? '<li class="page-item disabled"><span class="page-link">…</span></li>'
+                : pageItem(page, String(page), { active: page === currentPage })
+        ),
+        pageItem(currentPage + 1, '<i class="fa-solid fa-chevron-right" aria-hidden="true"></i>', {
+            disabled: currentPage === last,
+            aria: t("events.page.next", "Next page"),
+        }),
+    ];
+    nav.innerHTML = `<ul class="pagination pagination-sm justify-content-center flex-wrap mb-0">${items.join("")}</ul>`;
+}
+
+function goToPage(page) {
+    const target = Math.min(Math.max(1, Number(page) || 1), totalPages());
+    if (target === currentPage) {
+        return;
+    }
+    applyEventsFilter(window.getActiveEventsFilter?.() || null, { page: target }).then(() => {
+        const card = document.querySelector(".events-list-card");
+        if (card && card.getBoundingClientRect().top < 0) {
+            card.scrollIntoView({ behavior: "smooth", block: "start" });
+        }
+    });
+}
+
+function findEventRow(eventId) {
+    if (!eventsTableBody || eventId === null || eventId === undefined) {
+        return null;
+    }
+    return eventsTableBody.querySelector(`tr[data-event-id="${CSS.escape(String(eventId))}"]`);
+}
+
+function selectEventRow(eventId) {
+    selectedEventId = eventId === null || eventId === undefined ? null : String(eventId);
+    eventsTableBody
+        ?.querySelectorAll("tr.is-selected")
+        .forEach((row) => row.classList.remove("is-selected"));
+    const row = findEventRow(selectedEventId);
+    row?.classList.add("is-selected");
+    return row;
+}
+
+function showEventOnMap(eventId) {
+    selectEventRow(eventId);
+    if (!window.focusEventOnMap?.(eventId)) {
+        return;
+    }
+    const mapCard = document.getElementById("mapDiv");
+    const rect = mapCard?.getBoundingClientRect();
+    if (rect && (rect.bottom < 80 || rect.top > window.innerHeight - 80)) {
+        mapCard.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+}
+
 function renderEvents(events) {
     syncActionColumnVisibility();
+    syncSortHeaders();
 
     if (!eventsTableBody || !eventsStatus) {
         return;
@@ -239,29 +443,25 @@ function renderEvents(events) {
     if (!Array.isArray(events) || events.length === 0) {
         eventsTableBody.innerHTML = "";
         eventsStatus.textContent = t("events.empty", "No events found.");
+        renderPagination();
         return;
     }
 
-    const sortedEvents = [...events].sort((a, b) => {
-        const aTime = new Date(a.origin_time || 0).getTime();
-        const bTime = new Date(b.origin_time || 0).getTime();
-        return bTime - aTime;
-    });
+    const sortedEvents = events;
 
     eventsById.clear();
     sortedEvents.forEach((event) => eventsById.set(getEventKey(event), event));
     window.eventsById = eventsById;
 
+    const depthLabel = escapeHtml(t("events.table.depth_km", "Depth (km)"));
+
     eventsTableBody.innerHTML = sortedEvents
         .map((event) => {
             const id = escapeHtml(event.id);
-            const magnitude = getEventMagnitude(event);
-            const hasMagnitude = magnitude !== null && !Number.isNaN(magnitude.value);
-            const magnitudeValue = hasMagnitude ? magnitude.value.toFixed(1) : "-";
-            const magnitudeCode = hasMagnitude && magnitude.code ? magnitude.code : "";
+            const selected = selectedEventId !== null && getEventKey(event) === selectedEventId;
 
             return `
-      <tr data-event-id="${id}">
+      <tr data-event-id="${id}" tabindex="0"${selected ? ' class="is-selected"' : ""}>
         <td class="events-col-actions">
           <div class="events-actions">
             ${window.buildEventDetailsButton ? window.buildEventDetailsButton(event.id) : ""}
@@ -291,22 +491,11 @@ function renderEvents(events) {
             }
           </div>
         </td>
-        <td class="events-col-time">
-          <span class="events-time">${escapeHtml(formatOriginTime(event.origin_time))}</span>
-        </td>
-        <td class="events-col-mag">
-          ${
-              hasMagnitude
-                  ? `<span class="events-mag-badge"><span class="events-mag-value">${escapeHtml(
-                        magnitudeValue
-                    )}</span>${
-                        magnitudeCode
-                            ? `<span class="events-mag-code">${escapeHtml(magnitudeCode)}</span>`
-                            : ""
-                    }</span>`
-                  : `<span class="text-muted">-</span>`
-          }
-        </td>
+        <td class="events-col-type">${eventTypeBadge(event)}</td>
+        <td class="events-col-published">${publishedBadge(event)}</td>
+        <td class="events-col-time">${timeCell(event.origin_time)}</td>
+        <td class="events-col-mag">${magnitudeCell(event)}</td>
+        <td class="events-col-depth" data-label="${depthLabel}">${depthCell(event.depth)}</td>
         <td class="events-col-location">
           <span class="events-location">${escapeHtml(preferredLocation(event))}</span>
         </td>
@@ -318,80 +507,138 @@ function renderEvents(events) {
     const total = Number.isFinite(Number(window.eventsListTotal))
         ? Number(window.eventsListTotal)
         : sortedEvents.length;
-    const loadedTemplate =
-        total > sortedEvents.length
-            ? t("events.loaded_partial", "Loaded {count} of {total} earthquakes.")
-            : t("events.loaded", "Loaded {count} earthquakes.");
-    eventsStatus.textContent = loadedTemplate
-        .replace("{count}", String(sortedEvents.length))
+    const from = (currentPage - 1) * PAGE_SIZE + 1;
+    eventsStatus.textContent = t("events.showing", "Showing {from}–{to} of {total} earthquakes.")
+        .replace("{from}", String(from))
+        .replace("{to}", String(from + sortedEvents.length - 1))
         .replace("{total}", String(total));
+    renderPagination();
 }
 
 function renderEventsAndMap(events) {
     renderEvents(events);
     if (typeof window.updateMapMarkers === "function") {
-        window.updateMapMarkers(Array.isArray(events) ? events : []);
+        window.updateMapMarkers(Array.isArray(events) ? events : [], { latestId: latestEventId });
     }
 }
 
 let filterRequestSeq = 0;
+let latestFilterKey = null;
 
-async function applyEventsFilter(filterState) {
+function fetchEventsPage(filterState, { limit, offset, sort, order }) {
+    if (!filterState || window.isEmptyEventsFilter?.(filterState)) {
+        const query = new URLSearchParams({ limit, offset, sort, order });
+        return window.makeApiRequest(`/api/seismic_events/?${query}`, { method: "GET" });
+    }
+    return window.makeApiRequest("/api/seismic_events/filter", {
+        method: "POST",
+        body: JSON.stringify({
+            ...window.buildEventsFilterPayload(filterState),
+            limit,
+            offset,
+            sort,
+            order,
+        }),
+    });
+}
+
+// The map marks the newest event matching the filter, whichever page or sort is shown.
+async function refreshLatestEventId(filterState, filterKey, items) {
+    if (currentPage === 1 && isDefaultSort()) {
+        latestEventId = items[0]?.id ?? null;
+        latestFilterKey = filterKey;
+        return;
+    }
+    if (latestFilterKey === filterKey) {
+        return;
+    }
+    try {
+        const newest = await fetchEventsPage(filterState, {
+            limit: 1,
+            offset: 0,
+            sort: "time",
+            order: "desc",
+        });
+        latestEventId = newest.items?.[0]?.id ?? null;
+        latestFilterKey = filterKey;
+    } catch {
+        latestEventId = null;
+    }
+}
+
+async function applyEventsFilter(filterState, { page = 1 } = {}) {
     const requestId = ++filterRequestSeq;
+    const targetPage = Math.max(1, Number(page) || 1);
 
     if (eventsStatus) {
         eventsStatus.textContent = t("events.loading", "Loading earthquakes...");
     }
 
     try {
-        let data;
-        if (!filterState || window.isEmptyEventsFilter?.(filterState)) {
-            data = await window.makeApiRequest("/api/seismic_events/?limit=100", {
-                method: "GET",
-            });
-        } else {
-            const payload = window.buildEventsFilterPayload(filterState);
-            data = await window.makeApiRequest("/api/seismic_events/filter", {
-                method: "POST",
-                body: JSON.stringify(payload),
-            });
-        }
+        const filterKey = JSON.stringify(
+            filterState && !window.isEmptyEventsFilter?.(filterState)
+                ? window.buildEventsFilterPayload(filterState)
+                : {}
+        );
+        const data = await fetchEventsPage(filterState, {
+            limit: PAGE_SIZE,
+            offset: (targetPage - 1) * PAGE_SIZE,
+            sort: sortState.key,
+            order: sortState.dir,
+        });
 
         if (requestId !== filterRequestSeq) {
             return;
         }
 
-        allEvents = Array.isArray(data.items) ? data.items : [];
-        window.eventsListTotal = Number.isFinite(Number(data.total)) ? Number(data.total) : allEvents.length;
+        const items = Array.isArray(data.items) ? data.items : [];
+        const total = Number.isFinite(Number(data.total)) ? Number(data.total) : items.length;
+
+        // A deletion can empty the last page; fall back to the new last page.
+        const lastPage = Math.max(1, Math.ceil(total / PAGE_SIZE));
+        if (items.length === 0 && targetPage > lastPage) {
+            await applyEventsFilter(filterState, { page: lastPage });
+            return;
+        }
+
+        currentPage = targetPage;
+        allEvents = items;
+        window.eventsListTotal = total;
+        await refreshLatestEventId(filterState, filterKey, items);
+        if (requestId !== filterRequestSeq) {
+            return;
+        }
         window.updateAreaFilterOptions?.(allEvents);
         renderEventsAndMap(allEvents);
     } catch (error) {
         if (requestId !== filterRequestSeq) {
             return;
         }
+        const message = error.message || t("events.error.load", "Failed to load earthquakes.");
         if (eventsTableBody) {
             eventsTableBody.innerHTML = "";
         }
         if (eventsStatus) {
-            eventsStatus.textContent =
-                error.message || t("events.error.load", "Failed to load earthquakes.");
+            eventsStatus.textContent = message;
         }
-        window.showAlert(
-            "alertPlaceholder",
-            "danger",
-            error.message || t("events.error.load", "Failed to load earthquakes.")
-        );
+        window.eventsListTotal = 0;
+        renderPagination();
+        window.showAlert("alertPlaceholder", "danger", message);
     }
 }
 
+function reloadEventsPage(page = currentPage) {
+    // Edits can change which event is newest, so look it up again.
+    latestFilterKey = null;
+    return applyEventsFilter(window.getActiveEventsFilter?.() || null, { page });
+}
+
 function onEventUpdated() {
-    const currentFilter = window.getActiveEventsFilter?.() || null;
-    applyEventsFilter(currentFilter);
+    reloadEventsPage();
 }
 
 function onEventDeleted() {
-    const currentFilter = window.getActiveEventsFilter?.() || null;
-    applyEventsFilter(currentFilter);
+    reloadEventsPage();
 }
 
 function onEventCreated(event) {
@@ -399,7 +646,7 @@ function onEventCreated(event) {
         window.loadEvents?.();
         return;
     }
-    onEventUpdated();
+    reloadEventsPage(1);
 }
 
 async function loadEvents() {
@@ -494,6 +741,7 @@ window.onEventUpdated = onEventUpdated;
 window.onEventDeleted = onEventDeleted;
 window.onEventCreated = onEventCreated;
 window.eventsById = eventsById;
+window.onMapEventSelected = selectEventRow;
 
 document.addEventListener("DOMContentLoaded", () => {
     eventsTableBody?.addEventListener("click", (event) => {
@@ -506,6 +754,37 @@ document.addEventListener("DOMContentLoaded", () => {
         const deleteButton = event.target.closest("[data-delete-id]");
         if (deleteButton) {
             window.deleteEvent?.(deleteButton.dataset.deleteId);
+            return;
+        }
+
+        if (event.target.closest("a, button")) {
+            return;
+        }
+        const row = event.target.closest("tr[data-event-id]");
+        if (row) {
+            showEventOnMap(row.dataset.eventId);
+        }
+    });
+
+    eventsTableBody?.addEventListener("keydown", (event) => {
+        if (event.key !== "Enter" || event.target.tagName !== "TR") {
+            return;
+        }
+        event.preventDefault();
+        showEventOnMap(event.target.dataset.eventId);
+    });
+
+    document.querySelector(".events-table thead")?.addEventListener("click", (event) => {
+        const sortButton = event.target.closest("[data-sort]");
+        if (sortButton) {
+            setSort(sortButton.dataset.sort);
+        }
+    });
+
+    document.getElementById("eventsPagination")?.addEventListener("click", (event) => {
+        const pageButton = event.target.closest("[data-page]");
+        if (pageButton && !pageButton.disabled) {
+            goToPage(pageButton.dataset.page);
         }
     });
 

@@ -262,6 +262,40 @@ function getActiveEventsFilter() {
     return activeFilter;
 }
 
+const ADVANCED_FILTER_FIELDS = ["eventId", "seiscompOid", "depthMin", "depthMax"];
+
+function countActiveFilters(filter) {
+    const counts = { total: 0, advanced: 0 };
+    Object.entries(filter || {}).forEach(([field, value]) => {
+        const count = Array.isArray(value)
+            ? value.length
+            : value === null || value === undefined || value === ""
+              ? 0
+              : 1;
+        counts.total += count;
+        if (ADVANCED_FILTER_FIELDS.includes(field)) {
+            counts.advanced += count;
+        }
+    });
+    return counts;
+}
+
+function setCountBadge(id, count) {
+    const badge = document.getElementById(id);
+    if (!badge) {
+        return;
+    }
+    badge.textContent = count ? String(count) : "";
+    badge.classList.toggle("d-none", !count);
+}
+
+// Counts only applied filters, so the badge matches what the list actually shows.
+function updateFilterBadges() {
+    const counts = countActiveFilters(activeFilter);
+    setCountBadge("filterActiveCount", counts.total);
+    setCountBadge("filterAdvancedCount", counts.advanced);
+}
+
 function initFilterDatePickers() {
     if (typeof flatpickr !== "function") {
         return { from: null, to: null };
@@ -287,6 +321,7 @@ document.addEventListener("DOMContentLoaded", () => {
     form?.addEventListener("submit", (event) => {
         event.preventDefault();
         activeFilter = readFilterState();
+        updateFilterBadges();
         window.applyEventsFilter?.(activeFilter);
     });
 
@@ -315,6 +350,7 @@ document.addEventListener("DOMContentLoaded", () => {
             addMagnitudeFilterRow();
         }
         activeFilter = null;
+        updateFilterBadges();
         window.applyEventsFilter?.(null);
     });
 });

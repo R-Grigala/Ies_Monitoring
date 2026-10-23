@@ -20,6 +20,18 @@ class SeismicEvent(db.Model, BaseModel):
     is_automatic = db.Column(db.Boolean, nullable=False, default=False)
 
     created_at = db.Column(db.DateTime, nullable=False, default=db.func.now())
+    updated_at = db.Column(db.DateTime, nullable=True)
+
+    # A change is made either by a logged-in user or by a service API key; the other FK stays NULL.
+    created_by_user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
+    updated_by_user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
+    created_by_service_id = db.Column(db.Integer, db.ForeignKey("services.id"), nullable=True)
+    updated_by_service_id = db.Column(db.Integer, db.ForeignKey("services.id"), nullable=True)
+
+    created_by_user = db.relationship("User", foreign_keys=[created_by_user_id])
+    updated_by_user = db.relationship("User", foreign_keys=[updated_by_user_id])
+    created_by_service = db.relationship("Service", foreign_keys=[created_by_service_id])
+    updated_by_service = db.relationship("Service", foreign_keys=[updated_by_service_id])
 
     event_magnitudes = db.relationship(
         "EventMagnitude",
@@ -42,6 +54,24 @@ class SeismicEvent(db.Model, BaseModel):
         lazy="select",
     )
 
+    def mark_created_by(self, actor):
+        self.created_by_user_id = actor["user_id"]
+        self.created_by_service_id = actor["service"].id if actor["service"] else None
+
+    def mark_updated_by(self, actor):
+        self.updated_at = db.func.now()
+        self.updated_by_user_id = actor["user_id"]
+        self.updated_by_service_id = actor["service"].id if actor["service"] else None
+
+    @staticmethod
+    def _actor_dict(user, service):
+        if user is not None:
+            full_name = f"{user.first_name or ''} {user.last_name or ''}".strip()
+            return {"kind": "user", "name": full_name or user.email}
+        if service is not None:
+            return {"kind": "service", "name": service.name}
+        return None
+
     def to_dict(self):
         published = self.published_event
         return {
@@ -57,6 +87,9 @@ class SeismicEvent(db.Model, BaseModel):
             "area": self.area,
             "is_automatic": bool(self.is_automatic),
             "created_at": self.created_at.isoformat() if self.created_at else None,
+            "created_by": self._actor_dict(self.created_by_user, self.created_by_service),
+            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
+            "updated_by": self._actor_dict(self.updated_by_user, self.updated_by_service),
             "magnitudes": [item.to_dict() for item in self.event_magnitudes],
             "beachball": self.beachball.to_dict() if self.beachball else None,
             "is_published": published is not None,
