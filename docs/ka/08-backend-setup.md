@@ -39,6 +39,14 @@ flask --app run init_db --confirm-text RESET_DB
 flask --app run populate_db
 ```
 
+`init_db` ბაზას სრულად შლის. არსებული ბაზის მოდელებთან გასათანაბრებლად მონაცემების დაკარგვის გარეშე (მაგალითად, ახალი audit სვეტების დამატების შემდეგ) გაუშვი:
+
+```bash
+flask --app run upgrade_db
+```
+
+ქმნის აკლებულ ცხრილებს და ამატებს აკლებულ nullable სვეტებს; არსებულს არასდროს ცვლის და არ შლის. production ბაზაზე გაშვებამდე გააკეთე backup.
+
 `populate_db` ქმნის/ააქტიურებს უფლებებს:
 
 - `can_users`

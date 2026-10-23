@@ -1,32 +1,57 @@
 <div class="card border-0 shadow-sm h-100 w-100 events-filter-card">
-    <div class="card-header bg-white fw-semibold" data-i18n="events.filter.title">Filters</div>
+    <div class="card-header bg-white fw-semibold d-flex align-items-center justify-content-between">
+        <span data-i18n="events.filter.title">Filters</span>
+        <span
+            id="filterActiveCount"
+            class="badge rounded-pill text-bg-primary d-none"
+            data-i18n-aria-label="events.filter.active_count"
+            aria-label="Active filters"
+        ></span>
+    </div>
     <div class="card-body">
         <form id="filterEventForm" class="row g-2" novalidate>
             <div class="col-12 col-sm-6">
-                <label class="form-label small mb-1" for="filterEventId" data-i18n="events.filter.event_id">
-                    Event ID
+                <label class="form-label small mb-1" for="filterDateFrom" data-i18n="events.filter.date_from">
+                    Date (from)
                 </label>
                 <input
-                    type="search"
+                    type="text"
                     class="form-control form-control-sm"
-                    id="filterEventId"
+                    id="filterDateFrom"
+                    inputmode="numeric"
                     autocomplete="off"
-                    data-i18n-placeholder="events.filter.event_id_placeholder"
-                    placeholder="e.g. 555188"
+                    placeholder="dd/mm/yyyy"
+                    data-i18n-placeholder="events.filter.date_placeholder"
                 >
             </div>
             <div class="col-12 col-sm-6">
-                <label class="form-label small mb-1" for="filterSeiscompOid" data-i18n="events.filter.seiscomp_oid">
-                    SeisComP OID
+                <label class="form-label small mb-1" for="filterDateTo" data-i18n="events.filter.date_to">
+                    Date (to)
                 </label>
                 <input
-                    type="search"
+                    type="text"
                     class="form-control form-control-sm"
-                    id="filterSeiscompOid"
+                    id="filterDateTo"
+                    inputmode="numeric"
                     autocomplete="off"
-                    data-i18n-placeholder="events.filter.seiscomp_oid_placeholder"
-                    placeholder="OID"
+                    placeholder="dd/mm/yyyy"
+                    data-i18n-placeholder="events.filter.date_placeholder"
                 >
+            </div>
+
+            <div class="col-12">
+                <label class="form-label small mb-1" data-i18n="events.filter.magnitude_types">
+                    Magnitude types
+                </label>
+                <div id="filterMagnitudeRows" class="vstack gap-2"></div>
+                <button
+                    type="button"
+                    class="btn btn-sm btn-outline-primary mt-2"
+                    id="filterMagnitudeAdd"
+                    data-i18n="events.filter.magnitude_add"
+                >
+                    Add magnitude type
+                </button>
             </div>
 
             <div class="col-12 col-sm-6">
@@ -55,60 +80,62 @@
             </div>
 
             <div class="col-12">
-                <label class="form-label small mb-1" data-i18n="events.filter.magnitude_types">
-                    Magnitude types
-                </label>
-                <div id="filterMagnitudeRows" class="vstack gap-2"></div>
                 <button
                     type="button"
-                    class="btn btn-sm btn-outline-primary mt-2"
-                    id="filterMagnitudeAdd"
-                    data-i18n="events.filter.magnitude_add"
+                    class="btn btn-link btn-sm p-0 text-decoration-none events-filter-more"
+                    data-bs-toggle="collapse"
+                    data-bs-target="#filterAdvanced"
+                    aria-expanded="false"
+                    aria-controls="filterAdvanced"
                 >
-                    Add magnitude type
+                    <i class="fa-solid fa-sliders me-1" aria-hidden="true"></i>
+                    <span data-i18n="events.filter.more">More filters</span>
+                    <span id="filterAdvancedCount" class="badge rounded-pill text-bg-secondary ms-1 d-none"></span>
+                    <i class="fa-solid fa-chevron-down ms-1 events-filter-chevron" aria-hidden="true"></i>
                 </button>
             </div>
 
-            <div class="col-12 col-sm-6">
-                <label class="form-label small mb-1" for="filterDepthMin" data-i18n="events.filter.depth_min">
-                    Depth min
-                </label>
-                <input type="number" class="form-control form-control-sm" id="filterDepthMin" step="any">
-            </div>
-            <div class="col-12 col-sm-6">
-                <label class="form-label small mb-1" for="filterDepthMax" data-i18n="events.filter.depth_max">
-                    Depth max
-                </label>
-                <input type="number" class="form-control form-control-sm" id="filterDepthMax" step="any">
-            </div>
-
-            <div class="col-12 col-sm-6">
-                <label class="form-label small mb-1" for="filterDateFrom" data-i18n="events.filter.date_from">
-                    Date (from)
-                </label>
-                <input
-                    type="text"
-                    class="form-control form-control-sm"
-                    id="filterDateFrom"
-                    inputmode="numeric"
-                    autocomplete="off"
-                    placeholder="dd/mm/yyyy"
-                    data-i18n-placeholder="events.filter.date_placeholder"
-                >
-            </div>
-            <div class="col-12 col-sm-6">
-                <label class="form-label small mb-1" for="filterDateTo" data-i18n="events.filter.date_to">
-                    Date (to)
-                </label>
-                <input
-                    type="text"
-                    class="form-control form-control-sm"
-                    id="filterDateTo"
-                    inputmode="numeric"
-                    autocomplete="off"
-                    placeholder="dd/mm/yyyy"
-                    data-i18n-placeholder="events.filter.date_placeholder"
-                >
+            <div class="col-12 collapse" id="filterAdvanced">
+                <div class="row g-2">
+                    <div class="col-12 col-sm-6">
+                        <label class="form-label small mb-1" for="filterEventId" data-i18n="events.filter.event_id">
+                            Event ID
+                        </label>
+                        <input
+                            type="search"
+                            class="form-control form-control-sm"
+                            id="filterEventId"
+                            autocomplete="off"
+                            data-i18n-placeholder="events.filter.event_id_placeholder"
+                            placeholder="e.g. 555188"
+                        >
+                    </div>
+                    <div class="col-12 col-sm-6">
+                        <label class="form-label small mb-1" for="filterSeiscompOid" data-i18n="events.filter.seiscomp_oid">
+                            SeisComP OID
+                        </label>
+                        <input
+                            type="search"
+                            class="form-control form-control-sm"
+                            id="filterSeiscompOid"
+                            autocomplete="off"
+                            data-i18n-placeholder="events.filter.seiscomp_oid_placeholder"
+                            placeholder="OID"
+                        >
+                    </div>
+                    <div class="col-12 col-sm-6">
+                        <label class="form-label small mb-1" for="filterDepthMin" data-i18n="events.filter.depth_min">
+                            Depth min
+                        </label>
+                        <input type="number" class="form-control form-control-sm" id="filterDepthMin" step="any">
+                    </div>
+                    <div class="col-12 col-sm-6">
+                        <label class="form-label small mb-1" for="filterDepthMax" data-i18n="events.filter.depth_max">
+                            Depth max
+                        </label>
+                        <input type="number" class="form-control form-control-sm" id="filterDepthMax" step="any">
+                    </div>
+                </div>
             </div>
 
             <div class="col-12 d-flex flex-wrap gap-2 mt-2 justify-content-center">

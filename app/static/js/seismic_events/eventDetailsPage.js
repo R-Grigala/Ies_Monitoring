@@ -71,6 +71,16 @@ function displayOrDash(value) {
     return value === null || value === undefined || value === "" ? "—" : value;
 }
 
+function formatActor(actor) {
+    if (!actor?.name) {
+        return "—";
+    }
+    if (actor.kind === "service") {
+        return `${actor.name} (${t("events.details.actor_service", "service")})`;
+    }
+    return actor.name;
+}
+
 function metadataItem(label, value, monospace = false) {
     return `
         <div class="metadata-item">
@@ -200,6 +210,13 @@ function renderOverview(event) {
             formatOriginTime(event.created_at),
             true
         ),
+        metadataItem(t("events.details.created_by", "Created by"), formatActor(event.created_by)),
+        metadataItem(
+            t("events.details.updated_at", "Last updated"),
+            event.updated_at ? formatOriginTime(event.updated_at) : "—",
+            true
+        ),
+        metadataItem(t("events.details.updated_by", "Updated by"), formatActor(event.updated_by)),
     ].join("");
 }
 

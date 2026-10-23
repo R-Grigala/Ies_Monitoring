@@ -2,6 +2,7 @@ import logging
 
 from flask import request
 from flask_restx import Resource
+from sqlalchemy import or_
 from sqlalchemy.exc import IntegrityError
 
 from app.api.nsmodels import (
@@ -10,7 +11,7 @@ from app.api.nsmodels import (
     JWT_OR_API_KEY,
 )
 from app.extensions import db
-from app.models import Permission, Service, ServicePermission
+from app.models import Permission, SeismicEvent, Service, ServicePermission
 from app.utils.api_keys import generate_api_key
 from app.utils.auth_utils import require_permissions, resolve_actor
 
@@ -195,6 +196,21 @@ class ServiceDetailApi(Resource):
         service = Service.query.filter_by(uuid=service_uuid).first()
         if not service:
             return {"error": "not_found", "message": "Service not found."}, 404
+
+        event_refs = SeismicEvent.query.filter(
+            or_(
+                SeismicEvent.created_by_service_id == service.id,
+                SeismicEvent.updated_by_service_id == service.id,
+            )
+        ).count()
+        if event_refs:
+            return {
+                "error": "conflict",
+                "message": (
+                    f"Service cannot be deleted because {event_refs} seismic event(s) were "
+                    "created or last updated by it."
+                ),
+            }, 409
 
         try:
             ServicePermission.query.filter_by(service_id=service.id).delete(synchronize_session=False)

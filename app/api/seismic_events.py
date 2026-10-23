@@ -1,7 +1,7 @@
 import logging
 
 from flask_restx import Resource, marshal
-from sqlalchemy import String, and_, cast, exists, or_
+from sqlalchemy import String, and_, case, cast, exists, func, or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import selectinload
 
@@ -28,8 +28,8 @@ from app.api.nsmodels.seismic_events import (
     event_beachball_parser,
     parse_number,
 )
-from app.models import SeismicEvent, Magnitude, EventMagnitude, EventBeachball
-from app.utils.auth_utils import require_permissions
+from app.models import SeismicEvent, Magnitude, EventMagnitude, EventBeachball, PublishedEvent
+from app.utils.auth_utils import require_permissions, resolve_actor
 from app.utils.gen_beachball_img import delete_beachball_image, sync_beachball_image
 
 logger = logging.getLogger("app.seismic_events")
@@ -44,6 +44,10 @@ def _event_load_options():
         selectinload(SeismicEvent.event_magnitudes).selectinload(EventMagnitude.magnitude),
         selectinload(SeismicEvent.beachball),
         selectinload(SeismicEvent.published_event),
+        selectinload(SeismicEvent.created_by_user),
+        selectinload(SeismicEvent.updated_by_user),
+        selectinload(SeismicEvent.created_by_service),
+        selectinload(SeismicEvent.updated_by_service),
     )
 
 
@@ -193,6 +197,10 @@ def _apply_event_fields(event, payload, *, creating=False):
         event.is_automatic = bool(payload.get("is_automatic") or False)
     elif payload.get("is_automatic") is not None:
         event.is_automatic = bool(payload["is_automatic"])
+    else:
+        # A manual edit means the event was reviewed. Ingestion services send
+        # is_automatic explicitly, so their updates keep the value they choose.
+        event.is_automatic = False
 
     return None
 
@@ -382,16 +390,79 @@ def _validated_limit(limit):
     return limit, None
 
 
-def _newest_events_page(query, limit):
-    """Count all matches, then load only the newest `limit` rows with their relations."""
+def _validated_page(args):
+    """Returns (limit, offset, error_tuple)."""
+    limit, error = _validated_limit(args.get("limit"))
+    if error:
+        return None, None, error
+    offset = args.get("offset")
+    if offset is None:
+        return limit, 0, None
+    if offset < 0:
+        return None, None, (
+            {"error": "validation_error", "message": "offset cannot be negative."},
+            400,
+        )
+    return limit, offset, None
+
+
+def _preferred_magnitude_expr():
+    """ML value if the event has one, else its first recorded magnitude (same rule as the UI)."""
+    ml_value = (
+        select(EventMagnitude.value)
+        .join(Magnitude, Magnitude.id == EventMagnitude.magnitude_id)
+        .where(EventMagnitude.event_id == SeismicEvent.id, func.upper(Magnitude.code) == "ML")
+        .order_by(EventMagnitude.id)
+        .limit(1)
+        .scalar_subquery()
+    )
+    first_value = (
+        select(EventMagnitude.value)
+        .where(EventMagnitude.event_id == SeismicEvent.id)
+        .order_by(EventMagnitude.id)
+        .limit(1)
+        .scalar_subquery()
+    )
+    return func.coalesce(ml_value, first_value)
+
+
+def _sort_expr(sort):
+    if sort == "magnitude":
+        return _preferred_magnitude_expr()
+    if sort == "depth":
+        return SeismicEvent.depth
+    if sort == "type":
+        return SeismicEvent.is_automatic
+    if sort == "published":
+        is_published = exists().where(PublishedEvent.event_id == SeismicEvent.id)
+        return case((is_published, 1), else_=0)
+    return SeismicEvent.origin_time
+
+
+def _events_page(query, limit, offset=0, sort=None, order=None):
+    """Count all matches, then load one sorted page of rows with their relations."""
     total = query.order_by(None).count()
+    expr = _sort_expr(sort)
+    # CASE instead of NULLS LAST, which MySQL does not support.
+    missing_last = case((expr.is_(None), 1), else_=0)
     items = (
         query.options(*_event_load_options())
-        .order_by(SeismicEvent.origin_time.desc(), SeismicEvent.id.desc())
+        .order_by(
+            missing_last,
+            expr.asc() if order == "asc" else expr.desc(),
+            SeismicEvent.origin_time.desc(),
+            SeismicEvent.id.desc(),
+        )
+        .offset(offset)
         .limit(limit)
         .all()
     )
-    payload = {"items": [item.to_dict() for item in items], "total": total, "limit": limit}
+    payload = {
+        "items": [item.to_dict() for item in items],
+        "total": total,
+        "limit": limit,
+        "offset": offset,
+    }
     return marshal(payload, seismic_event_list_response_model), 200
 
 
@@ -415,13 +486,13 @@ class SeismicEventsFilterApi(Resource):
             return denied
 
         payload = seismic_event_filter_parser.parse_args()
-        limit, error = _validated_limit(payload.get("limit"))
+        limit, offset, error = _validated_page(payload)
         if error:
             return error
         query, error = _build_filtered_events_query(payload)
         if error:
             return error
-        return _newest_events_page(query, limit)
+        return _events_page(query, limit, offset, payload.get("sort"), payload.get("order"))
 
 
 @seismic_events_ns.route("/seismic_events/magnitude_types")
@@ -454,10 +525,11 @@ class SeismicEventsApi(Resource):
         if denied:
             return denied
 
-        limit, error = _validated_limit(seismic_event_get_parser.parse_args().get("limit"))
+        args = seismic_event_get_parser.parse_args()
+        limit, offset, error = _validated_page(args)
         if error:
             return error
-        return _newest_events_page(SeismicEvent.query, limit)
+        return _events_page(SeismicEvent.query, limit, offset, args.get("sort"), args.get("order"))
 
     @seismic_events_ns.doc(security=JWT_OR_API_KEY)
     @seismic_events_ns.expect(seismic_event_create_parser)
@@ -477,6 +549,7 @@ class SeismicEventsApi(Resource):
         error = _apply_event_fields(event, payload, creating=True)
         if error:
             return error
+        event.mark_created_by(resolve_actor())
 
         try:
             event.create()
@@ -567,6 +640,7 @@ class SeismicEventDetailApi(Resource):
         if apply_error:
             db.session.rollback()
             return apply_error
+        event.mark_updated_by(resolve_actor())
 
         try:
             event.save()
@@ -645,6 +719,7 @@ class EventMagnitudesApi(Resource):
             magnitude_id=magnitude.id,
             value=value,
         )
+        event.mark_updated_by(resolve_actor())
         try:
             item.create()
         except IntegrityError:
@@ -700,6 +775,7 @@ class EventMagnitudeDetailApi(Resource):
 
         if payload.get("value") is not None:
             item.value = payload["value"]
+        item.event.mark_updated_by(resolve_actor())
 
         try:
             item.save()
@@ -735,6 +811,7 @@ class EventMagnitudeDetailApi(Resource):
             return {"error": "not_found", "message": "Event magnitude not found."}, 404
 
         item_id = item.id
+        item.event.mark_updated_by(resolve_actor())
         item.delete()
         logger.info("Event magnitude deleted: event_magnitude_id=%s", item_id)
         return marshal(
@@ -798,6 +875,7 @@ class EventBeachballApi(Resource):
             strike=payload.get("strike"),
             beachball_path=None,
         )
+        event.mark_updated_by(resolve_actor())
         try:
             _apply_generated_beachball_path(beachball)
             beachball.create()
@@ -856,6 +934,7 @@ class EventBeachballApi(Resource):
         if payload.get("strike") is not None:
             beachball.strike = payload.get("strike")
         # beachball_path is server-generated; ignore any client-supplied path.
+        event.mark_updated_by(resolve_actor())
 
         try:
             _apply_generated_beachball_path(beachball)
@@ -895,6 +974,7 @@ class EventBeachballApi(Resource):
             return {"error": "not_found", "message": "Beachball not found for this event."}, 404
 
         beachball_id = event.beachball.id
+        event.mark_updated_by(resolve_actor())
         event.beachball.delete()
         delete_beachball_image(event.id)
         logger.info("Beachball deleted: event_id=%s beachball_id=%s", event.id, beachball_id)

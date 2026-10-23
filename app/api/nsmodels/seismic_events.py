@@ -130,6 +130,14 @@ event_beachball_model = seismic_events_ns.model(
     },
 )
 
+event_actor_model = seismic_events_ns.model(
+    "SeismicEventActor",
+    {
+        "kind": fields.String(required=True, enum=["user", "service"], example="user"),
+        "name": fields.String(required=True, example="Roma Grigalashvili"),
+    },
+)
+
 seismic_event_model = seismic_events_ns.model(
     "SeismicEvent",
     {
@@ -145,6 +153,9 @@ seismic_event_model = seismic_events_ns.model(
         "area": fields.String(required=False, example="Georgia"),
         "is_automatic": fields.Boolean(required=True, example=False),
         "created_at": fields.String(required=False, example="2026-08-05T12:31:00"),
+        "created_by": fields.Nested(event_actor_model, required=False, allow_null=True),
+        "updated_at": fields.String(required=False, example="2026-08-05T13:02:00", allow_null=True),
+        "updated_by": fields.Nested(event_actor_model, required=False, allow_null=True),
         "magnitudes": fields.List(fields.Nested(event_magnitude_model), required=True),
         "beachball": fields.Nested(event_beachball_model, required=False, allow_null=True),
         "is_published": fields.Boolean(required=True, example=False),
@@ -158,6 +169,7 @@ seismic_event_list_response_model = seismic_events_ns.model(
         "items": fields.List(fields.Nested(seismic_event_model), required=True),
         "total": fields.Integer(required=True, example=1),
         "limit": fields.Integer(required=False, example=100),
+        "offset": fields.Integer(required=False, example=0),
     },
 )
 
@@ -337,6 +349,29 @@ seismic_event_get_parser.add_argument(
     location="args",
     help="Page size (default 100, max 200)",
 )
+seismic_event_get_parser.add_argument(
+    "offset",
+    type=int,
+    required=False,
+    location="args",
+    help="Number of events to skip (default 0)",
+)
+
+EVENT_SORT_FIELDS = ("time", "magnitude", "depth", "type", "published")
+EVENT_SORT_ORDERS = ("desc", "asc")
+EVENT_SORT_HELP = (
+    "Sort field: time (default), magnitude (ML, else first recorded), depth, "
+    "type (is_automatic), published. Missing values sort last."
+)
+
+seismic_event_get_parser.add_argument(
+    "sort", type=str, choices=EVENT_SORT_FIELDS, required=False,
+    location="args", help=EVENT_SORT_HELP,
+)
+seismic_event_get_parser.add_argument(
+    "order", type=str, choices=EVENT_SORT_ORDERS, required=False,
+    location="args", help="Sort direction: desc (default) or asc",
+)
 
 seismic_event_filter_parser = reqparse.RequestParser()
 seismic_event_filter_parser.add_argument(
@@ -429,4 +464,17 @@ seismic_event_filter_parser.add_argument(
     type=int,
     required=False,
     help="Max events to return, newest first (default 100, max 200)",
+)
+seismic_event_filter_parser.add_argument(
+    "offset",
+    type=int,
+    required=False,
+    help="Number of matching events to skip (default 0)",
+)
+seismic_event_filter_parser.add_argument(
+    "sort", type=str, choices=EVENT_SORT_FIELDS, required=False, help=EVENT_SORT_HELP,
+)
+seismic_event_filter_parser.add_argument(
+    "order", type=str, choices=EVENT_SORT_ORDERS, required=False,
+    help="Sort direction: desc (default) or asc",
 )

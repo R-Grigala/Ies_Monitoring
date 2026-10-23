@@ -1,4 +1,6 @@
-from app.models import Magnitude
+from app import create_app
+from app.extensions import db
+from app.models import Magnitude, SeismicEvent
 
 
 def _seed_magnitude(code="MW", description="Moment Magnitude"):
@@ -433,7 +435,7 @@ def test_get_list_is_bounded(client, admin_auth_headers):
     payload = page.get_json()
     assert payload["total"] == 3
     assert payload["limit"] == 2
-    assert "offset" not in payload
+    assert payload["offset"] == 0
     assert len(payload["items"]) == 2
     assert payload["items"][0]["seiscomp_oid"] == "page-3"
 
@@ -591,3 +593,197 @@ def test_filter_is_bounded_and_validates_magnitudes(client, admin_auth_headers):
         json={"magnitudes": [{"magnitude_min": "abc", "magnitude_max": 3}]},
     )
     assert bad_magnitude.status_code == 400
+
+
+def test_list_and_filter_paginate_with_offset(client, admin_auth_headers):
+    ids = [
+        _create_event(client, admin_auth_headers, origin_time=f"2026-07-0{day}T00:00:00")["id"]
+        for day in (1, 2, 3)
+    ]
+    newest_first = list(reversed(ids))
+
+    first_page = client.get("/api/seismic_events/?limit=2", headers=admin_auth_headers)
+    second_page = client.get("/api/seismic_events/?limit=2&offset=2", headers=admin_auth_headers)
+    assert first_page.status_code == second_page.status_code == 200
+    assert [item["id"] for item in first_page.get_json()["items"]] == newest_first[:2]
+    assert [item["id"] for item in second_page.get_json()["items"]] == newest_first[2:]
+    assert second_page.get_json()["offset"] == 2
+    assert second_page.get_json()["total"] == 3
+
+    filtered = client.post(
+        "/api/seismic_events/filter",
+        headers=admin_auth_headers,
+        json={"date_from": "2026-07-01T00:00:00", "limit": 1, "offset": 1},
+    )
+    assert filtered.status_code == 200
+    assert [item["id"] for item in filtered.get_json()["items"]] == newest_first[1:2]
+
+    negative = client.get("/api/seismic_events/?offset=-1", headers=admin_auth_headers)
+    assert negative.status_code == 400
+
+
+def test_list_sorts_on_server_with_missing_values_last(client, admin_auth_headers, app):
+    with app.app_context():
+        _seed_magnitude("ML", "Local Magnitude")
+        _seed_magnitude("MW")
+
+    small = _create_event(client, admin_auth_headers, origin_time="2026-05-01T00:00:00", depth=5.0)
+    big = _create_event(client, admin_auth_headers, origin_time="2026-05-02T00:00:00", depth=30.0)
+    none = _create_event(client, admin_auth_headers, origin_time="2026-05-03T00:00:00")
+    mw_only = _create_event(client, admin_auth_headers, origin_time="2026-05-04T00:00:00", depth=12.0)
+    for event, code, value in ((small, "ML", 2.1), (big, "MW", 6.0), (big, "ML", 4.4), (mw_only, "MW", 3.0)):
+        response = client.post(
+            f"/api/seismic_events/{event['id']}/magnitudes",
+            headers=admin_auth_headers,
+            json={"magnitude_code": code, "value": value},
+        )
+        assert response.status_code == 201
+
+    def ids(**params):
+        response = client.get("/api/seismic_events/", headers=admin_auth_headers, query_string=params)
+        assert response.status_code == 200
+        return [item["id"] for item in response.get_json()["items"]]
+
+    # ML wins over a larger MW; an event without magnitudes stays last in both directions.
+    assert ids(sort="magnitude") == [big["id"], mw_only["id"], small["id"], none["id"]]
+    assert ids(sort="magnitude", order="asc") == [small["id"], mw_only["id"], big["id"], none["id"]]
+    assert ids(sort="depth", order="asc") == [small["id"], mw_only["id"], big["id"], none["id"]]
+    assert ids() == [mw_only["id"], none["id"], big["id"], small["id"]]
+
+    filtered = client.post(
+        "/api/seismic_events/filter",
+        headers=admin_auth_headers,
+        json={"date_from": "2026-05-01T00:00:00", "sort": "depth", "limit": 2, "offset": 1},
+    )
+    assert filtered.status_code == 200
+    assert [item["id"] for item in filtered.get_json()["items"]] == [mw_only["id"], small["id"]]
+
+    invalid = client.get("/api/seismic_events/?sort=bogus", headers=admin_auth_headers)
+    assert invalid.status_code == 400
+
+
+def test_manual_update_marks_event_calculated(client, admin_auth_headers):
+    event = _create_event(client, admin_auth_headers, is_automatic=True)
+    assert event["is_automatic"] is True
+
+    kept = client.put(
+        f"/api/seismic_events/event_id={event['id']}",
+        headers=admin_auth_headers,
+        json={"depth": 9.0, "is_automatic": True},
+    )
+    assert kept.status_code == 200
+    assert kept.get_json()["event"]["is_automatic"] is True
+
+    edited = client.put(
+        f"/api/seismic_events/event_id={event['id']}",
+        headers=admin_auth_headers,
+        json={"location_en": "Reviewed location"},
+    )
+    assert edited.status_code == 200
+    assert edited.get_json()["event"]["is_automatic"] is False
+
+
+def _create_service(client, headers, name, permissions):
+    response = client.post(
+        "/api/services/",
+        headers=headers,
+        json={"name": name, "permissions": permissions},
+    )
+    assert response.status_code == 201
+    return response.get_json()
+
+
+def test_event_records_who_created_and_updated_it(client, admin_auth_headers, app):
+    event = _create_event(client, admin_auth_headers)
+    assert event["created_by"] == {"kind": "user", "name": "Admin User"}
+    assert event["updated_at"] is None
+    assert event["updated_by"] is None
+
+    service = _create_service(client, admin_auth_headers, "seiscomp-sync", ["can_event_edit"])
+    service_headers = {"X-API-Key": service["api_key"]}
+
+    updated = client.put(
+        f"/api/seismic_events/event_id={event['id']}",
+        headers=service_headers,
+        json={"depth": 7.0, "is_automatic": True},
+    )
+    assert updated.status_code == 200
+    body = updated.get_json()["event"]
+    assert body["created_by"] == {"kind": "user", "name": "Admin User"}
+    assert body["updated_by"] == {"kind": "service", "name": "seiscomp-sync"}
+    assert body["updated_at"] is not None
+
+    with app.app_context():
+        _seed_magnitude("ML")
+    added = client.post(
+        f"/api/seismic_events/{event['id']}/magnitudes",
+        headers=admin_auth_headers,
+        json={"magnitude_code": "ML", "value": 3.1},
+    )
+    assert added.status_code == 201
+    detail = client.get(
+        f"/api/seismic_events/event_id={event['id']}", headers=admin_auth_headers
+    ).get_json()
+    assert detail["updated_by"] == {"kind": "user", "name": "Admin User"}
+
+    listed = client.get("/api/seismic_events/", headers=admin_auth_headers).get_json()
+    assert listed["items"][0]["created_by"]["name"] == "Admin User"
+
+
+def test_event_authors_cannot_be_hard_deleted(client, admin_auth_headers, app):
+    service = _create_service(client, admin_auth_headers, "seiscomp-sync", ["can_event_edit"])
+    _create_event(client, {"X-API-Key": service["api_key"]})
+
+    response = client.delete(
+        f"/api/services/{service['service']['uuid']}", headers=admin_auth_headers
+    )
+    assert response.status_code == 409
+    assert "seismic event" in response.get_json()["message"]
+
+
+def test_upgrade_db_adds_missing_columns_without_losing_rows(tmp_path):
+    import sqlalchemy as sa
+
+    from app.commands import upgrade_db_core
+    from app.config import TestingConfig
+
+    class OldSchemaConfig(TestingConfig):
+        SQLALCHEMY_DATABASE_URI = f"sqlite:///{tmp_path / 'old.db'}"
+
+    application = create_app(OldSchemaConfig)
+    with application.app_context():
+        db.create_all()
+        with db.engine.begin() as connection:
+            connection.execute(sa.text("DROP TABLE seismic_events"))
+            connection.execute(
+                sa.text(
+                    "CREATE TABLE seismic_events (id INTEGER PRIMARY KEY, iesdata_id INTEGER, "
+                    "seiscomp_oid VARCHAR(20), origin_time DATETIME NOT NULL, "
+                    "latitude FLOAT NOT NULL, longitude FLOAT NOT NULL, depth FLOAT, "
+                    "location_ge VARCHAR(500), location_en VARCHAR(500), area VARCHAR(20), "
+                    "is_automatic BOOLEAN NOT NULL, created_at DATETIME NOT NULL)"
+                )
+            )
+            connection.execute(
+                sa.text(
+                    "INSERT INTO seismic_events (origin_time, latitude, longitude, "
+                    "is_automatic, created_at) VALUES "
+                    "('2026-08-05 12:30:00', 41.7, 44.8, 1, '2026-08-05 12:31:00')"
+                )
+            )
+
+        added = upgrade_db_core()
+        assert sorted(added) == [
+            "seismic_events.created_by_service_id",
+            "seismic_events.created_by_user_id",
+            "seismic_events.updated_at",
+            "seismic_events.updated_by_service_id",
+            "seismic_events.updated_by_user_id",
+        ]
+        assert upgrade_db_core() == []
+
+        event = SeismicEvent.query.one()
+        assert event.is_automatic is True
+        assert event.to_dict()["created_by"] is None
+        db.session.remove()
+        db.drop_all()

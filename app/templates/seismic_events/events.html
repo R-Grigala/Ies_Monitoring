@@ -7,12 +7,6 @@
 {% block head %}
 <link
     rel="stylesheet"
-    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
-    crossorigin=""
-/>
-<link
-    rel="stylesheet"
     href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css"
 />
 {% endblock %}
@@ -26,8 +20,22 @@
             {% include "seismic_events/filterEvent.html" %}
         </div>
         <div class="col-12 col-xl-8 d-flex">
-            <div id="mapDiv" class="card h-100 w-100 events-map-card border-0 shadow-sm">
+            <div id="mapDiv" class="card h-100 w-100 events-map-card border-0 shadow-sm position-relative">
                 <div id="map"></div>
+                <div class="events-map-legend" aria-hidden="true">
+                    <span class="events-map-legend-item">
+                        <img src="{{ url_for('static', filename='images/earthquake_latest.gif') }}" alt="" width="18" height="18">
+                        <span data-i18n="events.map.legend.latest">Latest</span>
+                    </span>
+                    <span class="events-map-legend-item">
+                        <img src="{{ url_for('static', filename='images/earthquake_red.svg') }}" alt="" width="14" height="14">
+                        <span data-i18n="events.map.legend.recent">1–60 days</span>
+                    </span>
+                    <span class="events-map-legend-item">
+                        <img src="{{ url_for('static', filename='images/earthquake_yellow.svg') }}" alt="" width="14" height="14">
+                        <span data-i18n="events.map.legend.old">61+ days</span>
+                    </span>
+                </div>
             </div>
         </div>
     </div>
@@ -51,19 +59,48 @@
         </div>
     </div>
     <div class="card-body pt-3">
-        <div class="table-responsive events-table-scroll">
+        <div class="events-table-scroll">
             <table class="table table-hover align-middle mb-0 events-table">
                 <thead>
                     <tr>
                         <th class="events-col-actions" id="eventsActionHeader" data-i18n="events.table.actions">Action</th>
-                        <th class="events-col-time" data-i18n="events.table.time">Earthquake Time</th>
-                        <th class="events-col-mag" data-i18n="events.table.ml">Magnitude</th>
+                        <th class="events-col-type" data-sort-key="type">
+                            <button type="button" class="events-sort-btn" data-sort="type">
+                                <span data-i18n="events.table.type">A/C</span><i class="fa-solid fa-sort" aria-hidden="true"></i>
+                            </button>
+                        </th>
+                        <th class="events-col-published" data-sort-key="published">
+                            <button type="button" class="events-sort-btn" data-sort="published">
+                                <span data-i18n="events.table.published">Published</span><i class="fa-solid fa-sort" aria-hidden="true"></i>
+                            </button>
+                        </th>
+                        <th class="events-col-time" data-sort-key="time">
+                            <button type="button" class="events-sort-btn" data-sort="time">
+                                <span data-i18n="events.table.time">Earthquake Time</span><i class="fa-solid fa-sort" aria-hidden="true"></i>
+                            </button>
+                        </th>
+                        <th class="events-col-mag" data-sort-key="magnitude">
+                            <button type="button" class="events-sort-btn" data-sort="magnitude">
+                                <span data-i18n="events.table.ml">Magnitude</span><i class="fa-solid fa-sort" aria-hidden="true"></i>
+                            </button>
+                        </th>
+                        <th class="events-col-depth" data-sort-key="depth">
+                            <button type="button" class="events-sort-btn" data-sort="depth">
+                                <span data-i18n="events.table.depth_km">Depth (km)</span><i class="fa-solid fa-sort" aria-hidden="true"></i>
+                            </button>
+                        </th>
                         <th class="events-col-location" data-i18n="events.table.location">Location</th>
                     </tr>
                 </thead>
                 <tbody id="eventsTableBody"></tbody>
             </table>
         </div>
+        <nav
+            id="eventsPagination"
+            class="mt-3 d-none"
+            data-i18n-aria-label="events.pagination"
+            aria-label="Pages"
+        ></nav>
     </div>
 </div>
 
@@ -72,13 +109,15 @@
 {% endblock %}
 
 {% block scripts %}
-<script
-    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
-    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
-    crossorigin=""
-></script>
 <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 <script src="{{ url_for('static', filename='js/seismic_events/map.js') }}"></script>
+{% if config.GOOGLE_MAPS_API_KEY %}
+<script
+    src="https://maps.googleapis.com/maps/api/js?key={{ config.GOOGLE_MAPS_API_KEY | urlencode }}&callback=initEventsMap&loading=async&language={{ current_lang }}&region=GE"
+    async
+    defer
+></script>
+{% endif %}
 <script src="{{ url_for('static', filename='js/seismic_events/eventDetail.js') }}" defer></script>
 <script src="{{ url_for('static', filename='js/seismic_events/events.js') }}" defer></script>
 <script src="{{ url_for('static', filename='js/seismic_events/filterEvent.js') }}" defer></script>

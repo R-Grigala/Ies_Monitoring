@@ -4,6 +4,8 @@ import click
 
 from datetime import datetime
 
+import sqlalchemy as sa
+
 from app.extensions import db
 from app.models import (
     User,
@@ -35,6 +37,58 @@ def init_db_core():
     """Drop and recreate all database tables."""
     db.drop_all()
     db.create_all()
+
+def upgrade_db_core():
+    """
+    Bring an existing database up to the models without losing data.
+
+    Creates missing tables and adds missing nullable columns. Existing columns are
+    never changed or dropped; a missing NOT NULL column needs a manual migration.
+    Returns the list of added "table.column" names.
+    """
+    db.create_all()
+    inspector = sa.inspect(db.engine)
+    dialect = db.engine.dialect
+    quote = dialect.identifier_preparer.quote
+    added = []
+
+    with db.engine.begin() as connection:
+        for table in db.metadata.sorted_tables:
+            existing = {column["name"] for column in inspector.get_columns(table.name)}
+            for column in table.columns:
+                if column.name in existing:
+                    continue
+                if not column.nullable:
+                    raise click.ClickException(
+                        f"{table.name}.{column.name} is NOT NULL and cannot be added automatically."
+                    )
+
+                column_sql = f"{quote(column.name)} {column.type.compile(dialect=dialect)}"
+                foreign_key = next(iter(column.foreign_keys), None)
+                target = None
+                if foreign_key is not None:
+                    target = (
+                        f"{quote(foreign_key.column.table.name)} "
+                        f"({quote(foreign_key.column.name)})"
+                    )
+
+                if target and dialect.name == "sqlite":
+                    # SQLite cannot add a constraint later, only inline with the column.
+                    column_sql += f" REFERENCES {target}"
+                connection.execute(
+                    sa.text(f"ALTER TABLE {quote(table.name)} ADD COLUMN {column_sql}")
+                )
+                if target and dialect.name != "sqlite":
+                    connection.execute(
+                        sa.text(
+                            f"ALTER TABLE {quote(table.name)} ADD FOREIGN KEY "
+                            f"({quote(column.name)}) REFERENCES {target}"
+                        )
+                    )
+                added.append(f"{table.name}.{column.name}")
+
+    return added
+
 
 def _ensure_permission(code, name, description):
     """Create or re-activate a permission by code."""
@@ -290,6 +344,17 @@ def init_db(force, confirm_text):
     click.echo("Creating Database")
     init_db_core()
     click.echo("Database Created")
+
+@click.command("upgrade_db")
+@with_appcontext
+def upgrade_db():
+    """CLI: add missing tables and nullable columns without touching existing data."""
+    added = upgrade_db_core()
+    if added:
+        for name in added:
+            click.echo(f"Added column: {name}")
+    else:
+        click.echo("Database schema is up to date.")
 
 @click.command("populate_db")
 @click.option(
