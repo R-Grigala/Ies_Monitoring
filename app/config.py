@@ -3,14 +3,49 @@ from datetime import timedelta
 from os import path, sep, pardir
 
 from dotenv import load_dotenv
+from sqlalchemy.engine import URL
 from sqlalchemy.pool import StaticPool
 
-load_dotenv(dotenv_path=".env")
+BASE_DIR = path.abspath(path.dirname(__file__) + sep + pardir)
+
+# override=True: the dev reloader passes the old values to its child process,
+# so without it edits to .env would be ignored until a full restart.
+load_dotenv(dotenv_path=path.join(BASE_DIR, ".env"), override=True)
+
+
+def _database_uri(uri_key, mysql_database_key, sqlite_name):
+    """
+    Pick the database URI: an explicit `<uri_key>` wins, then MySQL built from the
+    MYSQL_* parts (database name from `mysql_database_key`), then a local SQLite file.
+    """
+    explicit = os.getenv(uri_key)
+    if explicit:
+        return explicit
+
+    host = os.getenv("MYSQL_HOST")
+    database = os.getenv(mysql_database_key)
+    if host and database:
+        # URL.create escapes special characters in the password.
+        return URL.create(
+            "mysql+pymysql",
+            username=os.getenv("MYSQL_USER"),
+            password=os.getenv("MYSQL_PASSWORD"),
+            host=host,
+            port=int(os.getenv("MYSQL_PORT", "3306")),
+            database=database,
+            query={"charset": "utf8mb4"},
+        ).render_as_string(hide_password=False)
+
+    return "sqlite:///" + path.join(BASE_DIR, sqlite_name)
 
 
 class Config:
-    BASE_DIR = path.abspath(path.dirname(__file__) + sep + pardir)
+    BASE_DIR = BASE_DIR
     TEMPLATES_FOLDERS = path.join(BASE_DIR, "app", "templates")
+    APP_ENV = (os.getenv("APP_ENV") or os.getenv("FLASK_ENV") or "development").lower()
+
+    # Reconnect after MySQL drops idle connections (wait_timeout).
+    SQLALCHEMY_ENGINE_OPTIONS = {"pool_pre_ping": True, "pool_recycle": 3600}
 
     SECRET_KEY = os.getenv("SECRET_KEY") or os.getenv("MY_SECRET_KEY", "default_secret_key")
 
@@ -68,19 +103,14 @@ class Config:
 class DevelopmentConfig(Config):
     DEBUG = True
     JWT_COOKIE_SECURE = False
-    SQLALCHEMY_DATABASE_URI = os.getenv(
-        "DEV_DATABASE_URI",
-        "sqlite:///" + path.join(Config.BASE_DIR, "dev.db"),
-    )
+    SQLALCHEMY_DATABASE_URI = _database_uri("DEV_DATABASE_URI", "DEV_MYSQL_DATABASE", "dev.db")
 
 
 class ProductionConfig(Config):
     DEBUG = False
     JWT_COOKIE_SECURE = True
-    SQLALCHEMY_DATABASE_URI = os.getenv(
-        "PROD_DATABASE_URI",
-        "sqlite:///" + path.join(Config.BASE_DIR, "prod.db"),
-    )
+    APP_ENV = "production"
+    SQLALCHEMY_DATABASE_URI = _database_uri("PROD_DATABASE_URI", "MYSQL_DATABASE", "prod.db")
 
 
 class TestingConfig(Config):
@@ -107,7 +137,7 @@ class TestingConfig(Config):
 
 
 def get_config():
-    env = os.getenv("FLASK_ENV", "development").lower()
+    env = Config.APP_ENV
     if env == "production":
         return ProductionConfig
     if env == "testing":
